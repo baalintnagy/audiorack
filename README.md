@@ -73,7 +73,7 @@ npm run dev
 ```
 
 `npm run dev` serves the UI at `http://127.0.0.1:5173/rack.html` in **demo mode**: outside the
-extension the rack runs in the page itself with a generated groove, or with a local audio file
+extension the rack runs in the page itself with a generated drum & bass demo track, or with a local audio file
 via “Load audio…”.
 
 ```bash

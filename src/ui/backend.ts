@@ -6,7 +6,7 @@ import {
     type CaptureStatus,
     type OffscreenMessage,
 } from '../shared/messages';
-import { createDemoLoop } from './demo-signal';
+import { DEMO_TRACK_LABEL, demoTrack } from './demo-signal';
 import type { TelemetryStore } from './telemetry';
 
 export interface BackendStatus {
@@ -105,12 +105,17 @@ class ExtensionBackend implements Backend {
 /** Runs the rack in the page itself, for development and trying effects on local files. */
 class LocalBackend implements Backend {
     readonly kind = 'local';
+
+    constructor() {
+        // Render the demo track in the background so Play starts immediately.
+        void demoTrack().catch(() => undefined);
+    }
     private context?: AudioContext;
     private graph?: RackGraph;
     private source?: AudioNode & { stop?: () => void };
     private media?: HTMLAudioElement;
     private rack?: RackState;
-    private label = 'Demo groove';
+    private label = DEMO_TRACK_LABEL;
     private file?: File;
     private listeners = new Set<() => void>();
 
@@ -127,7 +132,7 @@ class LocalBackend implements Backend {
             return context.createMediaElementSource(media);
         }
         const source = context.createBufferSource();
-        source.buffer = createDemoLoop(context);
+        source.buffer = await demoTrack();
         source.loop = true;
         source.start();
         return source;

@@ -4,8 +4,12 @@ import react from '@vitejs/plugin-react';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
     version: string;
-    description: string;
 };
+
+// The Chrome Web Store shows this as the listing summary; it must stay within 132 characters.
+const DESCRIPTION =
+    'An effect rack for your browser tabs: EQ, compressors, limiter, filter, de-esser, ' +
+    'bass booster and live audio analyzers.';
 
 const ICON_SIZES = [16, 32, 48, 128];
 
@@ -19,7 +23,7 @@ export function manifest(version: string) {
         name: 'AudioRack',
         short_name: 'AudioRack',
         version,
-        description: `${pkg.description}: EQ, compressors, limiter, filter, de-esser and more.`,
+        description: DESCRIPTION,
         minimum_chrome_version: '116',
         action: {
             default_title: 'AudioRack',

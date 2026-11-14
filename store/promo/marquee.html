@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>AudioRack marquee promo tile</title>
+        <link rel="stylesheet" href="promo.css" />
+        <style>
+            body {
+                width: 1400px;
+                height: 560px;
+            }
+
+            .content {
+                position: absolute;
+                top: 0;
+                left: 80px;
+                width: 560px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            .brand {
+                gap: 14px;
+                font-size: 34px;
+            }
+
+            .brand img {
+                width: 52px;
+                height: 52px;
+            }
+
+            h1 {
+                margin: 30px 0 0;
+                font-size: 60px;
+                line-height: 1.05;
+                letter-spacing: -0.02em;
+            }
+
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-top: 34px;
+            }
+
+            .chip {
+                padding: 7px 14px;
+                border: 1px solid #2a303a;
+                border-radius: 18px;
+                background: rgb(28 33 41 / 80%);
+                color: #c9d0dc;
+                font-size: 17px;
+                font-weight: 600;
+            }
+
+            .chip::before {
+                content: '';
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                margin-right: 9px;
+                border-radius: 50%;
+                background: var(--tint);
+                box-shadow: 0 0 8px var(--tint);
+                vertical-align: 2px;
+            }
+
+            .shot {
+                position: absolute;
+                top: 56px;
+                left: 700px;
+                width: 820px;
+                border: 1px solid #2a303a;
+                border-radius: 14px;
+                box-shadow:
+                    0 30px 80px rgb(0 0 0 / 65%),
+                    0 0 0 1px rgb(255 157 77 / 14%),
+                    0 0 90px rgb(79 179 255 / 16%);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="content">
+            <div class="brand">
+                <img src="../../public/icons/icon-128.png" alt="" />
+                <span>Audio<strong>Rack</strong></span>
+            </div>
+            <h1>An effect rack for <span class="gradient">every tab</span>.</h1>
+            <div class="chips">
+                <span class="chip" style="--tint: #4fb3ff">EQ</span>
+                <span class="chip" style="--tint: #ffb347">Compressor</span>
+                <span class="chip" style="--tint: #ff5e7a">Limiter</span>
+                <span class="chip" style="--tint: #b78bff">Multiband</span>
+                <span class="chip" style="--tint: #3fe0c5">Filter</span>
+                <span class="chip" style="--tint: #ffd84f">De-esser</span>
+                <span class="chip" style="--tint: #ff8a3d">Bass Booster</span>
+                <span class="chip" style="--tint: #9fe870">Analyzers</span>
+            </div>
+        </div>
+        <img class="shot" src="../screenshots/1-equalizer.jpg" alt="" />
+    </body>
+</html>

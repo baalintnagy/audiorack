@@ -1,0 +1,48 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
+body {
+    position: relative;
+    background:
+        radial-gradient(circle at 8% 0%, rgb(255 157 77 / 22%), transparent 45%),
+        radial-gradient(circle at 100% 100%, rgb(79 179 255 / 18%), transparent 50%), #0e1014;
+    color: #e8ecf2;
+    font-family: 'Segoe UI', Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+}
+
+.brand strong {
+    font-weight: 700;
+}
+
+.gradient {
+    background: linear-gradient(90deg, #ffb347, #ff5e7a);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.curve {
+    position: absolute;
+    inset: auto 0 0;
+    width: 100%;
+}
+
+.grid line {
+    stroke: rgb(255 255 255 / 6%);
+    stroke-width: 1;
+}

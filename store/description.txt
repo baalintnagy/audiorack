@@ -1,0 +1,42 @@
+AudioRack puts a studio-style effect rack on any browser tab. Route the sound of a video, stream, podcast or music player through a chain of EQ, compressors, a limiter, filter, de-esser and bass booster, and watch it on live analyzers.
+
+Tame videos that are too loud, make quiet dialogue easier to follow, take the harshness out of a voice, or give small laptop speakers more bass. Everything runs on your device, with no account and no uploads.
+
+★ BUILD YOUR OWN CHAIN
+• Add up to 16 effects and analyzers in any order.
+• Drag to reorder, click to bypass. Bypassing crossfades, so there are no clicks or pops.
+• A global bypass for quick before/after comparison.
+• Input and output gain with level meters.
+
+★ EIGHT EFFECTS
+• Equalizer: up to 12 bands (bell, shelves, notch, band pass and 12–48 dB/oct cuts), dragged directly on top of a live spectrum.
+• Compressor: soft knee, peak or RMS detection, sidechain high-pass, auto makeup and parallel mix, with a transfer curve and gain-reduction history.
+• Limiter: a lookahead brickwall limiter that keeps the output below the ceiling you set.
+• Multiband compressor: two to four bands on phase-aligned Linkwitz-Riley crossovers, each with its own settings, solo, mute and bypass.
+• Filter: resonant low pass, high pass, band pass or notch, with drive and a sweeping LFO.
+• De-esser: softens harsh “s” sounds in speech and vocals, with a listen mode.
+• Volume: gain, pan, stereo width and polarity.
+• Bass Booster: a low boost plus added harmonics, so bass comes through even on small speakers.
+
+★ THREE ANALYZERS
+• Spectrum: mono, left, right, mid or side, with peak hold, freeze and a frequency, note and level readout.
+• Spectrogram: frequency over time, with adjustable levels and three color schemes.
+• Stereo Image: a stereo scope with phase correlation, balance and width meters.
+Analyzers pass the audio through untouched, so you can place one before and one after an effect to compare.
+
+★ PRESETS
+Start from built-in presets such as Night Mode, Voice Clarity, Bass Head, Loudness and Lo-Fi Radio, save your own, and export or import them as files.
+
+★ HOW TO USE
+1. Open a tab that plays audio.
+2. Click the AudioRack icon and press “Process tab”.
+3. Adjust the rack. Use the pop-out button for a larger window.
+Press the button again or close the tab to stop. Chrome shows its usual sharing indicator on the tab while it is being processed.
+
+★ PRIVATE BY DESIGN
+• All audio processing happens locally in your browser.
+• Audio is never recorded, saved or uploaded.
+• No network requests, no analytics, no ads, no account.
+• Only your rack and presets are stored, on your device.
+
+AudioRack is free and open source under the MIT license. Try the live demo, read the source or report a problem at https://github.com/baalintnagy/audiorack

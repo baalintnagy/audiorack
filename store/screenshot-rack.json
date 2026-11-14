@@ -1,0 +1,85 @@
+{
+    "version": 1,
+    "bypass": false,
+    "inputDb": 0,
+    "outputDb": 0,
+    "chain": [
+        {
+            "type": "eq",
+            "params": {
+                "outputDb": 0,
+                "bands": [
+                    {
+                        "type": "lowcut",
+                        "frequency": 35,
+                        "gainDb": 0,
+                        "q": 0.71,
+                        "slope": 24,
+                        "enabled": true
+                    },
+                    {
+                        "type": "lowshelf",
+                        "frequency": 110,
+                        "gainDb": 3.5,
+                        "q": 0.71,
+                        "slope": 24,
+                        "enabled": true
+                    },
+                    {
+                        "type": "bell",
+                        "frequency": 380,
+                        "gainDb": -4,
+                        "q": 1.4,
+                        "slope": 24,
+                        "enabled": true
+                    },
+                    {
+                        "type": "bell",
+                        "frequency": 2800,
+                        "gainDb": 4.5,
+                        "q": 0.9,
+                        "slope": 24,
+                        "enabled": true
+                    },
+                    {
+                        "type": "highshelf",
+                        "frequency": 9000,
+                        "gainDb": 3,
+                        "q": 0.71,
+                        "slope": 24,
+                        "enabled": true
+                    },
+                    {
+                        "type": "notch",
+                        "frequency": 6200,
+                        "gainDb": 0,
+                        "q": 6,
+                        "slope": 24,
+                        "enabled": true
+                    }
+                ]
+            }
+        },
+        {
+            "type": "compressor",
+            "params": {
+                "thresholdDb": -26,
+                "ratio": 4,
+                "kneeDb": 8,
+                "attackMs": 8,
+                "releaseMs": 140,
+                "autoMakeup": true,
+                "mix": 100,
+                "detection": "peak",
+                "sidechainHpHz": 60,
+                "makeupDb": 0
+            }
+        },
+        { "type": "multiband", "params": {} },
+        { "type": "bassboost", "params": { "boostDb": 6, "frequency": 70, "harmonics": 40 } },
+        { "type": "limiter", "params": { "inputDb": 2, "ceilingDb": -1 } },
+        { "type": "spectrum", "params": {} },
+        { "type": "spectrogram", "params": {} },
+        { "type": "stereo", "params": { "display": "dots", "persistence": 75 } }
+    ]
+}

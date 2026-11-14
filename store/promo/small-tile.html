@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>AudioRack small promo tile</title>
+        <link rel="stylesheet" href="promo.css" />
+        <style>
+            body {
+                width: 440px;
+                height: 280px;
+            }
+
+            .content {
+                position: relative;
+                z-index: 1;
+                padding: 34px 36px;
+            }
+
+            .brand {
+                gap: 14px;
+                font-size: 40px;
+            }
+
+            .brand img {
+                width: 64px;
+                height: 64px;
+            }
+
+            .tagline {
+                margin: 18px 0 0;
+                font-size: 22px;
+                font-weight: 600;
+                line-height: 1.25;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="content">
+            <div class="brand">
+                <img src="../../public/icons/icon-128.png" alt="" />
+                <span>Audio<strong>Rack</strong></span>
+            </div>
+            <p class="tagline">
+                EQ, compressors &amp; analyzers<br />for <span class="gradient">every tab</span>
+            </p>
+        </div>
+        <svg class="curve" viewBox="0 0 440 120" height="120" aria-hidden="true">
+            <defs>
+                <linearGradient id="stroke" x1="0" x2="1">
+                    <stop offset="0" stop-color="#ffb347" />
+                    <stop offset="1" stop-color="#ff5e7a" />
+                </linearGradient>
+                <linearGradient id="fill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0" stop-color="#ff8a5c" stop-opacity="0.35" />
+                    <stop offset="1" stop-color="#ff8a5c" stop-opacity="0" />
+                </linearGradient>
+                <filter id="glow" x="-10%" y="-50%" width="120%" height="200%">
+                    <feGaussianBlur stdDeviation="4" />
+                </filter>
+            </defs>
+            <path
+                d="M0 110 C40 108 60 60 110 62 S180 92 230 88 S300 30 340 44 S410 72 440 66 L440 120 L0 120 Z"
+                fill="url(#fill)"
+            />
+            <path
+                d="M0 110 C40 108 60 60 110 62 S180 92 230 88 S300 30 340 44 S410 72 440 66"
+                fill="none"
+                stroke="url(#stroke)"
+                stroke-width="6"
+                filter="url(#glow)"
+                opacity="0.7"
+            />
+            <path
+                d="M0 110 C40 108 60 60 110 62 S180 92 230 88 S300 30 340 44 S410 72 440 66"
+                fill="none"
+                stroke="url(#stroke)"
+                stroke-width="3"
+            />
+        </svg>
+    </body>
+</html>

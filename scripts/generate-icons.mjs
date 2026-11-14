@@ -2,9 +2,19 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
-const SIZES = [16, 32, 48, 128];
 const SUPERSAMPLE = 4;
-const OUT_DIR = new URL('../public/icons/', import.meta.url);
+const ICON_DIR = new URL('../public/icons/', import.meta.url);
+const STORE_DIR = new URL('../store/', import.meta.url);
+
+// The Chrome Web Store icon is 128 px with the artwork in the middle 96 px.
+const TARGETS = [
+    ...[16, 32, 48, 128].map((size) => ({
+        file: new URL(`icon-${size}.png`, ICON_DIR),
+        size,
+        art: size,
+    })),
+    { file: new URL('icon-128.png', STORE_DIR), size: 128, art: 96 },
+];
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
     let c = n;
@@ -98,17 +108,17 @@ function shade(x, y, size) {
     return [26 + glow * 120, 30 + glow * 60, 37 + glow * 40, 255];
 }
 
-mkdirSync(OUT_DIR, { recursive: true });
-SIZES.forEach((size) => {
+function renderIcon(size, art) {
+    const pad = (size - art) / 2;
     const rgba = Buffer.alloc(size * size * 4);
     for (let py = 0; py < size; py++) {
         for (let px = 0; px < size; px++) {
             const sum = [0, 0, 0, 0];
             for (let sy = 0; sy < SUPERSAMPLE; sy++) {
                 for (let sx = 0; sx < SUPERSAMPLE; sx++) {
-                    const x = (px + (sx + 0.5) / SUPERSAMPLE) / size;
-                    const y = (py + (sy + 0.5) / SUPERSAMPLE) / size;
-                    const [r, g, b, a] = shade(x, y, size);
+                    const x = (px - pad + (sx + 0.5) / SUPERSAMPLE) / art;
+                    const y = (py - pad + (sy + 0.5) / SUPERSAMPLE) / art;
+                    const [r, g, b, a] = shade(x, y, art);
                     sum[0] += r * a;
                     sum[1] += g * a;
                     sum[2] += b * a;
@@ -123,6 +133,10 @@ SIZES.forEach((size) => {
             rgba[offset + 3] = Math.round(alpha);
         }
     }
-    writeFileSync(new URL(`icon-${size}.png`, OUT_DIR), encodePng(size, rgba));
-});
-console.log(`Wrote ${SIZES.length} icons to ${OUT_DIR.pathname}`);
+    return encodePng(size, rgba);
+}
+
+mkdirSync(ICON_DIR, { recursive: true });
+mkdirSync(STORE_DIR, { recursive: true });
+TARGETS.forEach(({ file, size, art }) => writeFileSync(file, renderIcon(size, art)));
+console.log(`Wrote ${TARGETS.length} icons`);

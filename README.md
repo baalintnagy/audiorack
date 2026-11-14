@@ -112,7 +112,8 @@ One-time setup:
 
 1. Create the store item and publish the first version manually in the
    [Developer Dashboard](https://chrome.google.com/webstore/devconsole); the API cannot create
-   new items.
+   new items. Everything the listing asks for is in [`store/`](store/README.md): the
+   description, privacy answers, icon, screenshots and promo tiles.
 2. In Google Cloud, enable the Chrome Web Store API and create an OAuth client, then obtain a
    refresh token for the `https://www.googleapis.com/auth/chromewebstore` scope (see
    [Use the Chrome Web Store API](https://developer.chrome.com/docs/webstore/using-api)).
@@ -120,9 +121,6 @@ One-time setup:
    reviewers if you want a manual gate) with:
     - secrets `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN`
     - variables `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`
-
-The Web Store listing requires a privacy policy URL. Use the website's copy,
-`https://baalintnagy.github.io/audiorack/privacy.html`.
 
 To release, bump the version and push the tag:
 

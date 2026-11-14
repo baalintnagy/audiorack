@@ -1,0 +1,34 @@
+{
+    "name": "audiorack",
+    "private": true,
+    "version": "0.1.0",
+    "description": "Audio effect rack for browser tabs",
+    "type": "module",
+    "license": "MIT",
+    "scripts": {
+        "dev": "vite --host 127.0.0.1",
+        "build": "tsc --noEmit && vite build",
+        "check": "tsc --noEmit",
+        "test": "vitest run",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "icons": "node scripts/generate-icons.mjs",
+        "package": "node scripts/package.mjs"
+    },
+    "dependencies": {
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0"
+    },
+    "devDependencies": {
+        "@types/chrome": "^0.1.0",
+        "@types/node": "^24.0.0",
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+        "@vitejs/plugin-react": "^5.0.4",
+        "jsdom": "^27.0.0",
+        "prettier": "^3.6.0",
+        "typescript": "^5.9.3",
+        "vite": "^7.1.9",
+        "vitest": "^3.2.4"
+    }
+}

@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>AudioRack — an effect rack for your browser tabs</title>
+        <meta
+            name="description"
+            content="AudioRack is a Chrome extension that routes any tab's audio through a configurable chain of EQ, compressors, limiter, filter, de-esser, bass booster and analyzers."
+        />
+        <meta name="theme-color" content="#0e1014" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="AudioRack" />
+        <meta
+            property="og:description"
+            content="An effect rack for your browser tabs: EQ, dynamics, filters and analyzers."
+        />
+        <meta property="og:url" content="https://baalintnagy.github.io/audiorack/" />
+        <meta
+            property="og:image"
+            content="https://baalintnagy.github.io/audiorack/images/equalizer.jpg"
+        />
+        <meta name="twitter:card" content="summary_large_image" />
+        <link rel="icon" href="images/icon.png" />
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <header class="nav">
+            <a class="brand" href="./">
+                <img src="images/icon.png" alt="" width="28" height="28" />
+                <span>Audio<strong>Rack</strong></span>
+            </a>
+            <nav>
+                <a href="#effects">Effects</a>
+                <a href="#analyzers">Analyzers</a>
+                <a href="#install">Install</a>
+                <a href="privacy.html">Privacy</a>
+                <a href="https://github.com/baalintnagy/audiorack">GitHub</a>
+            </nav>
+        </header>
+
+        <main>
+            <section class="hero">
+                <div class="hero-text">
+                    <p class="eyebrow">Chrome extension · free and open source</p>
+                    <h1>An effect rack for <span class="gradient">every tab</span>.</h1>
+                    <p class="lead">
+                        Route the sound of any browser tab through a chain of EQ, compressors, a
+                        limiter, filter, de-esser and bass booster, and see it on live analyzers.
+                        Tame loud videos, clarify podcasts or make laptop speakers sound bigger.
+                    </p>
+                    <div class="actions">
+                        <a class="button primary" href="demo/rack.html">Try the live demo</a>
+                        <a class="button" href="#install">Get the extension</a>
+                    </div>
+                    <p class="note">
+                        The demo runs the real audio engine in your browser with a generated groove
+                        or an audio file of your own. Nothing is uploaded.
+                    </p>
+                </div>
+                <figure class="hero-shot">
+                    <img
+                        src="images/equalizer.jpg"
+                        width="800"
+                        height="600"
+                        alt="AudioRack's equalizer editing a curve on top of a live spectrum"
+                    />
+                </figure>
+            </section>
+
+            <section id="effects" class="section">
+                <h2>Eight effects, any order</h2>
+                <p class="section-lead">
+                    Add effects, drag them into the order you want and bypass any of them with a
+                    click. Bypassing crossfades, so there are no clicks or pops.
+                </p>
+                <div class="cards">
+                    <article class="card" style="--tint: #4fb3ff">
+                        <h3>Equalizer</h3>
+                        <p>
+                            Up to 12 bands: bells, shelves, 12–48 dB/oct cuts, notch and band pass.
+                            Drag them directly on the live spectrum.
+                        </p>
+                    </article>
+                    <article class="card" style="--tint: #ffb347">
+                        <h3>Compressor</h3>
+                        <p>
+                            Soft knee, peak or RMS detection, a sidechain filter, auto makeup and
+                            parallel mix, with a transfer curve and gain-reduction history.
+                        </p>
+                    </article>
+                    <article class="card" style="--tint: #ff5e7a">
+                        <h3>Limiter</h3>
+                        <p>
+                            A lookahead brickwall limiter. The output never goes above the ceiling
+                            you set.
+                        </p>
+                    </article>
+                    <article class="card" style="--tint: #b78bff">
+                        <h3>Multiband</h3>
+                        <p>
+                            Two to four bands on phase-aligned crossovers, each with its own
+                            compressor, solo, mute and bypass.
+                        </p>
+                    </article>
+                    <article class="card" style="--tint: #3fe0c5">
+                        <h3>Filter</h3>
+                        <p>
+                            Resonant low pass, high pass, band pass or notch, with drive and a
+                            slowly sweeping LFO.
+                        </p>
+                    </article>
+                    <article class="card" style="--tint: #ffd84f">
+                        <h3>De-esser</h3>
+                        <p>
+                            Softens harsh “s” sounds in speech and vocals. Listen mode lets you hear
+                            exactly what it catches.
+                        </p>
+                    </article>
+                    <article class="card" style="--tint: #9fe870">
+                        <h3>Volume</h3>
+                        <p>Gain, pan, stereo width and polarity flip for each channel.</p>
+                    </article>
+                    <article class="card" style="--tint: #ff8a3d">
+                        <h3>Bass Booster</h3>
+                        <p>
+                            A low boost plus added harmonics, so bass comes through even on small
+                            speakers.
+                        </p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="section showcase">
+                <figure>
+                    <img
+                        src="images/compressor.jpg"
+                        width="800"
+                        height="600"
+                        loading="lazy"
+                        alt="Compressor with transfer curve and gain reduction history"
+                    />
+                    <figcaption>
+                        Compressor: transfer curve, live level and gain reduction.
+                    </figcaption>
+                </figure>
+                <figure>
+                    <img
+                        src="images/multiband.jpg"
+                        width="800"
+                        height="600"
+                        loading="lazy"
+                        alt="Multiband compressor with four bands and crossover handles"
+                    />
+                    <figcaption>Multiband: drag crossovers, watch each band work.</figcaption>
+                </figure>
+            </section>
+
+            <section id="analyzers" class="section">
+                <h2>See what you hear</h2>
+                <p class="section-lead">
+                    Analyzers pass the audio through untouched. Put them anywhere in the chain, for
+                    example one before and one after the EQ.
+                </p>
+                <div class="gallery">
+                    <figure>
+                        <img
+                            src="images/spectrum.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Spectrum analyzer with peak hold"
+                        />
+                        <figcaption>
+                            <strong>Spectrum</strong> Mono, left, right, mid or side, with peak
+                            hold, freeze and a readout of frequency, note and level.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <img
+                            src="images/spectrogram.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Scrolling spectrogram of a drum groove"
+                        />
+                        <figcaption>
+                            <strong>Spectrogram</strong> Frequency over time, with adjustable levels
+                            and three color schemes.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <img
+                            src="images/stereo.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Stereo image scope with correlation and balance meters"
+                        />
+                        <figcaption>
+                            <strong>Stereo Image</strong> A stereo scope with phase correlation,
+                            balance and width meters.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section id="install" class="section install">
+                <h2>Get the extension</h2>
+                <ol class="steps">
+                    <li>
+                        <strong>Download</strong> the latest <code>audiorack-*.zip</code> from the
+                        <a href="https://github.com/baalintnagy/audiorack/releases/latest"
+                            >GitHub releases</a
+                        >
+                        and unzip it.
+                    </li>
+                    <li>
+                        <strong>Load it</strong>: open <code>chrome://extensions</code>, turn on
+                        <em>Developer mode</em>, choose <em>Load unpacked</em> and pick the unzipped
+                        folder. Brave, Edge and other Chromium browsers work the same way.
+                    </li>
+                    <li>
+                        <strong>Play</strong>: open a tab with audio, click the AudioRack icon and
+                        press <em>Process tab</em>. Use the pop-out button for a bigger window.
+                    </li>
+                </ol>
+                <p class="note">
+                    Requires Chrome 116 or newer. A Chrome Web Store listing is on its way.
+                </p>
+            </section>
+
+            <section class="section privacy-blurb">
+                <h2>Private by design</h2>
+                <p>
+                    All processing happens on your device. AudioRack never records or uploads audio,
+                    makes no network requests and contains no analytics. It stores only your rack
+                    and presets.
+                    <a href="privacy.html">Read the privacy policy</a>.
+                </p>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <span>AudioRack · MIT License</span>
+            <nav>
+                <a href="privacy.html">Privacy</a>
+                <a href="https://github.com/baalintnagy/audiorack">Source</a>
+                <a href="https://github.com/baalintnagy/audiorack/issues">Issues</a>
+            </nav>
+        </footer>
+    </body>
+</html>

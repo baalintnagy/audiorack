@@ -13,7 +13,9 @@
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "icons": "node scripts/generate-icons.mjs",
-        "package": "node scripts/package.mjs"
+        "package": "node scripts/package.mjs",
+        "site": "vite build --mode demo && node scripts/build-site.mjs",
+        "site:preview": "vite preview --outDir site-dist --host 127.0.0.1"
     },
     "dependencies": {
         "react": "^19.2.0",

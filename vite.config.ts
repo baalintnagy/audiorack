@@ -46,24 +46,36 @@ function extensionManifest(): Plugin {
     };
 }
 
-export default defineConfig({
-    plugins: [react(), extensionManifest()],
-    worker: { format: 'iife' },
-    build: {
-        outDir: 'dist',
-        emptyOutDir: true,
-        target: 'chrome116',
-        modulePreload: false,
-        rollupOptions: {
-            input: {
-                rack: 'rack.html',
-                offscreen: 'offscreen.html',
-                background: 'src/background/index.ts',
-            },
-            output: {
-                entryFileNames: (chunk) =>
-                    chunk.name === 'background' ? 'background.js' : 'assets/[name]-[hash].js',
-            },
+const extensionBuild = {
+    outDir: 'dist',
+    emptyOutDir: true,
+    target: 'chrome116',
+    modulePreload: false,
+    rollupOptions: {
+        input: {
+            rack: 'rack.html',
+            offscreen: 'offscreen.html',
+            background: 'src/background/index.ts',
+        },
+        output: {
+            entryFileNames: (chunk: { name: string }) =>
+                chunk.name === 'background' ? 'background.js' : 'assets/[name]-[hash].js',
         },
     },
-});
+};
+
+// `vite build --mode demo` builds only the rack page, with relative URLs, for the website's
+// in-browser demo. Outside the extension the UI runs the engine in the page itself.
+const demoBuild = {
+    outDir: 'site-dist/demo',
+    emptyOutDir: true,
+    target: 'es2022',
+    rollupOptions: { input: { rack: 'rack.html' } },
+};
+
+export default defineConfig(({ mode }) => ({
+    base: mode === 'demo' ? './' : '/',
+    plugins: mode === 'demo' ? [react()] : [react(), extensionManifest()],
+    worker: { format: 'iife' as const },
+    build: mode === 'demo' ? demoBuild : extensionBuild,
+}));

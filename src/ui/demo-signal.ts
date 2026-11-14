@@ -43,8 +43,9 @@ export function createDemoLoop(context: BaseAudioContext): AudioBuffer {
         if (step % 8 === 4) {
             add(time, 0.25, (t) => {
                 const body = Math.sin(2 * Math.PI * 185 * t) * Math.exp(-25 * t) * 0.3;
-                const value = body + random() * Math.exp(-18 * t) * 0.35;
-                return [value, value * 0.9];
+                const decay = Math.exp(-18 * t) * 0.3;
+                // Independent noise per channel gives the snare a wide stereo image.
+                return [body + random() * decay, body + random() * decay];
             });
         }
         if (step % 2 === 0) {
@@ -53,7 +54,7 @@ export function createDemoLoop(context: BaseAudioContext): AudioBuffer {
                 const white = random();
                 const value = (white - previous) * Math.exp(-60 * t) * 0.12;
                 previous = white;
-                return [value * 0.7, value];
+                return step % 4 === 0 ? [value, value * 0.35] : [value * 0.35, value];
             });
         }
         if (step % 4 === 2) {
@@ -69,9 +70,13 @@ export function createDemoLoop(context: BaseAudioContext): AudioBuffer {
         if (step % 16 === 0) {
             const chord = chords[(step / 16) % chords.length];
             add(time, beat * 4, (t) => {
-                const envelope = Math.min(1, t * 4) * Math.exp(-0.6 * t) * 0.06;
-                const l = chord.reduce((sum, f) => sum + Math.sin(2 * Math.PI * f * t), 0);
-                const r = chord.reduce((sum, f) => sum + Math.sin(2 * Math.PI * f * 1.003 * t), 0);
+                const envelope = Math.min(1, t * 4) * Math.exp(-0.6 * t) * 0.07;
+                // Detuned voices per side make a slowly swirling stereo pad.
+                const l = chord.reduce((sum, f) => sum + Math.sin(2 * Math.PI * f * 0.996 * t), 0);
+                const r = chord.reduce(
+                    (sum, f) => sum + Math.sin(2 * Math.PI * f * 1.004 * t + 1.3),
+                    0,
+                );
                 return [l * envelope, r * envelope];
             });
         }

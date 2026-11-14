@@ -1,5 +1,7 @@
 # AudioRack
 
+**Website and live demo:** [baalintnagy.github.io/audiorack](https://baalintnagy.github.io/audiorack/)
+
 A Chrome extension that routes the audio of a browser tab through a configurable chain of
 effects, with a dark, analyzer-driven interface inspired by modern plug-in suites.
 
@@ -86,6 +88,17 @@ Other scripts: `npm test` (Vitest DSP and state tests), `npm run check` (TypeScr
 `npm run format` / `format:check` (Prettier), `npm run package` (zip `dist/` into `release/`),
 `npm run icons` (regenerate `public/icons`).
 
+## Website
+
+`site/` holds the GitHub Pages site: a landing page, the privacy policy (rendered from
+`PRIVACY.md` at build time) and screenshots. `npm run site` builds it into `site-dist/`,
+including the in-browser demo (`vite build --mode demo`, the rack UI with relative URLs).
+`npm run site:preview` serves the result locally.
+
+`.github/workflows/pages.yml` deploys it on pushes to `main` that touch the site, the app
+sources or `PRIVACY.md`. One-time setup: in the repository's **Settings → Pages**, set
+**Source** to **GitHub Actions**.
+
 ## Releasing to the Chrome Web Store
 
 `.github/workflows/ci.yml` checks formatting, types and tests, builds, and uploads the zip as an
@@ -108,9 +121,8 @@ One-time setup:
     - secrets `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN`
     - variables `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`
 
-The Web Store listing requires a privacy policy URL. Use the public link to
-[`PRIVACY.md`](PRIVACY.md), for example
-`https://github.com/baalintnagy/audiorack/blob/main/PRIVACY.md`.
+The Web Store listing requires a privacy policy URL. Use the website's copy,
+`https://baalintnagy.github.io/audiorack/privacy.html`.
 
 To release, bump the version and push the tag:
 

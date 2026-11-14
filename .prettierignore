@@ -3,3 +3,5 @@ release/
 node_modules/
 package-lock.json
 public/icons/
+site-dist/
+site/images/

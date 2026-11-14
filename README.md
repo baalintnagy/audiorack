@@ -108,6 +108,10 @@ One-time setup:
     - secrets `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN`
     - variables `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`
 
+The Web Store listing requires a privacy policy URL. Use the public link to
+[`PRIVACY.md`](PRIVACY.md), for example
+`https://github.com/baalintnagy/audiorack/blob/main/PRIVACY.md`.
+
 To release, bump the version and push the tag:
 
 ```bash
@@ -119,6 +123,11 @@ git push --follow-tags
 ```
 
 Running the workflow manually with “Submit for review” unchecked uploads a draft only.
+
+## Privacy
+
+AudioRack processes audio locally, makes no network requests and stores only your rack and
+presets. See [PRIVACY.md](PRIVACY.md).
 
 ## License
 

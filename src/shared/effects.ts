@@ -1,5 +1,23 @@
 export type EffectType =
-    'eq' | 'compressor' | 'limiter' | 'multiband' | 'filter' | 'deesser' | 'volume' | 'bassboost';
+    | 'eq'
+    | 'compressor'
+    | 'limiter'
+    | 'multiband'
+    | 'filter'
+    | 'deesser'
+    | 'volume'
+    | 'bassboost'
+    | 'spectrum'
+    | 'spectrogram'
+    | 'stereo';
+
+export type AnalyzerChannel = 'mono' | 'left' | 'right' | 'mid' | 'side';
+
+export const ANALYZER_CHANNELS: AnalyzerChannel[] = ['mono', 'left', 'right', 'mid', 'side'];
+
+export const FFT_SIZES = [2048, 4096, 8192] as const;
+
+export const SPECTROGRAM_PALETTES = ['magma', 'ice', 'mono'] as const;
 
 export type EqBandType =
     'bell' | 'lowshelf' | 'highshelf' | 'lowcut' | 'highcut' | 'notch' | 'bandpass';
@@ -112,6 +130,30 @@ export interface BassBoostParams {
     outputDb: number;
 }
 
+export interface SpectrumParams {
+    channel: AnalyzerChannel;
+    fftSize: number;
+    tilt: number;
+    rangeDb: number;
+    smoothing: number;
+    peakHold: boolean;
+}
+
+export interface SpectrogramParams {
+    channel: AnalyzerChannel;
+    fftSize: number;
+    tilt: number;
+    floorDb: number;
+    ceilingDb: number;
+    palette: (typeof SPECTROGRAM_PALETTES)[number];
+}
+
+export interface StereoParams {
+    display: 'lines' | 'dots';
+    persistence: number;
+    autoGain: boolean;
+}
+
 export interface EffectParamsMap {
     eq: EqParams;
     compressor: CompressorParams;
@@ -121,6 +163,9 @@ export interface EffectParamsMap {
     deesser: DeesserParams;
     volume: VolumeParams;
     bassboost: BassBoostParams;
+    spectrum: SpectrumParams;
+    spectrogram: SpectrogramParams;
+    stereo: StereoParams;
 }
 
 export type EffectOf<T extends EffectType> = {
@@ -258,6 +303,12 @@ export const SPECS = {
     },
     harmonics: { label: 'Harmonics', min: 0, max: 100, default: 25, unit: '%' },
     masterDb: { label: 'Gain', min: -24, max: 24, default: 0, unit: 'dB', decimals: 1 },
+    tilt: { label: 'Tilt', min: 0, max: 6, default: 4.5, unit: 'dB/oct', decimals: 1 },
+    smoothing: { label: 'Smoothing', min: 0, max: 100, default: 60, unit: '%' },
+    analyzerRange: { label: 'Range', min: 48, max: 144, default: 96, unit: 'dB' },
+    floorDb: { label: 'Floor', min: -140, max: -40, default: -100, unit: 'dB' },
+    spectrogramCeilingDb: { label: 'Ceiling', min: -40, max: 0, default: -10, unit: 'dB' },
+    persistence: { label: 'Persistence', min: 0, max: 100, default: 60, unit: '%' },
 } satisfies Record<string, NumberSpec>;
 
 export type SpecKey = keyof typeof SPECS;
@@ -267,6 +318,8 @@ export interface EffectInfo {
     short: string;
     description: string;
     color: string;
+    /** Analyzers pass audio through unchanged and only visualize it. */
+    category: 'effect' | 'analyzer';
 }
 
 export const EFFECT_INFO: Record<EffectType, EffectInfo> = {
@@ -275,48 +328,77 @@ export const EFFECT_INFO: Record<EffectType, EffectInfo> = {
         short: 'EQ',
         description: 'Parametric EQ with up to 12 bands',
         color: '#4fb3ff',
+        category: 'effect',
     },
     compressor: {
         label: 'Compressor',
         short: 'COMP',
         description: 'Soft-knee feed-forward compressor',
         color: '#ffb347',
+        category: 'effect',
     },
     limiter: {
         label: 'Limiter',
         short: 'LIM',
         description: 'Lookahead brickwall limiter',
         color: '#ff5e7a',
+        category: 'effect',
     },
     multiband: {
         label: 'Multiband',
         short: 'MB',
         description: 'Up to four-band compressor with Linkwitz-Riley crossovers',
         color: '#b78bff',
+        category: 'effect',
     },
     filter: {
         label: 'Filter',
         short: 'FLT',
         description: 'Resonant multimode filter with LFO',
         color: '#3fe0c5',
+        category: 'effect',
     },
     deesser: {
         label: 'De-esser',
         short: 'DS',
         description: 'Sibilance tamer with split-band mode',
         color: '#ffd84f',
+        category: 'effect',
     },
     volume: {
         label: 'Volume',
         short: 'VOL',
         description: 'Gain, pan, stereo width and polarity',
         color: '#9fe870',
+        category: 'effect',
     },
     bassboost: {
         label: 'Bass Booster',
         short: 'BASS',
         description: 'Low shelf boost with harmonic enhancer',
         color: '#ff8a3d',
+        category: 'effect',
+    },
+    spectrum: {
+        label: 'Spectrum',
+        short: 'SPEC',
+        description: 'FFT spectrum analyzer with peak hold',
+        color: '#6f8cff',
+        category: 'analyzer',
+    },
+    spectrogram: {
+        label: 'Spectrogram',
+        short: 'SGRAM',
+        description: 'Scrolling time-frequency display',
+        color: '#ff6fd8',
+        category: 'analyzer',
+    },
+    stereo: {
+        label: 'Stereo Image',
+        short: 'IMAGE',
+        description: 'Goniometer, correlation and balance meters',
+        color: '#8fe3ff',
+        category: 'analyzer',
     },
 };
 
@@ -425,6 +507,23 @@ export function defaultParams<T extends EffectType>(type: T): EffectParamsMap[T]
             monoBass: false,
             outputDb: 0,
         },
+        spectrum: {
+            channel: 'mono',
+            fftSize: 4096,
+            tilt: 4.5,
+            rangeDb: 96,
+            smoothing: 60,
+            peakHold: true,
+        },
+        spectrogram: {
+            channel: 'mono',
+            fftSize: 4096,
+            tilt: 3,
+            floorDb: -100,
+            ceilingDb: -10,
+            palette: 'magma',
+        },
+        stereo: { display: 'dots', persistence: 60, autoGain: true },
     };
     return defaults[type];
 }

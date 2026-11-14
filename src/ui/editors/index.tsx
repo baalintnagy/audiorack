@@ -7,6 +7,9 @@ import { EqEditor } from './EqEditor';
 import { FilterEditor } from './FilterEditor';
 import { LimiterEditor } from './LimiterEditor';
 import { MultibandEditor } from './MultibandEditor';
+import { SpectrogramEditor } from './SpectrogramEditor';
+import { SpectrumEditor } from './SpectrumEditor';
+import { StereoEditor } from './StereoEditor';
 import { VolumeEditor } from './VolumeEditor';
 
 export function EffectEditor({
@@ -34,5 +37,11 @@ export function EffectEditor({
             return <VolumeEditor effect={effect} setParams={setParams} color={color} />;
         case 'bassboost':
             return <BassBoostEditor effect={effect} setParams={setParams} color={color} />;
+        case 'spectrum':
+            return <SpectrumEditor effect={effect} setParams={setParams} color={color} />;
+        case 'spectrogram':
+            return <SpectrogramEditor effect={effect} setParams={setParams} color={color} />;
+        case 'stereo':
+            return <StereoEditor effect={effect} setParams={setParams} color={color} />;
     }
 }

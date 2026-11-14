@@ -1,5 +1,8 @@
 import {
+    ANALYZER_CHANNELS,
     EFFECT_TYPES,
+    FFT_SIZES,
+    SPECTROGRAM_PALETTES,
     EQ_BAND_TYPES,
     FILTER_MODES,
     MAX_EQ_BANDS,
@@ -153,6 +156,30 @@ const normalizers: { [T in EffectType]: (raw: Loose) => EffectParamsMap[T] } = {
         tighten: bool(raw.tighten, true),
         monoBass: bool(raw.monoBass, false),
         outputDb: num(raw.outputDb, 'outputDb'),
+    }),
+    spectrum: (raw) => ({
+        channel: oneOf(raw.channel, ANALYZER_CHANNELS, 'mono'),
+        fftSize: oneOf(raw.fftSize, FFT_SIZES, 4096),
+        tilt: num(raw.tilt, 'tilt'),
+        rangeDb: num(raw.rangeDb, 'analyzerRange'),
+        smoothing: num(raw.smoothing, 'smoothing'),
+        peakHold: bool(raw.peakHold, true),
+    }),
+    spectrogram: (raw) => {
+        const floorDb = num(raw.floorDb, 'floorDb');
+        return {
+            channel: oneOf(raw.channel, ANALYZER_CHANNELS, 'mono'),
+            fftSize: oneOf(raw.fftSize, FFT_SIZES, 4096),
+            tilt: num(raw.tilt, 'tilt', 3),
+            floorDb,
+            ceilingDb: Math.max(num(raw.ceilingDb, 'spectrogramCeilingDb'), floorDb + 12),
+            palette: oneOf(raw.palette, SPECTROGRAM_PALETTES, 'magma'),
+        };
+    },
+    stereo: (raw) => ({
+        display: oneOf(raw.display, ['lines', 'dots'] as const, 'dots'),
+        persistence: num(raw.persistence, 'persistence'),
+        autoGain: bool(raw.autoGain, true),
     }),
 };
 

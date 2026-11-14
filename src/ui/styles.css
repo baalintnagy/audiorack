@@ -1141,3 +1141,50 @@ button:disabled {
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
+
+/* Analyzers */
+
+.slot.analyzer {
+    background: linear-gradient(180deg, #1c2130, #161a24);
+}
+
+.slot.analyzer::before {
+    background: repeating-linear-gradient(90deg, var(--slot-color) 0 6px, transparent 6px 9px);
+}
+
+.slot.analyzer .slot-activity {
+    visibility: hidden;
+}
+
+.display-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgb(111 140 255 / 25%);
+    color: #c8d3ff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+
+.spectrogram-canvas {
+    background: #000;
+}
+
+.display.split .stereo-scope {
+    flex: none;
+    height: 100%;
+    width: auto;
+    aspect-ratio: 1;
+    min-width: 0;
+}
+
+.display.split .stereo-meters {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+}

@@ -16,6 +16,17 @@ effects, with a dark, analyzer-driven interface inspired by modern plug-in suite
 | Volume       | Gain, constant-power pan, stereo width and per-channel polarity.                                                     |
 | Bass Booster | Low shelf boost plus a harmonic enhancer that suggests bass on small speakers, optional rumble filter and mono bass. |
 
+### Analyzers
+
+Analyzers are pass-through modules: insert them anywhere in the chain to see the signal at
+that point (for example one before and one after the EQ).
+
+| Analyzer     | What it shows                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------------- |
+| Spectrum     | 2k–8k point FFT of mono, left, right, mid or side, with tilt, smoothing, peak hold, freeze and a hover readout. |
+| Spectrogram  | Scrolling time-frequency image with adjustable floor/ceiling, tilt and Magma, Ice or Mono palettes.             |
+| Stereo Image | Goniometer with persistence and auto zoom, plus phase correlation, balance and side/mid width meters.           |
+
 The chain can be reordered by dragging slots, each effect can be bypassed (with a short
 crossfade), and the whole rack can be bypassed for comparison. Factory presets are included;
 your own presets can be saved, exported and imported as JSON.

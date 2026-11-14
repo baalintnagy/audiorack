@@ -1,4 +1,5 @@
 import type { EffectParamsMap, EffectType } from '../../shared/effects';
+import { SpectrogramKernel, SpectrumKernel, StereoKernel } from './analyzers';
 import { BassBoostKernel } from './bassboost';
 import { CompressorKernel } from './compressor';
 import { DeesserKernel } from './deesser';
@@ -22,6 +23,9 @@ export const KERNELS: KernelFactories = {
     deesser: DeesserKernel,
     volume: VolumeKernel,
     bassboost: BassBoostKernel,
+    spectrum: SpectrumKernel,
+    spectrogram: SpectrogramKernel,
+    stereo: StereoKernel,
 };
 
 export function createKernel<T extends EffectType>(type: T, sampleRate: number): Kernel<unknown> {

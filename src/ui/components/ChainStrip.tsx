@@ -13,7 +13,10 @@ function SlotActivity({ effect }: { effect: Effect }) {
     const ref = useCanvas(
         ({ ctx, width, height, telemetry, live }) => {
             const readings = telemetry?.meters.effects[effect.id] ?? [];
-            const reduction = effect.type === 'filter' ? 0 : Math.max(0, ...readings);
+            // Only dynamics report gain reduction; the filter and analyzers report other data.
+            const reportsReduction =
+                EFFECT_INFO[effect.type].category === 'effect' && effect.type !== 'filter';
+            const reduction = reportsReduction ? Math.max(0, ...readings) : 0;
             if (live) {
                 shown.current = reduction > shown.current ? reduction : shown.current * 0.8;
             }
@@ -69,26 +72,35 @@ function AddMenu({ onAdd, disabled }: { onAdd: (type: EffectType) => void; disab
             </button>
             {open && (
                 <div className="menu add-menu-list" role="menu" style={position}>
-                    {EFFECT_TYPES.map((type) => (
-                        <button
-                            type="button"
-                            role="menuitem"
-                            key={type}
-                            className="menu-item"
-                            onClick={() => {
-                                onAdd(type);
-                                setOpen(false);
-                            }}
-                        >
-                            <span
-                                className="menu-swatch"
-                                style={{ background: EFFECT_INFO[type].color }}
-                            />
-                            <span className="menu-item-text">
-                                <strong>{EFFECT_INFO[type].label}</strong>
-                                <small>{EFFECT_INFO[type].description}</small>
-                            </span>
-                        </button>
+                    {(['effect', 'analyzer'] as const).map((category) => (
+                        <div key={category} role="group">
+                            <div className="menu-heading">
+                                {category === 'effect' ? 'Effects' : 'Analyzers'}
+                            </div>
+                            {EFFECT_TYPES.filter(
+                                (type) => EFFECT_INFO[type].category === category,
+                            ).map((type) => (
+                                <button
+                                    type="button"
+                                    role="menuitem"
+                                    key={type}
+                                    className="menu-item"
+                                    onClick={() => {
+                                        onAdd(type);
+                                        setOpen(false);
+                                    }}
+                                >
+                                    <span
+                                        className="menu-swatch"
+                                        style={{ background: EFFECT_INFO[type].color }}
+                                    />
+                                    <span className="menu-item-text">
+                                        <strong>{EFFECT_INFO[type].label}</strong>
+                                        <small>{EFFECT_INFO[type].description}</small>
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
                     ))}
                 </div>
             )}
@@ -142,6 +154,7 @@ export function ChainStrip({
                         role="listitem"
                         className={[
                             'slot',
+                            info.category === 'analyzer' ? 'analyzer' : '',
                             effect.id === selectedId ? 'selected' : '',
                             effect.bypass ? 'bypassed' : '',
                             dropIndex === index ? 'drop-before' : '',

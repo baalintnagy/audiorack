@@ -51,6 +51,43 @@ function Logo() {
     );
 }
 
+/** A single browser tab. */
+function ThisTabIcon() {
+    return (
+        <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+            <path
+                d="M1.5 13.5V5.5h5l1-2h3.5v2h3.5v8z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+/** A stack of browser tabs. */
+function AllTabsIcon() {
+    return (
+        <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+            <path
+                d="M1.5 14.5v-6h4l.8-1.5h3v1.5h3v6z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M3.5 5V3.5h3l.8-1.5h3v1.5h4.2V11H13.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
 export function App() {
     const [backend, setBackend] = useState<Backend>();
     const store = useMemo(() => new TelemetryStore(), []);
@@ -179,15 +216,22 @@ export function App() {
                     )}
                     <div className="header-spacer" />
                     {canScopeToTab && (
-                        <div
-                            className="scope-switch"
-                            title="This tab: a rack of its own, started from a copy of the All tabs rack. All tabs: follow the rack shared by every tab set to it."
-                        >
+                        <div className="scope-switch">
                             <Segmented
                                 value={scope}
                                 options={[
-                                    { value: 'tab', label: 'This tab' },
-                                    { value: 'shared', label: 'All tabs' },
+                                    {
+                                        value: 'tab',
+                                        label: 'This tab',
+                                        icon: <ThisTabIcon />,
+                                        title: 'This tab: a rack of its own, started from a copy of the All tabs rack',
+                                    },
+                                    {
+                                        value: 'shared',
+                                        label: 'All tabs',
+                                        icon: <AllTabsIcon />,
+                                        title: 'All tabs: follow the rack shared by every tab set to it',
+                                    },
                                 ]}
                                 onChange={(next) => void actions.setScope(next)}
                             />

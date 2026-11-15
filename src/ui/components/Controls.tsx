@@ -38,7 +38,8 @@ export function Segmented<T extends string | number>({
     vertical = false,
 }: {
     value: T;
-    options: { value: T; label: string }[];
+    /** With an `icon`, the label becomes the accessible name and `title` the hover hint. */
+    options: { value: T; label: string; icon?: ReactNode; title?: string }[];
     onChange: (value: T) => void;
     label?: string;
     color?: string;
@@ -59,10 +60,12 @@ export function Segmented<T extends string | number>({
                         key={option.value}
                         role="radio"
                         aria-checked={option.value === value}
-                        className={option.value === value ? 'on' : ''}
+                        className={`${option.value === value ? 'on' : ''} ${option.icon ? 'icon' : ''}`}
                         onClick={() => onChange(option.value)}
+                        title={option.title}
+                        aria-label={option.icon ? option.label : undefined}
                     >
-                        {option.label}
+                        {option.icon ?? option.label}
                     </button>
                 ))}
             </div>

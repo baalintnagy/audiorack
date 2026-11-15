@@ -63,10 +63,21 @@ body {
     overflow: hidden;
 }
 
+/*
+ * Chrome caps popups at 800×600. At fractional display scaling or a non-default zoom, a page of
+ * exactly that size can round past the cap, and Chrome then adds window scrollbars. Stay a few
+ * pixels under the cap and never let the popup document scroll.
+ */
+html.popup,
 html.popup body {
-    width: 800px;
-    min-width: 800px;
-    height: 600px;
+    overflow: hidden;
+    scrollbar-width: none;
+}
+
+html.popup body {
+    width: 792px;
+    min-width: 0;
+    height: 592px;
 }
 
 #root,
@@ -337,6 +348,27 @@ button:disabled {
 
 .segmented-options button:last-child {
     border-right: 0;
+}
+
+.segmented-options button.icon {
+    display: grid;
+    place-items: center;
+    padding: 0 9px;
+}
+
+.scope-switch .segmented-options button {
+    height: 28px;
+    white-space: nowrap;
+}
+
+.header > * {
+    flex-shrink: 0;
+}
+
+.header > .capture,
+.header > .header-spacer {
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .segmented.vertical .segmented-options {

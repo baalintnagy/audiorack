@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { EFFECT_TYPES, createEffect, defaultRack } from '../src/shared/effects';
-import { MAX_CHAIN_LENGTH, normalizeRack } from '../src/shared/normalize';
+import { RackRouting } from '../src/offscreen/routing';
+import { allEffects, countEffects, countGroups } from '../src/shared/chain';
+import {
+    EFFECT_TYPES,
+    MIN_BRANCHES,
+    SPECS,
+    createBranch,
+    createEffect,
+    createParallelGroup,
+    defaultRack,
+} from '../src/shared/effects';
+import { MAX_CHAIN_LENGTH, MAX_PARALLEL_GROUPS, normalizeRack } from '../src/shared/normalize';
 import { FACTORY_PRESETS } from '../src/shared/presets';
 import { SPECTRUM_BINS, toLogSpectrum } from '../src/shared/spectrum';
 
@@ -26,7 +36,7 @@ describe('rack normalization', () => {
         expect(rack.inputDb).toBe(24);
         expect(rack.chain.map((effect) => effect.type)).toEqual(['compressor', 'eq', 'multiband']);
         expect(new Set(rack.chain.map((effect) => effect.id)).size).toBe(3);
-        const [compressor, eq, multiband] = rack.chain;
+        const [compressor, eq, multiband] = allEffects(rack.chain);
         expect(compressor.type === 'compressor' && compressor.params.ratio).toBe(1);
         expect(eq.type === 'eq' && eq.params.bands[0].type).toBe('bell');
         expect(eq.type === 'eq' && eq.params.bands[0].frequency).toBe(20);
@@ -42,9 +52,7 @@ describe('rack normalization', () => {
     it('produces valid factory presets', () => {
         FACTORY_PRESETS.forEach((preset) => {
             const rack = preset.create();
-            expect(normalizeRack(rack).chain.map((effect) => effect.type)).toEqual(
-                rack.chain.map((effect) => effect.type),
-            );
+            expect(normalizeRack(rack)).toEqual(rack);
         });
     });
 });
@@ -57,5 +65,71 @@ describe('spectrum reduction', () => {
         expect(spectrum).toHaveLength(SPECTRUM_BINS);
         expect(Math.max(...spectrum)).toBeGreaterThan(-40);
         expect(Math.min(...spectrum)).toBe(-90);
+    });
+});
+
+describe('parallel rack state', () => {
+    it('normalizes groups, pads branches and keeps version 1 racks loading', () => {
+        const rack = normalizeRack({
+            version: 1,
+            chain: [
+                { type: 'eq', id: 'x' },
+                {
+                    type: 'parallel',
+                    id: 'x',
+                    branches: [
+                        {
+                            id: 'b',
+                            gainDb: 99,
+                            effects: [
+                                { type: 'compressor', id: 'x' },
+                                { type: 'parallel', branches: [] },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        });
+        expect(rack.version).toBe(2);
+        const [, group] = rack.chain;
+        expect(group.type).toBe('parallel');
+        if (group.type !== 'parallel') {
+            return;
+        }
+        expect(group.branches).toHaveLength(MIN_BRANCHES);
+        expect(group.branches[0].gainDb).toBe(SPECS.branchGainDb.max);
+        // Groups cannot nest: only the compressor survives inside the branch.
+        expect(group.branches[0].effects.map((effect) => effect.type)).toEqual(['compressor']);
+        const ids = [rack.chain[0].id, group.id, group.branches[0].effects[0].id];
+        expect(new Set(ids).size).toBe(3);
+    });
+
+    it('counts effects inside branches towards the rack limit', () => {
+        const effects = Array.from({ length: 12 }, () => createEffect('volume'));
+        const rack = normalizeRack({
+            chain: [
+                ...effects.slice(0, 6),
+                createParallelGroup([createBranch(effects), createBranch(effects)]),
+                ...Array.from({ length: MAX_PARALLEL_GROUPS + 1 }, () => createParallelGroup()),
+            ],
+        });
+        expect(countEffects(rack.chain)).toBe(MAX_CHAIN_LENGTH);
+        expect(countGroups(rack.chain)).toBe(MAX_PARALLEL_GROUPS);
+        expect(normalizeRack(JSON.parse(JSON.stringify(rack)))).toEqual(rack);
+    });
+});
+
+describe('rack routing', () => {
+    it('lets tabs follow the shared rack or keep their own', () => {
+        const routing = new RackRouting();
+        const shared = { ...defaultRack(), inputDb: 3 };
+        const own = { ...defaultRack(), inputDb: -3 };
+        expect(routing.assign(1, own, 'tab', [1, 2])).toEqual([1]);
+        expect(routing.assign(2, shared, 'shared', [1, 2])).toEqual([2]);
+        expect(routing.rackFor(1)).toBe(own);
+        expect(routing.rackFor(2)).toBe(shared);
+        // Pushing the shared rack from tab 1 returns it to the shared rack.
+        expect(routing.assign(1, shared, 'shared', [1, 2])).toEqual([1, 2]);
+        expect(routing.rackFor(1)).toBe(shared);
     });
 });

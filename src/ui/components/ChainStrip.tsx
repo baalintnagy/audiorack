@@ -1,11 +1,99 @@
-import { useEffect, useRef, useState, type DragEvent } from 'react';
-import { EFFECT_INFO, EFFECT_TYPES, type Effect, type EffectType } from '../../shared/effects';
+import { useRef, useState, type DragEvent } from 'react';
+import type { BranchRef, ChainPosition } from '../../shared/chain';
+import {
+    EFFECT_INFO,
+    PARALLEL_INFO,
+    isParallelGroup,
+    type ChainItem,
+    type Effect,
+    type ParallelGroup,
+} from '../../shared/effects';
 import { MAX_CHAIN_LENGTH } from '../../shared/normalize';
+import { BAND_COLORS } from '../editors/types';
+import { branchName } from '../format';
 import { css } from '../graph';
 import { useCanvas } from '../useCanvas';
+import { AddMenu, type AddKind } from './AddMenu';
 import { PowerIcon } from './Controls';
 
-const DRAG_TYPE = 'application/x-audiorack-effect';
+const DRAG_TYPE = 'application/x-audiorack-item';
+
+export interface ChainHandlers {
+    onSelect: (id: string) => void;
+    onToggle: (id: string) => void;
+    onRemove: (id: string) => void;
+    onMove: (id: string, position: ChainPosition) => void;
+    /** Adds an effect or group; at the selection when `position` is omitted. */
+    onAdd: (kind: AddKind, position?: ChainPosition) => void;
+}
+
+interface DragState {
+    id: string;
+    group: boolean;
+}
+
+/** Drag and drop of chain items between the main chain and parallel branches. */
+function useChainDrag(onMove: ChainHandlers['onMove']) {
+    const dragged = useRef<DragState | undefined>(undefined);
+    const [drop, setDrop] = useState<ChainPosition>();
+
+    const samePosition = (position: ChainPosition) =>
+        drop !== undefined &&
+        drop.index === position.index &&
+        drop.branch?.groupId === position.branch?.groupId &&
+        drop.branch?.branchId === position.branch?.branchId;
+
+    return {
+        start(event: DragEvent<HTMLElement>, id: string, group: boolean) {
+            event.stopPropagation();
+            dragged.current = { id, group };
+            event.dataTransfer.setData(DRAG_TYPE, id);
+            event.dataTransfer.effectAllowed = 'move';
+        },
+        end() {
+            dragged.current = undefined;
+            setDrop(undefined);
+        },
+        /** Offers `position` as a drop target; groups only land in the main chain. */
+        over(event: DragEvent<HTMLElement>, position: ChainPosition) {
+            const state = dragged.current;
+            if (!state || (state.group && position.branch)) {
+                return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            setDrop(position);
+        },
+        drop(event: DragEvent<HTMLElement>) {
+            event.preventDefault();
+            event.stopPropagation();
+            const state = dragged.current;
+            if (state && drop) {
+                onMove(state.id, drop);
+            }
+            dragged.current = undefined;
+            setDrop(undefined);
+        },
+        /** `drop-before`/`drop-after` classes for the item at `position`. */
+        markers(position: ChainPosition, last: boolean): string {
+            const before = samePosition(position) ? 'drop-before' : '';
+            const after =
+                last && samePosition({ ...position, index: position.index + 1 })
+                    ? 'drop-after'
+                    : '';
+            return `${before} ${after}`;
+        },
+        isTarget: samePosition,
+    };
+}
+
+type ChainDrag = ReturnType<typeof useChainDrag>;
+
+/** Returns the insertion index before or after the hovered element. */
+function sideOf(event: DragEvent<HTMLElement>, index: number): number {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return event.clientX - rect.left > rect.width / 2 ? index + 1 : index;
+}
 
 /** Small activity indicator: gain reduction for dynamics, otherwise nothing. */
 function SlotActivity({ effect }: { effect: Effect }) {
@@ -31,79 +119,240 @@ function SlotActivity({ effect }: { effect: Effect }) {
     return <canvas ref={ref} className="slot-activity" />;
 }
 
-function AddMenu({ onAdd, disabled }: { onAdd: (type: EffectType) => void; disabled: boolean }) {
-    // The chain scrolls horizontally, so the menu is positioned against the viewport.
-    const [position, setPosition] = useState<{ left: number; top: number }>();
-    const open = position !== undefined;
-    const setOpen = (value: boolean) => {
-        const rect = ref.current?.getBoundingClientRect();
-        setPosition(
-            value && rect
-                ? { left: Math.min(rect.left, window.innerWidth - 290), top: rect.bottom + 6 }
-                : undefined,
-        );
-    };
-    const ref = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-        const close = (event: MouseEvent) => {
-            if (!ref.current?.contains(event.target as Node)) {
-                setOpen(false);
-            }
-        };
-        window.addEventListener('mousedown', close);
-        return () => window.removeEventListener('mousedown', close);
-    }, [open]);
+function PowerButton({
+    item,
+    label,
+    onToggle,
+}: {
+    item: ChainItem;
+    label: string;
+    onToggle: (id: string) => void;
+}) {
     return (
-        <div className="add-menu" ref={ref}>
-            <button
-                type="button"
-                className="slot add-slot"
-                disabled={disabled}
-                aria-haspopup="menu"
-                aria-expanded={open}
-                onClick={() => setOpen(!open)}
-                title={disabled ? `The rack holds up to ${MAX_CHAIN_LENGTH} effects` : 'Add effect'}
-            >
-                <span className="add-plus">+</span>
-                <span className="slot-name">Add</span>
-            </button>
-            {open && (
-                <div className="menu add-menu-list" role="menu" style={position}>
-                    {(['effect', 'analyzer'] as const).map((category) => (
-                        <div key={category} role="group">
-                            <div className="menu-heading">
-                                {category === 'effect' ? 'Effects' : 'Analyzers'}
-                            </div>
-                            {EFFECT_TYPES.filter(
-                                (type) => EFFECT_INFO[type].category === category,
-                            ).map((type) => (
-                                <button
-                                    type="button"
-                                    role="menuitem"
-                                    key={type}
-                                    className="menu-item"
-                                    onClick={() => {
-                                        onAdd(type);
-                                        setOpen(false);
-                                    }}
-                                >
-                                    <span
-                                        className="menu-swatch"
-                                        style={{ background: EFFECT_INFO[type].color }}
-                                    />
-                                    <span className="menu-item-text">
-                                        <strong>{EFFECT_INFO[type].label}</strong>
-                                        <small>{EFFECT_INFO[type].description}</small>
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    ))}
-                </div>
+        <button
+            type="button"
+            className={`slot-power ${item.bypass ? '' : 'on'}`}
+            aria-label={item.bypass ? `Enable ${label}` : `Bypass ${label}`}
+            aria-pressed={!item.bypass}
+            onClick={(event) => {
+                event.stopPropagation();
+                onToggle(item.id);
+            }}
+        >
+            <PowerIcon />
+        </button>
+    );
+}
+
+function RemoveButton({
+    item,
+    label,
+    onRemove,
+}: {
+    item: ChainItem;
+    label: string;
+    onRemove: (id: string) => void;
+}) {
+    return (
+        <button
+            type="button"
+            className="slot-remove"
+            aria-label={`Remove ${label}`}
+            onClick={(event) => {
+                event.stopPropagation();
+                onRemove(item.id);
+            }}
+        >
+            ×
+        </button>
+    );
+}
+
+function EffectSlot({
+    effect,
+    position,
+    last,
+    selected,
+    handlers,
+    drag,
+}: {
+    effect: Effect;
+    position: ChainPosition;
+    last: boolean;
+    selected: boolean;
+    handlers: ChainHandlers;
+    drag: ChainDrag;
+}) {
+    const info = EFFECT_INFO[effect.type];
+    const compact = position.branch !== undefined;
+    return (
+        <div
+            role="listitem"
+            className={[
+                'slot',
+                compact ? 'compact' : '',
+                info.category === 'analyzer' ? 'analyzer' : '',
+                selected ? 'selected' : '',
+                effect.bypass ? 'bypassed' : '',
+                drag.markers(position, last),
+            ].join(' ')}
+            style={{ ['--slot-color' as string]: info.color }}
+            draggable
+            onDragStart={(event) => drag.start(event, effect.id, false)}
+            onDragEnd={drag.end}
+            onDragOver={(event) =>
+                drag.over(event, { ...position, index: sideOf(event, position.index) })
+            }
+            onDrop={drag.drop}
+            onClick={(event) => {
+                event.stopPropagation();
+                handlers.onSelect(effect.id);
+            }}
+            title={`${info.label} — drag to reorder or into a parallel branch`}
+        >
+            {compact ? (
+                <>
+                    <PowerButton item={effect} label={info.label} onToggle={handlers.onToggle} />
+                    <span className="slot-name">{info.short}</span>
+                    <RemoveButton item={effect} label={info.label} onRemove={handlers.onRemove} />
+                </>
+            ) : (
+                <>
+                    <div className="slot-top">
+                        <PowerButton
+                            item={effect}
+                            label={info.label}
+                            onToggle={handlers.onToggle}
+                        />
+                        <span className="slot-index">{position.index + 1}</span>
+                        <RemoveButton
+                            item={effect}
+                            label={info.label}
+                            onRemove={handlers.onRemove}
+                        />
+                    </div>
+                    <span className="slot-name">{info.short}</span>
+                    <span className="slot-label">{info.label}</span>
+                </>
             )}
+            <SlotActivity effect={effect} />
+        </div>
+    );
+}
+
+function BranchLane({
+    group,
+    index,
+    selectedId,
+    full,
+    handlers,
+    drag,
+}: {
+    group: ParallelGroup;
+    index: number;
+    selectedId: string | undefined;
+    full: boolean;
+    handlers: ChainHandlers;
+    drag: ChainDrag;
+}) {
+    const branch = group.branches[index];
+    const ref: BranchRef = { groupId: group.id, branchId: branch.id };
+    const end: ChainPosition = { branch: ref, index: branch.effects.length };
+    return (
+        <div
+            className={[
+                'lane',
+                branch.mute ? 'muted' : '',
+                branch.effects.length === 0 && drag.isTarget(end) ? 'drop-into' : '',
+            ].join(' ')}
+            style={{ ['--lane-color' as string]: BAND_COLORS[index] }}
+            role="list"
+            aria-label={`Branch ${branchName(index)}`}
+            onDragOver={(event) => drag.over(event, end)}
+            onDrop={drag.drop}
+        >
+            <span className="lane-label" title={branch.mute ? 'Muted' : undefined}>
+                {branchName(index)}
+            </span>
+            {branch.effects.map((effect, effectIndex) => (
+                <EffectSlot
+                    key={effect.id}
+                    effect={effect}
+                    position={{ branch: ref, index: effectIndex }}
+                    last={effectIndex === branch.effects.length - 1}
+                    selected={effect.id === selectedId}
+                    handlers={handlers}
+                    drag={drag}
+                />
+            ))}
+            {branch.effects.length === 0 && <span className="lane-dry">Dry</span>}
+            <AddMenu
+                variant="lane"
+                disabled={full}
+                disabledReason={`The rack holds up to ${MAX_CHAIN_LENGTH} effects`}
+                onAdd={(kind) => handlers.onAdd(kind, end)}
+            />
+        </div>
+    );
+}
+
+function GroupBlock({
+    group,
+    index,
+    last,
+    selectedId,
+    full,
+    handlers,
+    drag,
+}: {
+    group: ParallelGroup;
+    index: number;
+    last: boolean;
+    selectedId: string | undefined;
+    full: boolean;
+    handlers: ChainHandlers;
+    drag: ChainDrag;
+}) {
+    return (
+        <div
+            role="listitem"
+            className={[
+                'group',
+                group.id === selectedId ? 'selected' : '',
+                group.bypass ? 'bypassed' : '',
+                drag.markers({ index }, last),
+            ].join(' ')}
+            style={{ ['--slot-color' as string]: PARALLEL_INFO.color }}
+            draggable
+            onDragStart={(event) => drag.start(event, group.id, true)}
+            onDragEnd={drag.end}
+            onDragOver={(event) => drag.over(event, { index: sideOf(event, index) })}
+            onDrop={drag.drop}
+            onClick={() => handlers.onSelect(group.id)}
+            title="Parallel group — drag effects into its branches"
+        >
+            <div className="group-head">
+                <PowerButton
+                    item={group}
+                    label={PARALLEL_INFO.label}
+                    onToggle={handlers.onToggle}
+                />
+                <span className="group-name">{PARALLEL_INFO.short}</span>
+            </div>
+            <div className="group-lanes">
+                {group.branches.map((branch, branchIndex) => (
+                    <BranchLane
+                        key={branch.id}
+                        group={group}
+                        index={branchIndex}
+                        selectedId={selectedId}
+                        full={full}
+                        handlers={handlers}
+                        drag={drag}
+                    />
+                ))}
+            </div>
+            <RemoveButton item={group} label={PARALLEL_INFO.label} onRemove={handlers.onRemove} />
         </div>
     );
 }
@@ -111,28 +360,16 @@ function AddMenu({ onAdd, disabled }: { onAdd: (type: EffectType) => void; disab
 export function ChainStrip({
     chain,
     selectedId,
-    onSelect,
-    onToggle,
-    onRemove,
-    onMove,
-    onAdd,
+    full,
+    handlers,
 }: {
-    chain: Effect[];
+    chain: ChainItem[];
     selectedId: string | undefined;
-    onSelect: (id: string) => void;
-    onToggle: (id: string) => void;
-    onRemove: (id: string) => void;
-    onMove: (id: string, index: number) => void;
-    onAdd: (type: EffectType) => void;
+    /** Whether the rack already holds the maximum number of effects. */
+    full: boolean;
+    handlers: ChainHandlers;
 }) {
-    const [dropIndex, setDropIndex] = useState<number | undefined>(undefined);
-    const dragged = useRef<string | undefined>(undefined);
-
-    const dropTarget = (event: DragEvent<HTMLElement>, index: number) => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        return event.clientX - rect.left > rect.width / 2 ? index + 1 : index;
-    };
-
+    const drag = useChainDrag(handlers.onMove);
     return (
         <div
             className="chain"
@@ -146,87 +383,36 @@ export function ChainStrip({
             }}
         >
             <div className="chain-io">IN</div>
-            {chain.map((effect, index) => {
-                const info = EFFECT_INFO[effect.type];
-                return (
-                    <div
-                        key={effect.id}
-                        role="listitem"
-                        className={[
-                            'slot',
-                            info.category === 'analyzer' ? 'analyzer' : '',
-                            effect.id === selectedId ? 'selected' : '',
-                            effect.bypass ? 'bypassed' : '',
-                            dropIndex === index ? 'drop-before' : '',
-                            dropIndex === index + 1 && index === chain.length - 1
-                                ? 'drop-after'
-                                : '',
-                        ].join(' ')}
-                        style={{ ['--slot-color' as string]: info.color }}
-                        draggable
-                        onDragStart={(event) => {
-                            dragged.current = effect.id;
-                            event.dataTransfer.setData(DRAG_TYPE, effect.id);
-                            event.dataTransfer.effectAllowed = 'move';
-                        }}
-                        onDragEnd={() => {
-                            dragged.current = undefined;
-                            setDropIndex(undefined);
-                        }}
-                        onDragOver={(event) => {
-                            if (dragged.current) {
-                                event.preventDefault();
-                                setDropIndex(dropTarget(event, index));
-                            }
-                        }}
-                        onDrop={(event) => {
-                            event.preventDefault();
-                            const id = dragged.current;
-                            if (id) {
-                                const target = dropTarget(event, index);
-                                const from = chain.findIndex((item) => item.id === id);
-                                onMove(id, target > from ? target - 1 : target);
-                            }
-                            setDropIndex(undefined);
-                        }}
-                        onClick={() => onSelect(effect.id)}
-                        title={`${info.label} — drag to reorder`}
-                    >
-                        <div className="slot-top">
-                            <button
-                                type="button"
-                                className={`slot-power ${effect.bypass ? '' : 'on'}`}
-                                aria-label={
-                                    effect.bypass ? `Enable ${info.label}` : `Bypass ${info.label}`
-                                }
-                                aria-pressed={!effect.bypass}
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    onToggle(effect.id);
-                                }}
-                            >
-                                <PowerIcon />
-                            </button>
-                            <span className="slot-index">{index + 1}</span>
-                            <button
-                                type="button"
-                                className="slot-remove"
-                                aria-label={`Remove ${info.label}`}
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    onRemove(effect.id);
-                                }}
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <span className="slot-name">{info.short}</span>
-                        <span className="slot-label">{info.label}</span>
-                        <SlotActivity effect={effect} />
-                    </div>
-                );
-            })}
-            <AddMenu onAdd={onAdd} disabled={chain.length >= MAX_CHAIN_LENGTH} />
+            {chain.map((item, index) =>
+                isParallelGroup(item) ? (
+                    <GroupBlock
+                        key={item.id}
+                        group={item}
+                        index={index}
+                        last={index === chain.length - 1}
+                        selectedId={selectedId}
+                        full={full}
+                        handlers={handlers}
+                        drag={drag}
+                    />
+                ) : (
+                    <EffectSlot
+                        key={item.id}
+                        effect={item}
+                        position={{ index }}
+                        last={index === chain.length - 1}
+                        selected={item.id === selectedId}
+                        handlers={handlers}
+                        drag={drag}
+                    />
+                ),
+            )}
+            <AddMenu
+                variant="slot"
+                disabled={full}
+                disabledReason={`The rack holds up to ${MAX_CHAIN_LENGTH} effects`}
+                onAdd={(kind) => handlers.onAdd(kind)}
+            />
             <div className="chain-io">OUT</div>
         </div>
     );

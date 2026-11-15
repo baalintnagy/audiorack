@@ -70,3 +70,8 @@ export function formatDb(value: number, decimals = 1): string {
 export function gainToDbValue(gain: number): number {
     return gain > 1e-6 ? 20 * Math.log10(gain) : -120;
 }
+
+/** Branch names shown in the chain and the parallel editor: A, B, C, … */
+export function branchName(index: number): string {
+    return String.fromCharCode(65 + index);
+}

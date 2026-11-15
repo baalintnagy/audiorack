@@ -177,12 +177,41 @@ export type EffectOf<T extends EffectType> = {
 
 export type Effect = { [T in EffectType]: EffectOf<T> }[EffectType];
 
+/** One signal path of a parallel group: a serial chain of effects with its own level. */
+export interface ParallelBranch {
+    id: string;
+    gainDb: number;
+    /** -100 (left) to 100 (right), constant power. */
+    pan: number;
+    mute: boolean;
+    /** While any branch is soloed, only soloed branches are heard. */
+    solo: boolean;
+    /** Inverts the polarity of the branch. */
+    invert: boolean;
+    /** An empty branch passes the dry signal. */
+    effects: Effect[];
+}
+
+/** Splits the signal into branches that are processed side by side and summed. */
+export interface ParallelGroup {
+    id: string;
+    type: 'parallel';
+    bypass: boolean;
+    branches: ParallelBranch[];
+}
+
+export type ChainItem = Effect | ParallelGroup;
+
 export interface RackState {
-    version: 1;
+    version: 2;
     bypass: boolean;
     inputDb: number;
     outputDb: number;
-    chain: Effect[];
+    chain: ChainItem[];
+}
+
+export function isParallelGroup(item: ChainItem): item is ParallelGroup {
+    return item.type === 'parallel';
 }
 
 /** Numeric parameter metadata shared by knobs, validation and the DSP. */
@@ -303,6 +332,7 @@ export const SPECS = {
     },
     harmonics: { label: 'Harmonics', min: 0, max: 100, default: 25, unit: '%' },
     masterDb: { label: 'Gain', min: -24, max: 24, default: 0, unit: 'dB', decimals: 1 },
+    branchGainDb: { label: 'Level', min: -48, max: 12, default: 0, unit: 'dB', decimals: 1 },
     tilt: { label: 'Tilt', min: 0, max: 6, default: 4.5, unit: 'dB/oct', decimals: 1 },
     smoothing: { label: 'Smoothing', min: 0, max: 100, default: 60, unit: '%' },
     analyzerRange: { label: 'Range', min: 48, max: 144, default: 96, unit: 'dB' },
@@ -405,6 +435,21 @@ export const EFFECT_INFO: Record<EffectType, EffectInfo> = {
 export const EFFECT_TYPES = Object.keys(EFFECT_INFO) as EffectType[];
 
 export const MAX_EQ_BANDS = 12;
+
+export const MIN_BRANCHES = 2;
+export const MAX_BRANCHES = 4;
+
+/** Display metadata for a parallel group, shaped like the effects' own. */
+export const PARALLEL_INFO = {
+    label: 'Parallel',
+    short: 'PAR',
+    description: 'Runs branches side by side on the same input and sums them',
+    color: '#c7d0dc',
+};
+
+export function itemInfo(item: ChainItem): Omit<EffectInfo, 'category'> {
+    return isParallelGroup(item) ? PARALLEL_INFO : EFFECT_INFO[item.type];
+}
 
 export function createId(): string {
     return Math.random().toString(36).slice(2, 10);
@@ -532,9 +577,22 @@ export function createEffect<T extends EffectType>(type: T): EffectOf<T> {
     return { id: createId(), type, bypass: false, params: defaultParams(type) };
 }
 
+export function createBranch(effects: Effect[] = [], gainDb = 0): ParallelBranch {
+    return { id: createId(), gainDb, pan: 0, mute: false, solo: false, invert: false, effects };
+}
+
+/** Branch level of a new two-branch group, so that it starts at unity gain. */
+export const EQUAL_MIX_DB = -6;
+
+export function createParallelGroup(
+    branches: ParallelBranch[] = [createBranch([], EQUAL_MIX_DB), createBranch([], EQUAL_MIX_DB)],
+): ParallelGroup {
+    return { id: createId(), type: 'parallel', bypass: false, branches };
+}
+
 export function defaultRack(): RackState {
     return {
-        version: 1,
+        version: 2,
         bypass: false,
         inputDb: 0,
         outputDb: 0,

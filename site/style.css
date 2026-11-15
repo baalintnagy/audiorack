@@ -191,12 +191,14 @@ h1 {
 }
 
 .hero-shot,
+.feature-shot,
 .showcase figure,
 .gallery figure {
     margin: 0;
 }
 
 .hero-shot img,
+.feature-shot img,
 .showcase img,
 .gallery img {
     border: 1px solid var(--border);
@@ -266,6 +268,17 @@ h2 {
     margin: 0;
     color: var(--text-dim);
     font-size: 15px;
+}
+
+.feature {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: center;
+    gap: 40px;
+}
+
+.cards.stacked {
+    grid-template-columns: 1fr;
 }
 
 .showcase {
@@ -379,6 +392,10 @@ figcaption strong {
     .hero {
         grid-template-columns: 1fr;
         padding-top: 24px;
+    }
+
+    .feature {
+        grid-template-columns: 1fr;
     }
 
     .showcase,

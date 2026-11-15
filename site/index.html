@@ -6,7 +6,7 @@
         <title>AudioRack — an effect rack for your browser tabs</title>
         <meta
             name="description"
-            content="AudioRack is a Chrome extension that routes any tab's audio through a configurable chain of EQ, compressors, limiter, filter, de-esser, bass booster and analyzers."
+            content="AudioRack is a Chrome extension that routes any tab's audio through a configurable chain of EQ, compressors, limiter, filter, de-esser, bass booster and analyzers, in series or in parallel, with a separate rack per tab if you like."
         />
         <meta name="theme-color" content="#0e1014" />
         <meta property="og:type" content="website" />
@@ -32,6 +32,7 @@
             </a>
             <nav>
                 <a href="#effects">Effects</a>
+                <a href="#routing">Routing</a>
                 <a href="#analyzers">Analyzers</a>
                 <a href="#install">Install</a>
                 <a href="privacy.html">Privacy</a>
@@ -71,8 +72,9 @@
             <section id="effects" class="section">
                 <h2>Eight effects, any order</h2>
                 <p class="section-lead">
-                    Add effects, drag them into the order you want and bypass any of them with a
-                    click. Bypassing crossfades, so there are no clicks or pops.
+                    Add effects, drag them into the order you want, or side by side in parallel
+                    branches, and bypass any of them with a click. Bypassing crossfades, so there
+                    are no clicks or pops.
                 </p>
                 <div class="cards">
                     <article class="card" style="--tint: #4fb3ff">
@@ -153,6 +155,50 @@
                         alt="Multiband compressor with four bands and crossover handles"
                     />
                     <figcaption>Multiband: drag crossovers, watch each band work.</figcaption>
+                </figure>
+            </section>
+
+            <section id="routing" class="section feature">
+                <div class="feature-text">
+                    <h2>Series, parallel, per tab</h2>
+                    <p class="section-lead">
+                        A rack is more than a straight line. Split the signal into branches, and
+                        decide whether a tab shares the rack or gets its own.
+                    </p>
+                    <div class="cards stacked">
+                        <article class="card" style="--tint: #c7d0dc">
+                            <h3>Parallel groups</h3>
+                            <p>
+                                Up to four branches receive the same input and are summed on a small
+                                mixer: a fader and meter per branch, with pan, mute, solo and
+                                polarity. Drag effects into a branch; an empty branch carries the
+                                dry signal, so a compressor next to it gives parallel compression.
+                                Branches are delay-compensated, so a limiter's lookahead never
+                                smears the mix.
+                            </p>
+                        </article>
+                        <article class="card" style="--tint: #4fb3ff">
+                            <h3>A rack per tab</h3>
+                            <p>
+                                Every tab gets its own chain, started from your shared rack: a voice
+                                rack for a podcast next to a bass-heavy one for music. Switch a tab
+                                to <em>All tabs</em> when it should follow the shared rack instead.
+                                A tab's own rack lasts until the tab is closed.
+                            </p>
+                        </article>
+                    </div>
+                </div>
+                <figure class="feature-shot">
+                    <img
+                        src="images/parallel.jpg"
+                        width="800"
+                        height="600"
+                        loading="lazy"
+                        alt="A parallel group shown as a mixer: faders, meters, pan, mute and solo per branch and a sum meter"
+                    />
+                    <figcaption>
+                        Parallel Punch preset: the dry signal plus a crushed, brightened copy.
+                    </figcaption>
                 </figure>
             </section>
 

@@ -24,6 +24,14 @@ Follows the conventions of the sibling PermaFormula projects, applied to TypeScr
   bypassing never rewires the Web Audio graph.
 - Rack state from storage, presets or imported files is untrusted: pass it through
   `normalizeRack` before use.
+- The chain is a tree: `ChainItem` is an effect or a parallel group whose branches hold effects
+  only (no nesting). Edit it through the pure helpers in `src/shared/chain.ts`. The DSP mirrors it
+  with `Stage` implementations built by `StagePool`, which reuses stages by id; bypass and
+  parallel branches compensate latency so timing never changes when toggling.
+- Tabs get their own rack by default (`resolveTabRack`): a copy of the shared rack in
+  `chrome.storage.session` under `tabRack:<tabId>`, removed when the tab closes. A tab switched
+  to the shared rack (`chrome.storage.local`) is marked with `tabScope:<tabId>`. Rack
+  messages to the offscreen document carry the tab and its scope.
 - The offscreen document only has `chrome.runtime`; it receives rack updates by message and
   never reads storage directly.
 - Releases go through `.github/workflows/release.yml` (Chrome Web Store API v2). Do not publish

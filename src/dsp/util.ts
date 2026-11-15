@@ -17,6 +17,12 @@ export function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
 }
 
+/** Constant-power pan law (-100 to 100) normalized to unity gain at the center. */
+export function panGains(pan: number): { left: number; right: number } {
+    const angle = ((pan / 100 + 1) * Math.PI) / 4;
+    return { left: Math.cos(angle) * Math.SQRT2, right: Math.sin(angle) * Math.SQRT2 };
+}
+
 /** Per-sample one-pole smoother for gains and other continuous parameters. */
 export class Smoother {
     private current: number;

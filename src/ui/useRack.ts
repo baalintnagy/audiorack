@@ -1,13 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-    createEffect,
-    type Effect,
-    type EffectParamsMap,
-    type EffectType,
-    type RackState,
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import * as Chain from '../shared/chain';
+import type { ChainPosition } from '../shared/chain';
+import type {
+    ChainItem,
+    Effect,
+    EffectParamsMap,
+    EffectType,
+    ParallelGroup,
+    RackState,
 } from '../shared/effects';
-import { MAX_CHAIN_LENGTH, normalizeRack } from '../shared/normalize';
-import { loadRack, onRackChanged, saveRack } from '../shared/storage';
+import { normalizeRack } from '../shared/normalize';
+import {
+    loadSharedRack,
+    resolveTabRack,
+    setTabScope,
+    sharedRackStore,
+    tabRackStore,
+    type RackScope,
+    type RackStore,
+} from '../shared/storage';
 import type { Backend } from './backend';
 
 const PUSH_INTERVAL_MS = 30;
@@ -18,41 +29,79 @@ export interface RackActions {
     update: (updater: (rack: RackState) => RackState) => void;
     updateEffect: (id: string, updater: (effect: Effect) => Effect) => void;
     setParams: <T extends EffectType>(id: string, patch: Partial<EffectParamsMap[T]>) => void;
-    addEffect: (type: EffectType, index?: number) => Effect | undefined;
-    removeEffect: (id: string) => void;
-    moveEffect: (id: string, toIndex: number) => void;
+    updateGroup: (id: string, updater: (group: ParallelGroup) => ParallelGroup) => void;
+    /** Inserts at `position` (default: end of the main chain); false when over the limits. */
+    addItem: (item: ChainItem, position?: ChainPosition) => boolean;
+    removeItem: (id: string) => void;
+    moveItem: (id: string, position: ChainPosition) => void;
+    ungroup: (id: string) => void;
+    /** Switches between the shared rack and a rack of this tab's own. */
+    setScope: (scope: RackScope) => Promise<void>;
 }
 
-export function useRack(backend: Backend | undefined): [RackState | undefined, RackActions] {
+export interface RackModel {
+    rack: RackState | undefined;
+    scope: RackScope;
+    /** Whether this page knows its tab, so the rack can be scoped to it. */
+    canScopeToTab: boolean;
+    actions: RackActions;
+}
+
+export function useRack(backend: Backend | undefined): RackModel {
     const [rack, setRackState] = useState<RackState>();
+    const [scope, setScopeState] = useState<RackScope>('shared');
     const lastSaved = useRef('');
     const pushTimer = useRef<number | undefined>(undefined);
     const lastPush = useRef(0);
+    const tabId = backend?.tabId !== undefined && backend.tabId >= 0 ? backend.tabId : undefined;
+    const tabStore = useMemo(
+        () => (tabId === undefined ? undefined : tabRackStore(tabId)),
+        [tabId],
+    );
+    const store: RackStore = scope === 'tab' && tabStore ? tabStore : sharedRackStore;
+
+    const show = useCallback((next: RackState, nextScope: RackScope) => {
+        lastSaved.current = JSON.stringify(next);
+        setScopeState(nextScope);
+        setRackState(next);
+    }, []);
 
     useEffect(() => {
         if (!backend) {
             return;
         }
         let cancelled = false;
-        void loadRack().then((loaded) => {
+        void (async () => {
+            const loaded =
+                tabId === undefined
+                    ? { rack: await loadSharedRack(), scope: 'shared' as const }
+                    : await resolveTabRack(tabId);
             if (!cancelled) {
-                lastSaved.current = JSON.stringify(loaded);
-                setRackState(loaded);
-                backend.pushRack(loaded);
+                show(loaded.rack, loaded.scope);
             }
-        });
-        const stop = onRackChanged((changed) => {
-            const serialized = JSON.stringify(changed);
-            if (serialized !== lastSaved.current) {
-                lastSaved.current = serialized;
-                setRackState(changed);
-            }
-        });
+        })();
         return () => {
             cancelled = true;
-            stop();
         };
-    }, [backend]);
+    }, [backend, tabId, show]);
+
+    // Follow edits made in another window showing the same rack.
+    useEffect(
+        () =>
+            store.subscribe((changed) => {
+                if (!changed) {
+                    // Another window returned this tab to the shared rack.
+                    void loadSharedRack().then((shared) => show(shared, 'shared'));
+                    return;
+                }
+                const serialized = JSON.stringify(changed);
+                if (serialized !== lastSaved.current) {
+                    lastSaved.current = serialized;
+                    setRackState(changed);
+                }
+            }),
+        [store, show],
+    );
 
     // Push to the engine at a bounded rate, always delivering the final state.
     useEffect(() => {
@@ -62,7 +111,7 @@ export function useRack(backend: Backend | undefined): [RackState | undefined, R
         const push = () => {
             lastPush.current = performance.now();
             pushTimer.current = undefined;
-            backend.pushRack(rack);
+            backend.pushRack(rack, scope);
         };
         window.clearTimeout(pushTimer.current);
         const wait = PUSH_INTERVAL_MS - (performance.now() - lastPush.current);
@@ -71,7 +120,7 @@ export function useRack(backend: Backend | undefined): [RackState | undefined, R
         } else {
             pushTimer.current = window.setTimeout(push, wait);
         }
-    }, [rack, backend]);
+    }, [rack, scope, backend]);
 
     useEffect(() => {
         if (!rack) {
@@ -81,25 +130,26 @@ export function useRack(backend: Backend | undefined): [RackState | undefined, R
             const serialized = JSON.stringify(rack);
             if (serialized !== lastSaved.current) {
                 lastSaved.current = serialized;
-                void saveRack(rack);
+                void store.save(rack);
             }
         }, SAVE_DELAY_MS);
         return () => window.clearTimeout(timer);
-    }, [rack]);
+    }, [rack, store]);
 
     const update = useCallback((updater: (rack: RackState) => RackState) => {
         setRackState((previous) => (previous ? updater(previous) : previous));
     }, []);
 
+    const updateChain = useCallback(
+        (edit: (chain: ChainItem[]) => ChainItem[]) =>
+            update((previous) => ({ ...previous, chain: edit(previous.chain) })),
+        [update],
+    );
+
     const updateEffect = useCallback(
         (id: string, updater: (effect: Effect) => Effect) =>
-            update((previous) => ({
-                ...previous,
-                chain: previous.chain.map((effect) =>
-                    effect.id === id ? updater(effect) : effect,
-                ),
-            })),
-        [update],
+            updateChain((chain) => Chain.mapEffect(chain, id, updater)),
+        [updateChain],
     );
 
     const setParams = useCallback(
@@ -111,50 +161,79 @@ export function useRack(backend: Backend | undefined): [RackState | undefined, R
         [updateEffect],
     );
 
-    const addEffect = useCallback(
-        (type: EffectType, index?: number) => {
-            if (!rack || rack.chain.length >= MAX_CHAIN_LENGTH) {
-                return undefined;
+    const updateGroup = useCallback(
+        (id: string, updater: (group: ParallelGroup) => ParallelGroup) =>
+            updateChain((chain) => Chain.mapGroup(chain, id, updater)),
+        [updateChain],
+    );
+
+    const addItem = useCallback(
+        (item: ChainItem, position?: ChainPosition) => {
+            if (!rack || !Chain.canInsert(rack.chain, item)) {
+                return false;
             }
-            const effect = createEffect(type) as Effect;
-            update((previous) => {
-                const chain = [...previous.chain];
-                chain.splice(index ?? chain.length, 0, effect);
-                return { ...previous, chain };
-            });
-            return effect;
+            updateChain((chain) =>
+                Chain.insertItem(chain, item, position ?? { index: chain.length }),
+            );
+            return true;
         },
-        [update, rack],
+        [updateChain, rack],
     );
 
-    const removeEffect = useCallback(
-        (id: string) =>
-            update((previous) => ({
-                ...previous,
-                chain: previous.chain.filter((effect) => effect.id !== id),
-            })),
-        [update],
+    const removeItem = useCallback(
+        (id: string) => updateChain((chain) => Chain.removeItem(chain, id)),
+        [updateChain],
     );
 
-    const moveEffect = useCallback(
-        (id: string, toIndex: number) =>
-            update((previous) => {
-                const from = previous.chain.findIndex((effect) => effect.id === id);
-                if (from < 0) {
-                    return previous;
+    const moveItem = useCallback(
+        (id: string, position: ChainPosition) =>
+            updateChain((chain) => Chain.moveItem(chain, id, position)),
+        [updateChain],
+    );
+
+    const ungroup = useCallback(
+        (id: string) => updateChain((chain) => Chain.ungroup(chain, id)),
+        [updateChain],
+    );
+
+    const setScope = useCallback(
+        async (next: RackScope) => {
+            if (!rack || tabId === undefined || next === scope) {
+                return;
+            }
+            if (next === 'tab') {
+                // Keep the shared rack as it is now, then give the tab a copy of it.
+                if (JSON.stringify(rack) !== lastSaved.current) {
+                    await store.save(rack);
                 }
-                const chain = [...previous.chain];
-                const [moved] = chain.splice(from, 1);
-                chain.splice(Math.min(Math.max(toIndex, 0), chain.length), 0, moved);
-                return { ...previous, chain };
-            }),
-        [update],
+                show(rack, 'tab');
+                await setTabScope(tabId, 'tab', rack);
+                return;
+            }
+            const shared = await loadSharedRack();
+            show(shared, 'shared');
+            await setTabScope(tabId, 'shared', shared);
+        },
+        [rack, scope, store, tabId, show],
     );
 
     const setRack = useCallback((next: RackState) => setRackState(normalizeRack(next)), []);
 
-    return [
+    return {
         rack,
-        { setRack, update, updateEffect, setParams, addEffect, removeEffect, moveEffect },
-    ];
+        scope,
+        canScopeToTab: tabId !== undefined,
+        actions: {
+            setRack,
+            update,
+            updateEffect,
+            setParams,
+            updateGroup,
+            addItem,
+            removeItem,
+            moveItem,
+            ungroup,
+            setScope,
+        },
+    };
 }

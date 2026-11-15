@@ -33,6 +33,26 @@ The chain can be reordered by dragging slots, each effect can be bypassed (with 
 crossfade), and the whole rack can be bypassed for comparison. Factory presets are included;
 your own presets can be saved, exported and imported as JSON.
 
+### Parallel groups
+
+Add **Parallel** from the “+ Add” menu to split the signal into two to four branches. Every branch
+receives the same input, runs its own serial chain and is summed back; an empty branch carries
+the dry signal (a compressor next to it gives parallel compression). Selecting the group shows a
+small mixer: per branch a fader with a post-fader meter, pan, mute, solo and polarity invert, plus
+a meter of the sum. Drag effects into, out of and between branches, or use a branch's own “+”. Branches are
+delay-compensated, so lookahead (the limiter) does not comb-filter against the other branches, and
+bypassing an effect keeps its latency. Groups do not nest. The rack holds up to 16 effects in
+total and up to four groups.
+
+### Per-tab racks
+
+The **This tab / All tabs** switch in the header decides which rack a tab plays through. By
+default each tab has its own rack: the first time a tab is opened or processed, it gets a copy of
+the shared rack, which then changes independently. Tab racks live in `chrome.storage.session` and
+are removed when the tab closes. **All tabs** makes the tab follow the shared rack (stored in
+`chrome.storage.local`, and the starting point for new tabs) and discards its own rack. The switch
+is not shown in demo mode.
+
 ### Controls
 
 - **Knobs:** drag vertically (Shift for fine), mouse wheel, arrow keys; double-click resets;
@@ -54,7 +74,11 @@ popup / window (React UI) ──messages──▶ service worker ──▶ offsc
 
 - `src/dsp` contains host-independent DSP kernels (RBJ biquads, Butterworth/Linkwitz-Riley
   filters, log-domain dynamics, lookahead limiter). They run inside one AudioWorklet that
-  executes the whole chain, so reordering does not rewire the audio graph.
+  executes the whole chain, so reordering does not rewire the audio graph. The chain is a tree
+  of stages (`stage.ts`: effect, bypass crossfade, serial chain; `parallel.ts`: parallel group)
+  that `pool.ts` rebuilds on every rack change, keeping each effect's state by id.
+- The offscreen document keeps the shared rack and each tab's own rack (`src/offscreen/routing.ts`);
+  the UI sends rack updates tagged with its tab and scope.
 - `src/engine` wires the worklet and analysers; the same graph powers the extension's
   offscreen document and the in-page demo mode.
 - `src/shared` holds the rack model, validation of stored/imported state, presets and

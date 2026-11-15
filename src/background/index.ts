@@ -4,7 +4,7 @@ import {
     type CaptureStatus,
     type OffscreenMessage,
 } from '../shared/messages';
-import { loadRack } from '../shared/storage';
+import { forgetTab, resolveTabRack } from '../shared/storage';
 
 const OFFSCREEN_URL = 'offscreen.html';
 const SESSIONS_KEY = 'sessions';
@@ -78,9 +78,9 @@ async function startCapture(tabId: number): Promise<CaptureStatus> {
     }
     const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
     await ensureOffscreenDocument();
-    const rack = await loadRack();
+    const { rack, scope } = await resolveTabRack(tabId);
     try {
-        await sendToOffscreen({ target: 'offscreen', type: 'start', tabId, streamId, rack });
+        await sendToOffscreen({ target: 'offscreen', type: 'start', tabId, streamId, rack, scope });
     } catch (error) {
         if (sessions.length === 0) {
             await chrome.offscreen.closeDocument().catch(() => undefined);
@@ -138,6 +138,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
+    void forgetTab(tabId);
     void getSessions().then((sessions) =>
         sessions.includes(tabId) ? stopCapture(tabId) : undefined,
     );

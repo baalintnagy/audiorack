@@ -6,6 +6,7 @@ import {
     type CaptureStatus,
     type OffscreenMessage,
 } from '../shared/messages';
+import type { RackScope } from '../shared/storage';
 import { DEMO_TRACK_LABEL, demoTrack } from './demo-signal';
 import type { TelemetryStore } from './telemetry';
 
@@ -17,10 +18,12 @@ export interface BackendStatus {
 
 export interface Backend {
     readonly kind: 'extension' | 'local';
+    /** The browser tab being processed; racks can only be scoped to a tab when it is known. */
+    readonly tabId?: number;
     status(): Promise<BackendStatus>;
     start(): Promise<BackendStatus>;
     stop(): Promise<BackendStatus>;
-    pushRack(rack: RackState): void;
+    pushRack(rack: RackState, scope: RackScope): void;
     /** Streams telemetry into the store while the engine runs. */
     connect(store: TelemetryStore): () => void;
     popOut?(): void;
@@ -35,7 +38,7 @@ class ExtensionBackend implements Backend {
     readonly kind = 'extension';
 
     private constructor(
-        private readonly tabId: number,
+        readonly tabId: number,
         private readonly tabTitle: string,
     ) {}
 
@@ -76,8 +79,14 @@ class ExtensionBackend implements Backend {
         return this.send('stop-capture');
     }
 
-    pushRack(rack: RackState) {
-        const message: OffscreenMessage = { target: 'offscreen', type: 'rack', rack };
+    pushRack(rack: RackState, scope: RackScope) {
+        const message: OffscreenMessage = {
+            target: 'offscreen',
+            type: 'rack',
+            tabId: this.tabId,
+            rack,
+            scope,
+        };
         // The offscreen document only exists while a tab is being processed.
         chrome.runtime.sendMessage(message).catch(() => undefined);
     }

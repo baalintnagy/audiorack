@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { EFFECT_INFO, SPECS, defaultParams, type Effect } from '../shared/effects';
+import { countEffects, findItem, insertionPoint, type ChainPosition } from '../shared/chain';
+import {
+    SPECS,
+    createEffect,
+    createParallelGroup,
+    isParallelGroup,
+    type ChainItem,
+    type Effect,
+} from '../shared/effects';
+import { MAX_CHAIN_LENGTH } from '../shared/normalize';
 import { createBackend, type Backend, type BackendStatus } from './backend';
+import type { AddKind } from './components/AddMenu';
 import { ChainStrip } from './components/ChainStrip';
-import { PowerIcon, Toggle } from './components/Controls';
+import { PowerIcon, Segmented, Toggle } from './components/Controls';
+import { ItemPanel } from './components/ItemPanel';
 import { Knob } from './components/Knob';
 import { LevelMeter } from './components/Meters';
 import { PresetMenu } from './components/PresetMenu';
-import { EffectEditor } from './editors';
 import { TelemetryContext, TelemetryStore } from './telemetry';
 import { useRack } from './useRack';
 
@@ -44,7 +54,7 @@ function Logo() {
 export function App() {
     const [backend, setBackend] = useState<Backend>();
     const store = useMemo(() => new TelemetryStore(), []);
-    const [rack, actions] = useRack(backend);
+    const { rack, scope, canScopeToTab, actions } = useRack(backend);
     const [status, setStatus] = useState<BackendStatus>({ active: false, label: '' });
     const [busy, setBusy] = useState(false);
     const [selectedId, setSelectedId] = useState<string>();
@@ -78,7 +88,25 @@ export function App() {
         return <div className="loading">Loading rack…</div>;
     }
 
-    const selected = rack.chain.find((effect) => effect.id === selectedId) ?? rack.chain[0];
+    const selected: ChainItem | undefined =
+        (selectedId === undefined ? undefined : findItem(rack.chain, selectedId)) ?? rack.chain[0];
+
+    const add = (kind: AddKind, position?: ChainPosition) => {
+        const item: ChainItem =
+            kind === 'parallel' ? createParallelGroup() : (createEffect(kind) as Effect);
+        if (actions.addItem(item, position ?? insertionPoint(rack.chain, item, selected?.id))) {
+            setSelectedId(item.id);
+        }
+    };
+
+    const toggleBypass = (id: string) => {
+        const item = findItem(rack.chain, id);
+        if (item && isParallelGroup(item)) {
+            actions.updateGroup(id, (group) => ({ ...group, bypass: !group.bypass }));
+        } else {
+            actions.updateEffect(id, (effect) => ({ ...effect, bypass: !effect.bypass }));
+        }
+    };
 
     const run = async (action: () => Promise<BackendStatus>) => {
         setBusy(true);
@@ -150,6 +178,21 @@ export function App() {
                         </span>
                     )}
                     <div className="header-spacer" />
+                    {canScopeToTab && (
+                        <div
+                            className="scope-switch"
+                            title="This tab: a rack of its own, started from a copy of the All tabs rack. All tabs: follow the rack shared by every tab set to it."
+                        >
+                            <Segmented
+                                value={scope}
+                                options={[
+                                    { value: 'tab', label: 'This tab' },
+                                    { value: 'shared', label: 'All tabs' },
+                                ]}
+                                onChange={(next) => void actions.setScope(next)}
+                            />
+                        </div>
+                    )}
                     <PresetMenu rack={rack} onLoad={(next) => actions.setRack(next)} />
                     <Toggle
                         className="bypass-all"
@@ -186,84 +229,26 @@ export function App() {
                         <ChainStrip
                             chain={rack.chain}
                             selectedId={selected?.id}
-                            onSelect={setSelectedId}
-                            onToggle={(id) =>
-                                actions.updateEffect(id, (effect) => ({
-                                    ...effect,
-                                    bypass: !effect.bypass,
-                                }))
-                            }
-                            onRemove={actions.removeEffect}
-                            onMove={actions.moveEffect}
-                            onAdd={(type) => {
-                                const index = selected
-                                    ? rack.chain.indexOf(selected) + 1
-                                    : undefined;
-                                const added = actions.addEffect(type, index);
-                                if (added) {
-                                    setSelectedId(added.id);
-                                }
+                            full={countEffects(rack.chain) >= MAX_CHAIN_LENGTH}
+                            handlers={{
+                                onSelect: setSelectedId,
+                                onToggle: toggleBypass,
+                                onRemove: actions.removeItem,
+                                onMove: actions.moveItem,
+                                onAdd: add,
                             }}
                         />
-                        <section
-                            className={`panel ${selected?.bypass ? 'effect-bypassed' : ''}`}
-                            style={
-                                selected
-                                    ? {
-                                          ['--effect-color' as string]:
-                                              EFFECT_INFO[selected.type].color,
-                                      }
-                                    : undefined
+                        <ItemPanel
+                            item={selected}
+                            actions={actions}
+                            hint={
+                                status.active
+                                    ? undefined
+                                    : backend.kind === 'local'
+                                      ? 'Press “Play demo” to hear the rack'
+                                      : 'Press “Process tab” to route this tab through the rack'
                             }
-                        >
-                            {selected ? (
-                                <>
-                                    <div className="panel-header">
-                                        <span className="panel-title">
-                                            {EFFECT_INFO[selected.type].label}
-                                        </span>
-                                        <span className="panel-description">
-                                            {EFFECT_INFO[selected.type].description}
-                                        </span>
-                                        {selected.bypass && <span className="badge">Bypassed</span>}
-                                        <div className="header-spacer" />
-                                        <button
-                                            type="button"
-                                            className="ghost small"
-                                            onClick={() =>
-                                                actions.updateEffect(
-                                                    selected.id,
-                                                    (effect) =>
-                                                        ({
-                                                            ...effect,
-                                                            params: defaultParams(effect.type),
-                                                        }) as Effect,
-                                                )
-                                            }
-                                        >
-                                            Reset
-                                        </button>
-                                    </div>
-                                    <EffectEditor
-                                        key={selected.id}
-                                        effect={selected}
-                                        setParams={(patch) => actions.setParams(selected.id, patch)}
-                                    />
-                                </>
-                            ) : (
-                                <div className="empty">
-                                    <p>The rack is empty.</p>
-                                    <p>Use “+ Add” to insert an effect, or pick a preset.</p>
-                                </div>
-                            )}
-                            {!status.active && (
-                                <div className="idle-hint">
-                                    {backend.kind === 'local'
-                                        ? 'Press “Play demo” to hear the rack'
-                                        : 'Press “Process tab” to route this tab through the rack'}
-                                </div>
-                            )}
-                        </section>
+                        />
                     </main>
                     <aside className="master">
                         <div className="master-meters">

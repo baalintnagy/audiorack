@@ -5,19 +5,26 @@ import {
     SPECTROGRAM_PALETTES,
     EQ_BAND_TYPES,
     FILTER_MODES,
+    MAX_BRANCHES,
     MAX_EQ_BANDS,
+    MIN_BRANCHES,
     SLOPES,
     SPECS,
+    createBranch,
     createId,
     defaultEqBand,
     defaultMultibandBand,
     defaultParams,
     defaultRack,
+    isParallelGroup,
+    type ChainItem,
     type Effect,
     type EffectParamsMap,
     type EffectType,
     type EqBand,
     type MultibandBand,
+    type ParallelBranch,
+    type ParallelGroup,
     type RackState,
     type SpecKey,
 } from './effects';
@@ -192,27 +199,112 @@ export function normalizeEffect(raw: unknown): Effect | undefined {
     return { id: id(raw.id), type, bypass: bool(raw.bypass, false), params } as Effect;
 }
 
+/** Maximum number of effects in the rack, counting those inside parallel branches. */
 export const MAX_CHAIN_LENGTH = 16;
+export const MAX_PARALLEL_GROUPS = 4;
+
+/** Tracks how many effects and groups may still be added while normalizing a rack. */
+class Budget {
+    constructor(
+        private effects: number,
+        private groups: number,
+    ) {}
+
+    takeEffects(effects: Effect[]): Effect[] {
+        const kept = effects.slice(0, this.effects);
+        this.effects -= kept.length;
+        return kept;
+    }
+
+    takeGroup(): boolean {
+        if (this.groups === 0) {
+            return false;
+        }
+        this.groups--;
+        return true;
+    }
+}
+
+function normalizeEffects(raw: unknown): Effect[] {
+    return (Array.isArray(raw) ? raw : [])
+        .slice(0, MAX_CHAIN_LENGTH)
+        .map(normalizeEffect)
+        .filter((effect): effect is Effect => effect !== undefined);
+}
+
+function normalizeBranch(raw: unknown, budget: Budget): ParallelBranch {
+    const branch = isObject(raw) ? raw : {};
+    return {
+        id: id(branch.id),
+        gainDb: num(branch.gainDb, 'branchGainDb'),
+        pan: num(branch.pan, 'pan'),
+        mute: bool(branch.mute, false),
+        solo: bool(branch.solo, false),
+        invert: bool(branch.invert, false),
+        effects: budget.takeEffects(normalizeEffects(branch.effects)),
+    };
+}
+
+function normalizeGroup(raw: Loose, budget: Budget): ParallelGroup | undefined {
+    if (!budget.takeGroup()) {
+        return undefined;
+    }
+    const branches = (Array.isArray(raw.branches) ? raw.branches : [])
+        .slice(0, MAX_BRANCHES)
+        .map((branch) => normalizeBranch(branch, budget));
+    const padding = Array.from({ length: Math.max(0, MIN_BRANCHES - branches.length) }, () =>
+        createBranch(),
+    );
+    return {
+        id: id(raw.id),
+        type: 'parallel',
+        bypass: bool(raw.bypass, false),
+        branches: [...branches, ...padding],
+    };
+}
+
+function normalizeItem(raw: unknown, budget: Budget): ChainItem | undefined {
+    if (isObject(raw) && raw.type === 'parallel') {
+        return normalizeGroup(raw, budget);
+    }
+    const effect = normalizeEffect(raw);
+    return effect ? budget.takeEffects([effect])[0] : undefined;
+}
+
+/** Gives every effect, group and branch an id that is unique within the rack. */
+function withUniqueIds(chain: ChainItem[]): ChainItem[] {
+    const seen = new Set<string>();
+    const unique = <T extends { id: string }>(item: T): T => {
+        const result = seen.has(item.id) ? { ...item, id: createId() } : item;
+        seen.add(result.id);
+        return result;
+    };
+    return chain.map((item) =>
+        isParallelGroup(item)
+            ? unique({
+                  ...item,
+                  branches: item.branches.map((branch) =>
+                      unique({ ...branch, effects: branch.effects.map(unique) }),
+                  ),
+              })
+            : unique(item),
+    );
+}
 
 /** Validates untrusted rack state from storage, presets or imported files. */
 export function normalizeRack(raw: unknown): RackState {
     if (!isObject(raw)) {
         return defaultRack();
     }
+    const budget = new Budget(MAX_CHAIN_LENGTH, MAX_PARALLEL_GROUPS);
     const chain = (Array.isArray(raw.chain) ? raw.chain : [])
-        .slice(0, MAX_CHAIN_LENGTH)
-        .map(normalizeEffect)
-        .filter((effect): effect is Effect => effect !== undefined);
-    const seen = new Set<string>();
+        .map((item) => normalizeItem(item, budget))
+        .filter((item): item is ChainItem => item !== undefined);
     return {
-        version: 1,
+        version: 2,
         bypass: bool(raw.bypass, false),
         inputDb: num(raw.inputDb, 'masterDb'),
         outputDb: num(raw.outputDb, 'masterDb'),
-        chain: chain.map((effect) => {
-            const unique = seen.has(effect.id) ? { ...effect, id: createId() } : effect;
-            seen.add(unique.id);
-            return unique;
-        }),
+        chain: withUniqueIds(chain),
     };
 }

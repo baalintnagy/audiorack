@@ -1,5 +1,5 @@
 import type { VolumeParams } from '../../shared/effects';
-import { Smoother, dbToGain } from '../util';
+import { Smoother, dbToGain, panGains } from '../util';
 import type { Kernel } from './kernel';
 
 export function volumeGains(p: VolumeParams): { left: number; right: number; width: number } {
@@ -7,11 +7,10 @@ export function volumeGains(p: VolumeParams): { left: number; right: number; wid
         return { left: 0, right: 0, width: p.width / 100 };
     }
     const gain = dbToGain(p.gainDb);
-    // Constant-power pan law normalized to unity at the center.
-    const angle = ((p.pan / 100 + 1) * Math.PI) / 4;
+    const pan = panGains(p.pan);
     return {
-        left: gain * Math.cos(angle) * Math.SQRT2 * (p.invertLeft ? -1 : 1),
-        right: gain * Math.sin(angle) * Math.SQRT2 * (p.invertRight ? -1 : 1),
+        left: gain * pan.left * (p.invertLeft ? -1 : 1),
+        right: gain * pan.right * (p.invertRight ? -1 : 1),
         width: p.width / 100,
     };
 }

@@ -1,7 +1,10 @@
 import {
+    createBranch,
     createEffect,
+    createParallelGroup,
     defaultEqBand,
     defaultRack,
+    type ChainItem,
     type Effect,
     type EffectParamsMap,
     type EffectType,
@@ -13,7 +16,7 @@ function effect<T extends EffectType>(type: T, params: Partial<EffectParamsMap[T
     return { ...base, params: { ...base.params, ...params } } as Effect;
 }
 
-function rack(chain: Effect[], partial: Partial<RackState> = {}): RackState {
+function rack(chain: ChainItem[], partial: Partial<RackState> = {}): RackState {
     return { ...defaultRack(), chain, ...partial };
 }
 
@@ -90,6 +93,42 @@ export const FACTORY_PRESETS: FactoryPreset[] = [
                     sidechainHpHz: 60,
                 }),
                 effect('limiter', { ceilingDb: -0.8, releaseMs: 60 }),
+            ]),
+    },
+    {
+        name: 'Parallel Punch',
+        description: 'Parallel compression: a crushed copy blended under the dry signal',
+        create: () =>
+            rack([
+                effect('eq', {
+                    bands: [defaultEqBand({ type: 'lowcut', frequency: 30, q: 0.71, slope: 24 })],
+                }),
+                createParallelGroup([
+                    createBranch(),
+                    {
+                        ...createBranch([
+                            effect('compressor', {
+                                thresholdDb: -40,
+                                ratio: 10,
+                                attackMs: 2,
+                                releaseMs: 120,
+                                kneeDb: 3,
+                                autoMakeup: true,
+                            }),
+                            effect('eq', {
+                                bands: [
+                                    defaultEqBand({
+                                        type: 'highshelf',
+                                        frequency: 6000,
+                                        gainDb: 3,
+                                    }),
+                                ],
+                            }),
+                        ]),
+                        gainDb: -8,
+                    },
+                ]),
+                effect('limiter', { ceilingDb: -1 }),
             ]),
     },
     {

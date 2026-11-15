@@ -1,5 +1,4 @@
 import { RackGraph } from '../engine/graph';
-import type { RackState } from '../shared/effects';
 import {
     TELEMETRY_PORT_PREFIX,
     isRuntimeMessage,
@@ -7,6 +6,8 @@ import {
     type OffscreenMessage,
 } from '../shared/messages';
 import { normalizeRack } from '../shared/normalize';
+import type { RackScope } from '../shared/storage';
+import { RackRouting } from './routing';
 
 interface Session {
     stream: MediaStream;
@@ -16,18 +17,24 @@ interface Session {
 
 const sessions = new Map<number, Session>();
 const pending = new Map<number, ((graph: RackGraph) => void)[]>();
-let rack: RackState | undefined;
+const routing = new RackRouting();
 
 function notifyEnded(tabId: number) {
     const message: BackgroundMessage = { target: 'background', type: 'session-ended', tabId };
     void chrome.runtime.sendMessage(message).catch(() => undefined);
 }
 
-async function start(tabId: number, streamId: string, initial: RackState) {
+function assignRack(tabId: number, raw: unknown, scope: RackScope) {
+    routing
+        .assign(tabId, normalizeRack(raw), scope, sessions.keys())
+        .forEach((tab) => sessions.get(tab)?.graph.setRack(routing.rackFor(tab)));
+}
+
+async function start(tabId: number, streamId: string, rack: unknown, scope: RackScope) {
     if (sessions.has(tabId)) {
         return;
     }
-    rack ??= normalizeRack(initial);
+    assignRack(tabId, rack, scope);
     const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
             mandatory: { chromeMediaSource: 'tab', chromeMediaSourceId: streamId },
@@ -36,7 +43,7 @@ async function start(tabId: number, streamId: string, initial: RackState) {
     } as MediaStreamConstraints);
     const context = new AudioContext({ latencyHint: 'interactive' });
     const source = context.createMediaStreamSource(stream);
-    const graph = await RackGraph.create(context, source, rack);
+    const graph = await RackGraph.create(context, source, routing.rackFor(tabId));
     await context.resume();
     sessions.set(tabId, { stream, context, graph });
     stream.getAudioTracks().forEach((track) =>
@@ -50,6 +57,7 @@ async function start(tabId: number, streamId: string, initial: RackState) {
 }
 
 function stop(tabId: number) {
+    routing.forget(tabId);
     const session = sessions.get(tabId);
     if (!session) {
         return;
@@ -63,13 +71,15 @@ function stop(tabId: number) {
 function handle(message: OffscreenMessage): Promise<unknown> | unknown {
     switch (message.type) {
         case 'start':
-            return start(message.tabId, message.streamId, message.rack);
+            return start(message.tabId, message.streamId, message.rack, message.scope);
         case 'stop':
             stop(message.tabId);
             return undefined;
         case 'rack':
-            rack = normalizeRack(message.rack);
-            sessions.forEach((session) => session.graph.setRack(rack!));
+            // A tab's own rack is sent again with `start`; only the shared one matters early.
+            if (sessions.has(message.tabId) || message.scope === 'shared') {
+                assignRack(message.tabId, message.rack, message.scope);
+            }
             return undefined;
         case 'list':
             return [...sessions.keys()];

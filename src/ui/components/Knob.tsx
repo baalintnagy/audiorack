@@ -1,6 +1,7 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from 'react';
+import { useRef, type PointerEvent } from 'react';
 import type { NumberSpec } from '../../shared/effects';
-import { formatValue, fromNormalized, parseValue, roundForSpec, toNormalized } from '../format';
+import { toNormalized } from '../format';
+import { ValueReadout, useValueControl } from './valueControl';
 
 const START_ANGLE = -135;
 const SWEEP = 270;
@@ -38,8 +39,8 @@ export function Knob({
     disabled?: boolean;
 }) {
     const drag = useRef<{ y: number; position: number } | undefined>(undefined);
-    const [editing, setEditing] = useState(false);
-    const normalized = Math.min(1, Math.max(0, toNormalized(spec, value)));
+    const control = useValueControl({ spec, value, onChange, defaultValue, disabled });
+    const normalized = control.normalized;
     const bipolar = spec.min < 0 && spec.max > 0 && spec.scale !== 'log';
     const origin = bipolar ? toNormalized(spec, 0) : 0;
     const angle = START_ANGLE + normalized * SWEEP;
@@ -49,13 +50,6 @@ export function Knob({
     const pointer = polar(c, c, radius - 9, angle);
     const pointerBase = polar(c, c, radius * 0.2, angle);
     const name = label ?? spec.label;
-
-    const set = (next: number) => {
-        const rounded = roundForSpec(spec, Math.min(spec.max, Math.max(spec.min, next)));
-        if (rounded !== value) {
-            onChange(rounded);
-        }
-    };
 
     const onPointerDown = (event: PointerEvent<SVGSVGElement>) => {
         if (disabled || event.button !== 0) {
@@ -76,39 +70,11 @@ export function Knob({
             Math.max(0, drag.current.position + (drag.current.y - event.clientY) / sensitivity),
         );
         drag.current = { y: event.clientY, position };
-        set(fromNormalized(spec, position));
+        control.setNormalized(position);
     };
 
     const onPointerUp = () => {
         drag.current = undefined;
-    };
-
-    const onWheel = (event: WheelEvent<SVGSVGElement>) => {
-        if (disabled) {
-            return;
-        }
-        const step = (event.shiftKey ? 0.002 : 0.015) * (event.deltaY < 0 ? 1 : -1);
-        set(fromNormalized(spec, normalized + step));
-    };
-
-    const onKeyDown = (event: KeyboardEvent<SVGSVGElement>) => {
-        const step = event.shiftKey ? 0.002 : 0.02;
-        const keys: Record<string, number> = {
-            ArrowUp: step,
-            ArrowRight: step,
-            ArrowDown: -step,
-            ArrowLeft: -step,
-            PageUp: 0.1,
-            PageDown: -0.1,
-        };
-        if (event.key in keys) {
-            event.preventDefault();
-            set(fromNormalized(spec, normalized + keys[event.key]));
-        } else if (event.key === 'Home') {
-            set(spec.min);
-        } else if (event.key === 'End') {
-            set(spec.max);
-        }
     };
 
     return (
@@ -118,20 +84,15 @@ export function Knob({
                 width={size}
                 height={size}
                 viewBox={`0 0 ${size} ${size}`}
-                role="slider"
-                tabIndex={disabled ? -1 : 0}
+                {...control.aria}
                 aria-label={name}
-                aria-valuemin={spec.min}
-                aria-valuemax={spec.max}
-                aria-valuenow={value}
-                aria-valuetext={formatValue(spec, value)}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
-                onWheel={onWheel}
-                onKeyDown={onKeyDown}
-                onDoubleClick={() => set(defaultValue ?? spec.default)}
+                onWheel={control.onWheel}
+                onKeyDown={control.onKeyDown}
+                onDoubleClick={control.reset}
             >
                 <defs>
                     <radialGradient id="knob-cap" cx="40%" cy="30%" r="75%">
@@ -165,37 +126,7 @@ export function Knob({
                     className="knob-pointer"
                 />
             </svg>
-            {editing ? (
-                <input
-                    className="knob-input"
-                    autoFocus
-                    defaultValue={roundForSpec(spec, value)}
-                    onBlur={(event) => {
-                        const parsed = parseValue(spec, event.target.value);
-                        if (parsed !== undefined) {
-                            set(parsed);
-                        }
-                        setEditing(false);
-                    }}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                            event.currentTarget.blur();
-                        } else if (event.key === 'Escape') {
-                            setEditing(false);
-                        }
-                    }}
-                />
-            ) : (
-                <button
-                    type="button"
-                    className="knob-readout"
-                    disabled={disabled}
-                    title="Click to type a value"
-                    onClick={() => setEditing(true)}
-                >
-                    {formatValue(spec, value)}
-                </button>
-            )}
+            <ValueReadout spec={spec} value={value} set={control.set} disabled={disabled} />
         </div>
     );
 }

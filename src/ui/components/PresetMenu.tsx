@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { countEffects } from '../../shared/chain';
 import type { RackState } from '../../shared/effects';
 import { normalizeRack } from '../../shared/normalize';
 import { FACTORY_PRESETS } from '../../shared/presets';
@@ -121,7 +122,7 @@ export function PresetMenu({
                             >
                                 <span className="menu-item-text">
                                     <strong>{preset.name}</strong>
-                                    <small>{preset.rack.chain.length} effects</small>
+                                    <small>{countEffects(preset.rack.chain)} effects</small>
                                 </span>
                             </button>
                             <button

@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent } from 'react';
+import { useRef } from 'react';
 import type { BranchRef, ChainPosition } from '../../shared/chain';
 import {
     EFFECT_INFO,
@@ -13,10 +13,9 @@ import { BAND_COLORS } from '../editors/types';
 import { branchName } from '../format';
 import { css } from '../graph';
 import { useCanvas } from '../useCanvas';
+import { useChainDrag, type ChainDrag } from '../useChainDrag';
 import { AddMenu, type AddKind } from './AddMenu';
 import { PowerIcon } from './Controls';
-
-const DRAG_TYPE = 'application/x-audiorack-item';
 
 export interface ChainHandlers {
     onSelect: (id: string) => void;
@@ -25,74 +24,6 @@ export interface ChainHandlers {
     onMove: (id: string, position: ChainPosition) => void;
     /** Adds an effect or group; at the selection when `position` is omitted. */
     onAdd: (kind: AddKind, position?: ChainPosition) => void;
-}
-
-interface DragState {
-    id: string;
-    group: boolean;
-}
-
-/** Drag and drop of chain items between the main chain and parallel branches. */
-function useChainDrag(onMove: ChainHandlers['onMove']) {
-    const dragged = useRef<DragState | undefined>(undefined);
-    const [drop, setDrop] = useState<ChainPosition>();
-
-    const samePosition = (position: ChainPosition) =>
-        drop !== undefined &&
-        drop.index === position.index &&
-        drop.branch?.groupId === position.branch?.groupId &&
-        drop.branch?.branchId === position.branch?.branchId;
-
-    return {
-        start(event: DragEvent<HTMLElement>, id: string, group: boolean) {
-            event.stopPropagation();
-            dragged.current = { id, group };
-            event.dataTransfer.setData(DRAG_TYPE, id);
-            event.dataTransfer.effectAllowed = 'move';
-        },
-        end() {
-            dragged.current = undefined;
-            setDrop(undefined);
-        },
-        /** Offers `position` as a drop target; groups only land in the main chain. */
-        over(event: DragEvent<HTMLElement>, position: ChainPosition) {
-            const state = dragged.current;
-            if (!state || (state.group && position.branch)) {
-                return;
-            }
-            event.preventDefault();
-            event.stopPropagation();
-            setDrop(position);
-        },
-        drop(event: DragEvent<HTMLElement>) {
-            event.preventDefault();
-            event.stopPropagation();
-            const state = dragged.current;
-            if (state && drop) {
-                onMove(state.id, drop);
-            }
-            dragged.current = undefined;
-            setDrop(undefined);
-        },
-        /** `drop-before`/`drop-after` classes for the item at `position`. */
-        markers(position: ChainPosition, last: boolean): string {
-            const before = samePosition(position) ? 'drop-before' : '';
-            const after =
-                last && samePosition({ ...position, index: position.index + 1 })
-                    ? 'drop-after'
-                    : '';
-            return `${before} ${after}`;
-        },
-        isTarget: samePosition,
-    };
-}
-
-type ChainDrag = ReturnType<typeof useChainDrag>;
-
-/** Returns the insertion index before or after the hovered element. */
-function sideOf(event: DragEvent<HTMLElement>, index: number): number {
-    const rect = event.currentTarget.getBoundingClientRect();
-    return event.clientX - rect.left > rect.width / 2 ? index + 1 : index;
 }
 
 /** Small activity indicator: gain reduction for dynamics, otherwise nothing. */
@@ -200,10 +131,6 @@ function EffectSlot({
             draggable
             onDragStart={(event) => drag.start(event, effect.id, false)}
             onDragEnd={drag.end}
-            onDragOver={(event) =>
-                drag.over(event, { ...position, index: sideOf(event, position.index) })
-            }
-            onDrop={drag.drop}
             onClick={(event) => {
                 event.stopPropagation();
                 handlers.onSelect(effect.id);
@@ -268,7 +195,7 @@ function BranchLane({
             style={{ ['--lane-color' as string]: BAND_COLORS[index] }}
             role="list"
             aria-label={`Branch ${branchName(index)}`}
-            onDragOver={(event) => drag.over(event, end)}
+            onDragOver={(event) => drag.over(event, ref)}
             onDrop={drag.drop}
         >
             <span className="lane-label" title={branch.mute ? 'Muted' : undefined}>
@@ -326,8 +253,6 @@ function GroupBlock({
             draggable
             onDragStart={(event) => drag.start(event, group.id, true)}
             onDragEnd={drag.end}
-            onDragOver={(event) => drag.over(event, { index: sideOf(event, index) })}
-            onDrop={drag.drop}
             onClick={() => handlers.onSelect(group.id)}
             title="Parallel group — drag effects into its branches"
         >
@@ -369,12 +294,15 @@ export function ChainStrip({
     full: boolean;
     handlers: ChainHandlers;
 }) {
-    const drag = useChainDrag(handlers.onMove);
+    const drag = useChainDrag(chain, handlers.onMove);
     return (
         <div
             className="chain"
             role="list"
             aria-label="Effect chain"
+            onDragOver={(event) => drag.over(event)}
+            onDragLeave={drag.leave}
+            onDrop={drag.drop}
             onWheel={(event) => {
                 // Let a regular mouse wheel scroll the horizontal chain.
                 if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {

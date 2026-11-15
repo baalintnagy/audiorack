@@ -160,7 +160,8 @@ export function insertItem(
     );
 }
 
-function sameLane(a: ChainPosition, b: ChainPosition): boolean {
+/** Whether two positions address the same lane: the main chain or one branch. */
+export function sameLane(a: ChainPosition, b: ChainPosition): boolean {
     return a.branch?.groupId === b.branch?.groupId && a.branch?.branchId === b.branch?.branchId;
 }
 

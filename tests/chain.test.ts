@@ -8,6 +8,7 @@ import {
     mapEffect,
     moveItem,
     removeItem,
+    toggleBypass,
     ungroup,
 } from '../src/shared/chain';
 import {
@@ -100,6 +101,14 @@ describe('chain operations', () => {
         expect(groupOf(bypassed).branches[0].effects[0].bypass).toBe(true);
         expect(ids(removeItem(chain, compressor.id))).not.toContain(compressor.id);
         expect(removeItem(chain, group.id)).toHaveLength(2);
+    });
+
+    it('toggles the bypass of effects and groups', () => {
+        const { chain, compressor, group } = setup();
+        const bypassed = toggleBypass(toggleBypass(chain, compressor.id), group.id);
+        expect(groupOf(bypassed).bypass).toBe(true);
+        expect(groupOf(bypassed).branches[0].effects[0].bypass).toBe(true);
+        expect(toggleBypass(bypassed, group.id)[1].bypass).toBe(false);
     });
 
     it('flattens a group into its effects in series', () => {

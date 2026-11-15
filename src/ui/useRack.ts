@@ -30,6 +30,7 @@ export interface RackActions {
     updateEffect: (id: string, updater: (effect: Effect) => Effect) => void;
     setParams: <T extends EffectType>(id: string, patch: Partial<EffectParamsMap[T]>) => void;
     updateGroup: (id: string, updater: (group: ParallelGroup) => ParallelGroup) => void;
+    toggleBypass: (id: string) => void;
     /** Inserts at `position` (default: end of the main chain); false when over the limits. */
     addItem: (item: ChainItem, position?: ChainPosition) => boolean;
     removeItem: (id: string) => void;
@@ -167,6 +168,11 @@ export function useRack(backend: Backend | undefined): RackModel {
         [updateChain],
     );
 
+    const toggleBypass = useCallback(
+        (id: string) => updateChain((chain) => Chain.toggleBypass(chain, id)),
+        [updateChain],
+    );
+
     const addItem = useCallback(
         (item: ChainItem, position?: ChainPosition) => {
             if (!rack || !Chain.canInsert(rack.chain, item)) {
@@ -229,6 +235,7 @@ export function useRack(backend: Backend | undefined): RackModel {
             updateEffect,
             setParams,
             updateGroup,
+            toggleBypass,
             addItem,
             removeItem,
             moveItem,

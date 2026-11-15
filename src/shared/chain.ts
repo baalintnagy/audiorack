@@ -127,6 +127,12 @@ export function mapGroup(
     return chain.map((item) => (isParallelGroup(item) && item.id === id ? update(item) : item));
 }
 
+/** Flips the bypass of the effect or parallel group `id`. */
+export function toggleBypass(chain: ChainItem[], id: string): ChainItem[] {
+    const flip = <T extends ChainItem>(item: T): T => ({ ...item, bypass: !item.bypass });
+    return mapGroup(mapEffect(chain, id, flip), id, flip);
+}
+
 export function removeItem(chain: ChainItem[], id: string): ChainItem[] {
     return mapBranches(
         chain.filter((item) => item.id !== id),

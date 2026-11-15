@@ -9,8 +9,62 @@ import {
 import { EffectEditor } from '../editors';
 import { ParallelEditor } from '../editors/ParallelEditor';
 import type { RackActions } from '../useRack';
+import { PopOutIcon, Toggle } from './Controls';
 
-function PanelHeader({ item, children }: { item: ChainItem; children: ReactNode }) {
+/**
+ * Where the panel is shown: the rack window can pop the item out, and a window of the item's
+ * own replaces the chain strip's power button with a bypass toggle.
+ */
+export type PanelPlacement = { kind: 'rack'; onPopOut?: () => void } | { kind: 'window' };
+
+function WindowControls({
+    item,
+    placement,
+    actions,
+}: {
+    item: ChainItem;
+    placement: PanelPlacement;
+    actions: RackActions;
+}) {
+    if (placement.kind === 'window') {
+        return (
+            <Toggle
+                active={item.bypass}
+                onChange={() => actions.toggleBypass(item.id)}
+                color="#ff5e7a"
+                title="Compare with the signal skipping this item"
+            >
+                Bypass
+            </Toggle>
+        );
+    }
+    if (!placement.onPopOut) {
+        return null;
+    }
+    return (
+        <button
+            type="button"
+            className="ghost small icon"
+            onClick={placement.onPopOut}
+            title="Open in a window of its own"
+            aria-label="Open in a window of its own"
+        >
+            <PopOutIcon />
+        </button>
+    );
+}
+
+function PanelHeader({
+    item,
+    placement,
+    actions,
+    children,
+}: {
+    item: ChainItem;
+    placement: PanelPlacement;
+    actions: RackActions;
+    children: ReactNode;
+}) {
     const info = itemInfo(item);
     return (
         <div className="panel-header">
@@ -19,14 +73,23 @@ function PanelHeader({ item, children }: { item: ChainItem; children: ReactNode 
             {item.bypass && <span className="badge">Bypassed</span>}
             <div className="header-spacer" />
             {children}
+            <WindowControls item={item} placement={placement} actions={actions} />
         </div>
     );
 }
 
-function EffectPanel({ effect, actions }: { effect: Effect; actions: RackActions }) {
+function EffectPanel({
+    effect,
+    placement,
+    actions,
+}: {
+    effect: Effect;
+    placement: PanelPlacement;
+    actions: RackActions;
+}) {
     return (
         <>
-            <PanelHeader item={effect}>
+            <PanelHeader item={effect} placement={placement} actions={actions}>
                 <button
                     type="button"
                     className="ghost small"
@@ -53,10 +116,12 @@ function EffectPanel({ effect, actions }: { effect: Effect; actions: RackActions
 /** The editor area for the selected effect or parallel group. */
 export function ItemPanel({
     item,
+    placement,
     actions,
     hint,
 }: {
     item: ChainItem | undefined;
+    placement: PanelPlacement;
     actions: RackActions;
     hint?: string;
 }) {
@@ -73,7 +138,7 @@ export function ItemPanel({
             )}
             {item && isParallelGroup(item) && (
                 <>
-                    <PanelHeader item={item}>
+                    <PanelHeader item={item} placement={placement} actions={actions}>
                         <button
                             type="button"
                             className="ghost small"
@@ -89,7 +154,9 @@ export function ItemPanel({
                     />
                 </>
             )}
-            {item && !isParallelGroup(item) && <EffectPanel effect={item} actions={actions} />}
+            {item && !isParallelGroup(item) && (
+                <EffectPanel effect={item} placement={placement} actions={actions} />
+            )}
             {hint && <div className="idle-hint">{hint}</div>}
         </section>
     );

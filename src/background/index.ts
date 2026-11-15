@@ -4,10 +4,9 @@ import {
     type CaptureStatus,
     type OffscreenMessage,
 } from '../shared/messages';
-import { forgetTab, resolveTabRack } from '../shared/storage';
+import { SESSIONS_KEY, forgetTab, resolveTabRack } from '../shared/storage';
 
 const OFFSCREEN_URL = 'offscreen.html';
-const SESSIONS_KEY = 'sessions';
 
 let creatingOffscreen: Promise<void> | undefined;
 

@@ -5,6 +5,8 @@ export const RACK_KEY = 'rack';
 export const TAB_RACK_PREFIX = 'tabRack:';
 export const TAB_SCOPE_PREFIX = 'tabScope:';
 export const PRESETS_KEY = 'userPresets';
+/** The tabs being processed, kept in `chrome.storage.session` by the background worker. */
+export const SESSIONS_KEY = 'sessions';
 
 /**
  * Which rack a tab follows: a rack of its own that lives until the tab is closed (the default,

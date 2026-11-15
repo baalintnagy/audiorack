@@ -53,6 +53,14 @@ are removed when the tab closes. **All tabs** makes the tab follow the shared ra
 `chrome.storage.local`, and the starting point for new tabs) and discards its own rack. The switch
 is not shown in demo mode.
 
+### Pop-out windows
+
+The pop-out button in an effect's or group's header opens it in a window of its own, so several
+can be watched side by side: the spectrogram next to the compressor, say. Pop-out windows edit
+the same rack as the main window and follow its changes, have their own **Bypass** toggle, and
+come back to life when processing is started from another window. Pressing the button again
+focuses the open window. Pop-out windows exist only in the extension, not in demo mode.
+
 ### Controls
 
 - **Knobs:** drag vertically (Shift for fine), mouse wheel, arrow keys; double-click resets;

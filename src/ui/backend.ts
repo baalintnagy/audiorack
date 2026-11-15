@@ -6,8 +6,9 @@ import {
     type CaptureStatus,
     type OffscreenMessage,
 } from '../shared/messages';
-import type { RackScope } from '../shared/storage';
+import { SESSIONS_KEY, type RackScope } from '../shared/storage';
 import { DEMO_TRACK_LABEL, demoTrack } from './demo-signal';
+import { pagePath, pageParams } from './page';
 import type { TelemetryStore } from './telemetry';
 
 export interface BackendStatus {
@@ -23,10 +24,15 @@ export interface Backend {
     status(): Promise<BackendStatus>;
     start(): Promise<BackendStatus>;
     stop(): Promise<BackendStatus>;
+    /** Reports status changes made elsewhere, such as processing started in another window. */
+    watchStatus(listener: (status: BackendStatus) => void): () => void;
     pushRack(rack: RackState, scope: RackScope): void;
     /** Streams telemetry into the store while the engine runs. */
     connect(store: TelemetryStore): () => void;
+    /** Moves the whole rack into a larger window. */
     popOut?(): void;
+    /** Opens one effect or parallel group in a window of its own, or focuses the open one. */
+    popOutItem?(itemId: string): Promise<void>;
     loadFile?(file: File): Promise<BackendStatus>;
 }
 
@@ -43,9 +49,8 @@ class ExtensionBackend implements Backend {
     ) {}
 
     static async create(): Promise<ExtensionBackend> {
-        const param = new URLSearchParams(location.search).get('tab');
-        if (param && /^\d+$/.test(param)) {
-            const tabId = Number(param);
+        const { tabId } = pageParams();
+        if (tabId !== undefined) {
             const tab = await chrome.tabs.get(tabId).catch(() => undefined);
             return new ExtensionBackend(tabId, tab?.title ?? `Tab ${tabId}`);
         }
@@ -79,6 +84,16 @@ class ExtensionBackend implements Backend {
         return this.send('stop-capture');
     }
 
+    watchStatus(listener: (status: BackendStatus) => void) {
+        const handler = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+            if (area === 'session' && SESSIONS_KEY in changes) {
+                void this.status().then(listener);
+            }
+        };
+        chrome.storage.onChanged.addListener(handler);
+        return () => chrome.storage.onChanged.removeListener(handler);
+    }
+
     pushRack(rack: RackState, scope: RackScope) {
         const message: OffscreenMessage = {
             target: 'offscreen',
@@ -102,12 +117,25 @@ class ExtensionBackend implements Backend {
 
     popOut() {
         void chrome.windows.create({
-            url: chrome.runtime.getURL(`rack.html?tab=${this.tabId}`),
+            url: chrome.runtime.getURL(pagePath({ tabId: this.tabId })),
             type: 'popup',
             width: 1180,
             height: 760,
         });
         window.close();
+    }
+
+    async popOutItem(itemId: string) {
+        const url = chrome.runtime.getURL(pagePath({ tabId: this.tabId, itemId }));
+        const [open] = await chrome.runtime.getContexts({
+            contextTypes: [chrome.runtime.ContextType.TAB],
+            documentUrls: [url],
+        });
+        if (open) {
+            await chrome.windows.update(open.windowId, { focused: true });
+            return;
+        }
+        await chrome.windows.create({ url, type: 'popup', width: 760, height: 520 });
     }
 }
 
@@ -183,6 +211,11 @@ class LocalBackend implements Backend {
         this.file = file;
         this.label = file.name;
         return running ? this.start() : this.status();
+    }
+
+    watchStatus() {
+        // Only this page starts and stops the in-page engine.
+        return () => {};
     }
 
     pushRack(rack: RackState) {

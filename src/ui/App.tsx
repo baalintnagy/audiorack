@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { countEffects, findItem, insertionPoint, type ChainPosition } from '../shared/chain';
 import {
     SPECS,
     createEffect,
     createParallelGroup,
-    isParallelGroup,
     type ChainItem,
     type Effect,
 } from '../shared/effects';
@@ -12,12 +11,15 @@ import { MAX_CHAIN_LENGTH } from '../shared/normalize';
 import { createBackend, type Backend, type BackendStatus } from './backend';
 import type { AddKind } from './components/AddMenu';
 import { ChainStrip } from './components/ChainStrip';
-import { PowerIcon, Segmented, Toggle } from './components/Controls';
+import { PopOutIcon, PowerIcon, Segmented, Toggle } from './components/Controls';
 import { ItemPanel } from './components/ItemPanel';
 import { Knob } from './components/Knob';
 import { LevelMeter } from './components/Meters';
 import { PresetMenu } from './components/PresetMenu';
-import { TelemetryContext, TelemetryStore } from './telemetry';
+import { ItemWindow } from './ItemWindow';
+import { pageParams } from './page';
+import { TelemetryContext } from './telemetry';
+import { useEngine } from './useEngine';
 import { useRack } from './useRack';
 
 function Logo() {
@@ -90,38 +92,35 @@ function AllTabsIcon() {
 
 export function App() {
     const [backend, setBackend] = useState<Backend>();
-    const store = useMemo(() => new TelemetryStore(), []);
-    const { rack, scope, canScopeToTab, actions } = useRack(backend);
-    const [status, setStatus] = useState<BackendStatus>({ active: false, label: '' });
-    const [busy, setBusy] = useState(false);
-    const [selectedId, setSelectedId] = useState<string>();
-    const fileInput = useRef<HTMLInputElement>(null);
-    const isPopup =
-        backend?.kind === 'extension' && !new URLSearchParams(location.search).has('tab');
 
     useEffect(() => {
         void createBackend().then(setBackend);
     }, []);
 
+    if (!backend) {
+        return <div className="loading">Loading rack…</div>;
+    }
+    // Only backends that can open item windows show them; elsewhere the page is the whole rack.
+    const { itemId } = pageParams();
+    if (itemId !== undefined && backend.popOutItem) {
+        return <ItemWindow backend={backend} itemId={itemId} />;
+    }
+    return <RackWindow backend={backend} />;
+}
+
+function RackWindow({ backend }: { backend: Backend }) {
+    const { status, setStatus, store } = useEngine(backend);
+    const { rack, scope, canScopeToTab, actions } = useRack(backend);
+    const [busy, setBusy] = useState(false);
+    const [selectedId, setSelectedId] = useState<string>();
+    const fileInput = useRef<HTMLInputElement>(null);
+    const isPopup = backend.kind === 'extension' && pageParams().tabId === undefined;
+
     useEffect(() => {
         document.documentElement.classList.toggle('popup', isPopup);
     }, [isPopup]);
 
-    useEffect(() => {
-        if (!backend) {
-            return;
-        }
-        void backend.status().then(setStatus);
-    }, [backend]);
-
-    useEffect(() => {
-        if (backend && status.active) {
-            return backend.connect(store);
-        }
-        return undefined;
-    }, [backend, status.active, store]);
-
-    if (!backend || !rack) {
+    if (!rack) {
         return <div className="loading">Loading rack…</div>;
     }
 
@@ -133,15 +132,6 @@ export function App() {
             kind === 'parallel' ? createParallelGroup() : (createEffect(kind) as Effect);
         if (actions.addItem(item, position ?? insertionPoint(rack.chain, item, selected?.id))) {
             setSelectedId(item.id);
-        }
-    };
-
-    const toggleBypass = (id: string) => {
-        const item = findItem(rack.chain, id);
-        if (item && isParallelGroup(item)) {
-            actions.updateGroup(id, (group) => ({ ...group, bypass: !group.bypass }));
-        } else {
-            actions.updateEffect(id, (effect) => ({ ...effect, bypass: !effect.bypass }));
         }
     };
 
@@ -257,14 +247,7 @@ export function App() {
                             title="Open in a larger window"
                             aria-label="Open in a larger window"
                         >
-                            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-                                <path
-                                    d="M9 2h5v5M14 2 7.5 8.5M12 9.5V14H2V4h4.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.6"
-                                />
-                            </svg>
+                            <PopOutIcon />
                         </button>
                     )}
                 </header>
@@ -276,7 +259,7 @@ export function App() {
                             full={countEffects(rack.chain) >= MAX_CHAIN_LENGTH}
                             handlers={{
                                 onSelect: setSelectedId,
-                                onToggle: toggleBypass,
+                                onToggle: actions.toggleBypass,
                                 onRemove: actions.removeItem,
                                 onMove: actions.moveItem,
                                 onAdd: add,
@@ -284,6 +267,13 @@ export function App() {
                         />
                         <ItemPanel
                             item={selected}
+                            placement={{
+                                kind: 'rack',
+                                onPopOut:
+                                    backend.popOutItem && selected
+                                        ? () => void backend.popOutItem?.(selected.id)
+                                        : undefined,
+                            }}
                             actions={actions}
                             hint={
                                 status.active

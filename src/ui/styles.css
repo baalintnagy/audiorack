@@ -80,6 +80,16 @@ html.popup body {
     height: 592px;
 }
 
+/* A window showing a single effect or group: just its panel, at any size. */
+html.item-window body {
+    min-width: 0;
+}
+
+html.item-window .app {
+    grid-template-rows: 1fr;
+    padding: 10px;
+}
+
 #root,
 .app {
     height: 100%;
@@ -272,6 +282,10 @@ button:disabled {
     padding: 0;
     display: grid;
     place-items: center;
+}
+
+.ghost.small.icon {
+    width: 24px;
 }
 
 .ghost.danger:hover:not(:disabled) {

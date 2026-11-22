@@ -1,11 +1,13 @@
 /**
  * What a rack page shows, from its URL. Without parameters it is the toolbar popup for the
  * active tab; `tab` opens the whole rack of that tab in a window of its own, and `item` narrows
- * such a window to one effect or parallel group of the rack.
+ * such a window to one effect or parallel group of the rack. `panel=side` marks the rack docked
+ * in the browser's side panel.
  */
 export interface PageParams {
     tabId?: number;
     itemId?: string;
+    sidePanel?: boolean;
 }
 
 const PAGE = 'rack.html';
@@ -17,6 +19,7 @@ export function parsePageParams(search: string): PageParams {
     return {
         tabId: tab !== null && /^\d+$/.test(tab) ? Number(tab) : undefined,
         itemId: item || undefined,
+        sidePanel: params.get('panel') === 'side',
     };
 }
 
@@ -25,13 +28,16 @@ export function pageParams(): PageParams {
 }
 
 /** The path of the rack page showing `params`, relative to the extension root. */
-export function pagePath({ tabId, itemId }: PageParams): string {
+export function pagePath({ tabId, itemId, sidePanel }: PageParams): string {
     const params = new URLSearchParams();
     if (tabId !== undefined) {
         params.set('tab', String(tabId));
     }
     if (itemId !== undefined) {
         params.set('item', itemId);
+    }
+    if (sidePanel) {
+        params.set('panel', 'side');
     }
     const query = params.toString();
     return query ? `${PAGE}?${query}` : PAGE;

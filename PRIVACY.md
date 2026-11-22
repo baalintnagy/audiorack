@@ -1,6 +1,6 @@
 # Privacy Policy: AudioRack
 
-_Last updated: 15 November 2026_
+_Last updated: 22 November 2026_
 
 AudioRack ("the extension") does **not** collect, transmit, sell or share any personal data.
 
@@ -28,6 +28,9 @@ The extension uses Chrome's built-in `chrome.storage` API:
 - **Your presets**: the names and settings of presets you save, stored in `chrome.storage.local`.
 - **Which tabs are being processed**: the browser's internal numeric tab IDs, stored in
   `chrome.storage.session`. Chrome clears this when the browser closes.
+- **Effects pinned in the side panel**: the IDs of the effects you keep open in a tab's side
+  panel, keyed by the browser's internal numeric tab ID and stored in `chrome.storage.session`.
+  It is deleted when the tab closes, and Chrome clears it when the browser closes.
 
 Nothing else is stored. In particular, the extension does not store:
 
@@ -42,6 +45,7 @@ Nothing else is stored. In particular, the extension does not store:
 - **`offscreen`**: to run the audio engine in a hidden extension page while the popup is closed.
 - **`activeTab`**: to identify the tab you opened the extension on, and to show its title in the
   popup. The title is displayed only and is not stored.
+- **`sidePanel`**: to show the rack in Chrome's side panel when you press the side panel button.
 - **`storage`**: to save your rack and presets as described above.
 
 The extension does not read or change the content of any web page.

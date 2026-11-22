@@ -117,6 +117,42 @@ export function PopOutIcon() {
     );
 }
 
+/** A push pin; filled while pinned. */
+export function PinIcon({ pinned }: { pinned: boolean }) {
+    return (
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path
+                d="M5.5 2h5l-.8 4 2.3 2.5H4L6.3 6z"
+                fill={pinned ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+            />
+            <path d="M8 8.5V14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+/** A browser window with its side panel. */
+export function SidePanelIcon() {
+    return (
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <rect
+                x="1.8"
+                y="2.8"
+                width="12.4"
+                height="10.4"
+                rx="1.2"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+            />
+            <path d="M10 3v10" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M10.5 3.5h3v9h-3z" fill="currentColor" opacity="0.45" />
+        </svg>
+    );
+}
+
 export function ControlRow({ children }: { children: ReactNode }) {
     return <div className="control-row">{children}</div>;
 }

@@ -58,8 +58,9 @@ Screenshots, in order:
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tabCapture` | Captures the audio of the tab the user chooses when they press “Process tab”, so it can be run through the effect chain and played back. This is the extension's core function. Capturing stops when the user presses the button again or closes the tab. |
 | `offscreen`  | Runs the audio engine (Web Audio and an AudioWorklet) in an offscreen document, so processing continues after the popup closes. A service worker cannot use Web Audio.                                                                                    |
-| `storage`    | Saves the user's effect chain, its settings and their presets on the device, and remembers which tabs are being processed during the browser session.                                                                                                     |
+| `storage`    | Saves the user's effect chain, its settings and their presets on the device, and remembers which tabs are being processed and which effects are pinned in the side panel during the browser session.                                                      |
 | `activeTab`  | Identifies the tab the user opened the extension on, so that tab can be captured, and shows its title in the popup. The title is only displayed and never stored.                                                                                         |
+| `sidePanel`  | Shows the effect rack in Chrome's side panel when the user presses the side panel button, so they can adjust the effects next to the page they are listening to. The panel is opened only for that tab and shows the same rack as the popup.              |
 
 Host permissions: none requested.
 

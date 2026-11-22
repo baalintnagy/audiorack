@@ -1,10 +1,11 @@
 import { defaultRack, type RackState } from './effects';
-import { normalizeRack } from './normalize';
+import { MAX_CHAIN_LENGTH, normalizeRack } from './normalize';
 import { MAX_PRESET_NAME } from './presets';
 
 export const RACK_KEY = 'rack';
 export const TAB_RACK_PREFIX = 'tabRack:';
 export const TAB_SCOPE_PREFIX = 'tabScope:';
+export const PANEL_PINS_PREFIX = 'panelPins:';
 export const PRESETS_KEY = 'userPresets';
 /** The tabs being processed, kept in `chrome.storage.session` by the background worker. */
 export const SESSIONS_KEY = 'sessions';
@@ -154,10 +155,31 @@ export async function setTabScope(tabId: number, scope: RackScope, rack: RackSta
     await tabRackStore(tabId).clear();
 }
 
+function panelPinsKey(tabId: number): string {
+    return `${PANEL_PINS_PREFIX}${tabId}`;
+}
+
+/** The ids of the items pinned open in the tab's side panel, in the order they were pinned. */
+export async function loadPanelPins(tabId: number): Promise<string[]> {
+    const raw = await read('session', panelPinsKey(tabId));
+    if (!Array.isArray(raw)) {
+        return [];
+    }
+    const ids = raw.filter((id): id is string => typeof id === 'string' && id.length > 0);
+    return [...new Set(ids)].slice(0, MAX_CHAIN_LENGTH);
+}
+
+export function savePanelPins(tabId: number, ids: string[]): Promise<void> {
+    return ids.length > 0
+        ? write('session', panelPinsKey(tabId), ids)
+        : remove('session', panelPinsKey(tabId));
+}
+
 /** Drops everything stored for a closed tab. */
 export async function forgetTab(tabId: number) {
     await tabRackStore(tabId).clear();
     await remove('session', tabScopeKey(tabId));
+    await remove('session', panelPinsKey(tabId));
 }
 
 export async function loadUserPresets(): Promise<UserPreset[]> {

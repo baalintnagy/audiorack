@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createParallelGroup, defaultRack } from '../src/shared/effects';
 import {
     forgetTab,
+    loadPanelPins,
     resolveTabRack,
+    savePanelPins,
     setTabScope,
     sharedRackStore,
     tabRackStore,
@@ -47,5 +49,20 @@ describe('rack storage', () => {
         const { rack, scope } = await resolveTabRack(3);
         expect(scope).toBe('tab');
         expect(rack.chain).toEqual([]);
+    });
+
+    it('keeps side panel pins per tab and forgets them with the tab', async () => {
+        await savePanelPins(4, ['fx-1', 'fx-2']);
+        expect(await loadPanelPins(4)).toEqual(['fx-1', 'fx-2']);
+        expect(await loadPanelPins(5)).toEqual([]);
+        await forgetTab(4);
+        expect(await loadPanelPins(4)).toEqual([]);
+    });
+
+    it('validates stored pins', async () => {
+        sessionStorage.setItem('audiorack:panelPins:4', JSON.stringify(['a', 3, '', 'a', 'b']));
+        expect(await loadPanelPins(4)).toEqual(['a', 'b']);
+        sessionStorage.setItem('audiorack:panelPins:4', JSON.stringify({ a: 1 }));
+        expect(await loadPanelPins(4)).toEqual([]);
     });
 });

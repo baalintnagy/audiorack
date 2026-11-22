@@ -31,6 +31,8 @@ export interface Backend {
     connect(store: TelemetryStore): () => void;
     /** Moves the whole rack into a larger window. */
     popOut?(): void;
+    /** Docks the rack of this tab in the browser's side panel. */
+    dockToSidePanel?(): void;
     /** Opens one effect or parallel group in a window of its own, or focuses the open one. */
     popOutItem?(itemId: string): Promise<void>;
     loadFile?(file: File): Promise<BackendStatus>;
@@ -122,7 +124,31 @@ class ExtensionBackend implements Backend {
             width: 1180,
             height: 760,
         });
-        window.close();
+        this.close();
+    }
+
+    dockToSidePanel() {
+        // The panel is set per tab, so it shows this tab's rack and hides on other tabs. `open`
+        // needs the click's user gesture, so neither call may wait for the other.
+        const tabId = this.tabId;
+        void chrome.sidePanel.setOptions({
+            tabId,
+            path: pagePath({ tabId, sidePanel: true }),
+            enabled: true,
+        });
+        void chrome.sidePanel.open({ tabId }).then(
+            () => window.close(),
+            () => undefined,
+        );
+    }
+
+    /** Closes this page; a side panel closes by being disabled for its tab. */
+    private close() {
+        if (pageParams().sidePanel) {
+            void chrome.sidePanel.setOptions({ tabId: this.tabId, enabled: false });
+        } else {
+            window.close();
+        }
     }
 
     async popOutItem(itemId: string) {

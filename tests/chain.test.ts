@@ -8,6 +8,7 @@ import {
     locate,
     mapEffect,
     moveItem,
+    panelOrder,
     removeItem,
     stepSelection,
     toggleBypass,
@@ -158,5 +159,21 @@ describe('chain selection order', () => {
         expect(stepSelection(chain, 'missing', -Infinity)).toBe(eq.id);
         expect(stepSelection(chain, 'missing', Infinity)).toBe(limiter.id);
         expect(stepSelection([], undefined, 1)).toBeUndefined();
+    });
+
+    it('orders side panel panels like the chain strip, whatever order they were pinned in', () => {
+        const { eq, compressor, limiter, group, chain } = setup();
+        expect(panelOrder(chain, [limiter.id, eq.id, compressor.id])).toEqual([
+            eq.id,
+            compressor.id,
+            limiter.id,
+        ]);
+        // The selection lands between the pinned items, and duplicates or stale ids drop out.
+        expect(panelOrder(chain, [limiter.id, eq.id, 'missing', group.id, eq.id])).toEqual([
+            eq.id,
+            group.id,
+            limiter.id,
+        ]);
+        expect(panelOrder(chain, [undefined])).toEqual([]);
     });
 });

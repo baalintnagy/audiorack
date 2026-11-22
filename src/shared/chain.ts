@@ -83,6 +83,16 @@ export function displayOrder(chain: ChainItem[]): string[] {
 }
 
 /**
+ * The items open as panels when several are shown: `shown` (pinned items and the selection) in
+ * display order, so they read like the chain strip, left to right and each group top-down.
+ * Ids no longer in the chain are left out.
+ */
+export function panelOrder(chain: ChainItem[], shown: Iterable<string | undefined>): string[] {
+    const wanted = new Set(shown);
+    return displayOrder(chain).filter((id) => wanted.has(id));
+}
+
+/**
  * The item `step` places from `id` in display order, stopping at either end. Without a shown
  * `id`, stepping forward starts at the first item and stepping back at the last.
  */

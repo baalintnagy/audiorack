@@ -80,6 +80,117 @@ html.popup body {
     height: 592px;
 }
 
+/* The rack docked in the browser's side panel, which the user can resize. */
+html.side-panel body {
+    min-width: 0;
+}
+
+html.side-panel .app {
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+html.side-panel .app > * {
+    min-width: 0;
+}
+
+/* The header wraps onto more rows instead of widening the panel. */
+html.side-panel .header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    padding: 8px 10px;
+}
+
+html.side-panel .main {
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+/* Below the display's own controls, which fill its top edge in a narrow panel. */
+html.side-panel .idle-hint {
+    top: 84px;
+    max-width: calc(100% - 24px);
+    white-space: normal;
+    text-align: center;
+}
+
+/* Controls wrap too: a row scrolled sideways without a scrollbar would hide them. */
+html.side-panel .control-row,
+html.side-panel .control-group-body {
+    flex-wrap: wrap;
+}
+
+/*
+ * Pinned items stack below the selected one and the rack scrolls under the chain strip. Panels
+ * take their natural height, so displays get a fixed one.
+ */
+html.side-panel .main.stacked .chain-frame {
+    position: sticky;
+    top: -10px;
+    z-index: 4;
+    margin-top: -10px;
+    padding-top: 10px;
+    background: var(--bg);
+}
+
+html.side-panel .main.stacked .panel {
+    flex: none;
+    scroll-margin-top: calc(var(--chain-height, 0px) + 10px);
+}
+
+html.side-panel .main.stacked .display {
+    flex: none;
+    height: 200px;
+}
+
+html.side-panel .main.stacked .mixer {
+    flex: none;
+    height: 360px;
+}
+
+html.side-panel .main.stacked .panel.selected {
+    border-color: color-mix(in srgb, var(--effect-color) 60%, var(--border));
+}
+
+.pin-button.on {
+    color: var(--effect-color);
+}
+
+/* The mixer strips keep their width and scroll sideways, with the note after them. */
+html.side-panel .mixer {
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+html.side-panel .parallel-note {
+    flex: none;
+    width: 220px;
+}
+
+/* Too narrow for a column beside the rack: the master section goes below it. */
+@media (max-width: 560px) {
+    html.side-panel .body {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    html.side-panel .main {
+        padding-right: 10px;
+    }
+
+    html.side-panel .master {
+        flex-direction: row;
+        justify-content: center;
+        gap: 16px;
+        height: 116px;
+        padding: 0 10px 10px;
+    }
+
+    html.side-panel .master-meters {
+        flex: none;
+        height: 100%;
+    }
+}
+
 /* A window showing a single effect or group: just its panel, at any size. */
 html.item-window body {
     min-width: 0;
@@ -734,6 +845,28 @@ button:disabled {
 .slot-power svg {
     width: 11px;
     height: 11px;
+}
+
+/* A pin on an item kept open in the side panel. */
+.slot-pin {
+    display: grid;
+    place-items: center;
+    flex: none;
+    color: var(--slot-color);
+}
+
+.slot-pin svg {
+    width: 10px;
+    height: 10px;
+}
+
+/* Beside the slot number rather than the power button. */
+.slot-top .slot-pin {
+    margin-left: auto;
+}
+
+.slot-top .slot-pin + .slot-index {
+    flex: none;
 }
 
 .slot-index {

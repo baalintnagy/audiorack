@@ -32,7 +32,7 @@ export function manifest(version: string) {
         },
         icons: icons('icons'),
         background: { service_worker: 'background.js', type: 'module' },
-        permissions: ['tabCapture', 'offscreen', 'storage', 'activeTab'],
+        permissions: ['tabCapture', 'offscreen', 'storage', 'activeTab', 'sidePanel'],
     };
 }
 

@@ -9,13 +9,16 @@ import {
 import { EffectEditor } from '../editors';
 import { ParallelEditor } from '../editors/ParallelEditor';
 import type { RackActions } from '../useRack';
-import { PopOutIcon, Toggle } from './Controls';
+import { PinIcon, PopOutIcon, Toggle } from './Controls';
 
 /**
- * Where the panel is shown: the rack window can pop the item out, and a window of the item's
- * own replaces the chain strip's power button with a bypass toggle.
+ * Where the panel is shown: the rack window can pop the item out, a rack in the side panel can
+ * also pin it open, and a window of the item's own replaces the chain strip's power button with
+ * a bypass toggle.
  */
-export type PanelPlacement = { kind: 'rack'; onPopOut?: () => void } | { kind: 'window' };
+export type PanelPlacement =
+    | { kind: 'rack'; onPopOut?: () => void; pin?: { pinned: boolean; onToggle: () => void } }
+    | { kind: 'window' };
 
 function WindowControls({
     item,
@@ -38,19 +41,34 @@ function WindowControls({
             </Toggle>
         );
     }
-    if (!placement.onPopOut) {
-        return null;
-    }
+    const { pin, onPopOut } = placement;
+    const pinLabel = pin?.pinned ? 'Unpin from the side panel' : 'Keep open in the side panel';
     return (
-        <button
-            type="button"
-            className="ghost small icon"
-            onClick={placement.onPopOut}
-            title="Open in a window of its own"
-            aria-label="Open in a window of its own"
-        >
-            <PopOutIcon />
-        </button>
+        <>
+            {pin && (
+                <button
+                    type="button"
+                    className={`ghost small icon pin-button ${pin.pinned ? 'on' : ''}`}
+                    onClick={pin.onToggle}
+                    title={pinLabel}
+                    aria-label={pinLabel}
+                    aria-pressed={pin.pinned}
+                >
+                    <PinIcon pinned={pin.pinned} />
+                </button>
+            )}
+            {onPopOut && (
+                <button
+                    type="button"
+                    className="ghost small icon"
+                    onClick={onPopOut}
+                    title="Open in a window of its own"
+                    aria-label="Open in a window of its own"
+                >
+                    <PopOutIcon />
+                </button>
+            )}
+        </>
     );
 }
 
@@ -113,21 +131,24 @@ function EffectPanel({
     );
 }
 
-/** The editor area for the selected effect or parallel group. */
+/** The editor area for an effect or parallel group; `selected` marks it among several. */
 export function ItemPanel({
     item,
     placement,
     actions,
     hint,
+    selected = false,
 }: {
     item: ChainItem | undefined;
     placement: PanelPlacement;
     actions: RackActions;
     hint?: string;
+    selected?: boolean;
 }) {
     return (
         <section
-            className={`panel ${item?.bypass ? 'effect-bypassed' : ''}`}
+            className={`panel ${item?.bypass ? 'effect-bypassed' : ''} ${selected ? 'selected' : ''}`}
+            data-item-id={item?.id}
             style={item ? { ['--effect-color' as string]: itemInfo(item).color } : undefined}
         >
             {!item && (

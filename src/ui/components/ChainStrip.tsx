@@ -20,7 +20,7 @@ import { css } from '../graph';
 import { useCanvas } from '../useCanvas';
 import { useChainDrag, type ChainDrag } from '../useChainDrag';
 import { AddMenu, type AddKind } from './AddMenu';
-import { ChevronIcon, PowerIcon } from './Controls';
+import { ChevronIcon, PinIcon, PowerIcon } from './Controls';
 
 export interface ChainHandlers {
     onSelect: (id: string) => void;
@@ -29,6 +29,15 @@ export interface ChainHandlers {
     onMove: (id: string, position: ChainPosition) => void;
     /** Adds an effect or group; at the selection when `position` is omitted. */
     onAdd: (kind: AddKind, position?: ChainPosition) => void;
+}
+
+/** Marks an item pinned open in the side panel. */
+function PinBadge() {
+    return (
+        <span className="slot-pin" title="Pinned in the side panel">
+            <PinIcon pinned />
+        </span>
+    );
 }
 
 /** Small activity indicator: gain reduction for dynamics, otherwise nothing. */
@@ -109,6 +118,7 @@ function EffectSlot({
     position,
     last,
     selected,
+    pinned,
     handlers,
     drag,
 }: {
@@ -116,6 +126,7 @@ function EffectSlot({
     position: ChainPosition;
     last: boolean;
     selected: boolean;
+    pinned: boolean;
     handlers: ChainHandlers;
     drag: ChainDrag;
 }) {
@@ -147,6 +158,7 @@ function EffectSlot({
                 <>
                     <PowerButton item={effect} label={info.label} onToggle={handlers.onToggle} />
                     <span className="slot-name">{info.short}</span>
+                    {pinned && <PinBadge />}
                     <RemoveButton item={effect} label={info.label} onRemove={handlers.onRemove} />
                 </>
             ) : (
@@ -157,6 +169,7 @@ function EffectSlot({
                             label={info.label}
                             onToggle={handlers.onToggle}
                         />
+                        {pinned && <PinBadge />}
                         <span className="slot-index">{position.index + 1}</span>
                         <RemoveButton
                             item={effect}
@@ -177,6 +190,7 @@ function BranchLane({
     group,
     index,
     selectedId,
+    pinnedIds,
     full,
     handlers,
     drag,
@@ -184,6 +198,7 @@ function BranchLane({
     group: ParallelGroup;
     index: number;
     selectedId: string | undefined;
+    pinnedIds: ReadonlySet<string>;
     full: boolean;
     handlers: ChainHandlers;
     drag: ChainDrag;
@@ -214,6 +229,7 @@ function BranchLane({
                     position={{ branch: ref, index: effectIndex }}
                     last={effectIndex === branch.effects.length - 1}
                     selected={effect.id === selectedId}
+                    pinned={pinnedIds.has(effect.id)}
                     handlers={handlers}
                     drag={drag}
                 />
@@ -234,6 +250,7 @@ function GroupBlock({
     index,
     last,
     selectedId,
+    pinnedIds,
     full,
     handlers,
     drag,
@@ -242,6 +259,7 @@ function GroupBlock({
     index: number;
     last: boolean;
     selectedId: string | undefined;
+    pinnedIds: ReadonlySet<string>;
     full: boolean;
     handlers: ChainHandlers;
     drag: ChainDrag;
@@ -270,6 +288,7 @@ function GroupBlock({
                     onToggle={handlers.onToggle}
                 />
                 <span className="group-name">{PARALLEL_INFO.short}</span>
+                {pinnedIds.has(group.id) && <PinBadge />}
             </div>
             <div className="group-lanes">
                 {group.branches.map((branch, branchIndex) => (
@@ -278,6 +297,7 @@ function GroupBlock({
                         group={group}
                         index={branchIndex}
                         selectedId={selectedId}
+                        pinnedIds={pinnedIds}
                         full={full}
                         handlers={handlers}
                         drag={drag}
@@ -366,14 +386,19 @@ function ScrollArrow({
     );
 }
 
+const NO_PINS: ReadonlySet<string> = new Set();
+
 export function ChainStrip({
     chain,
     selectedId,
+    pinnedIds = NO_PINS,
     full,
     handlers,
 }: {
     chain: ChainItem[];
     selectedId: string | undefined;
+    /** Items pinned open in the side panel, marked with a pin. */
+    pinnedIds?: ReadonlySet<string>;
     /** Whether the rack already holds the maximum number of effects. */
     full: boolean;
     handlers: ChainHandlers;
@@ -447,6 +472,7 @@ export function ChainStrip({
                             index={index}
                             last={index === chain.length - 1}
                             selectedId={selectedId}
+                            pinnedIds={pinnedIds}
                             full={full}
                             handlers={handlers}
                             drag={drag}
@@ -458,6 +484,7 @@ export function ChainStrip({
                             position={{ index }}
                             last={index === chain.length - 1}
                             selected={item.id === selectedId}
+                            pinned={pinnedIds.has(item.id)}
                             handlers={handlers}
                             drag={drag}
                         />

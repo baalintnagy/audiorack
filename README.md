@@ -61,6 +61,20 @@ the same rack as the main window and follow its changes, have their own **Bypass
 come back to life when processing is started from another window. Pressing the button again
 focuses the open window. Pop-out windows exist only in the extension, not in demo mode.
 
+### Side panel
+
+The side panel button in the rack header docks the tab's rack in Chrome's side panel, next to the
+page. The panel belongs to that tab: it hides when you switch to another tab and comes back when
+you return. In a narrow panel the header and controls wrap and the master meters move below the
+rack. The pop-out button in the panel moves the rack to a window and closes the panel.
+
+The pin button in an effect's or group's header keeps it open in the panel. Open panels follow
+the chain strip: left to right, and a parallel group before the effects of its branches, top to
+bottom. Picking an item in the strip scrolls to its panel; an item that is not pinned opens in
+its place among the pinned ones and closes again when another item is picked. The chain strip
+stays at the top while the panel scrolls. Pins belong to the tab and are forgotten when it
+closes.
+
 ### Controls
 
 - **Knobs:** drag vertically (Shift for fine), mouse wheel, arrow keys; double-click resets;

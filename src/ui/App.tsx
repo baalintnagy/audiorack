@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { countEffects, findItem, insertionPoint, type ChainPosition } from '../shared/chain';
+import {
+    countEffects,
+    findItem,
+    insertionPoint,
+    panelOrder,
+    type ChainPosition,
+} from '../shared/chain';
 import {
     SPECS,
     createEffect,
@@ -11,7 +17,7 @@ import { MAX_CHAIN_LENGTH } from '../shared/normalize';
 import { createBackend, type Backend, type BackendStatus } from './backend';
 import { AddMenu, type AddKind } from './components/AddMenu';
 import { ChainStrip } from './components/ChainStrip';
-import { PopOutIcon, PowerIcon, Segmented, Toggle } from './components/Controls';
+import { PopOutIcon, PowerIcon, Segmented, SidePanelIcon, Toggle } from './components/Controls';
 import { ItemPanel } from './components/ItemPanel';
 import { Knob } from './components/Knob';
 import { LevelMeter } from './components/Meters';
@@ -20,6 +26,7 @@ import { ItemWindow } from './ItemWindow';
 import { pageParams } from './page';
 import { TelemetryContext } from './telemetry';
 import { useEngine } from './useEngine';
+import { usePanelPins } from './usePanelPins';
 import { useRack } from './useRack';
 
 function Logo() {
@@ -113,12 +120,35 @@ function RackWindow({ backend }: { backend: Backend }) {
     const { rack, scope, canScopeToTab, actions } = useRack(backend);
     const [busy, setBusy] = useState(false);
     const [selectedId, setSelectedId] = useState<string>();
+    // Counts picks in the chain strip, so picking the selected item again still scrolls to it.
+    const [picks, setPicks] = useState(0);
     const fileInput = useRef<HTMLInputElement>(null);
     const isPopup = backend.kind === 'extension' && pageParams().tabId === undefined;
+    const isSidePanel = pageParams().sidePanel === true;
+    // Outside the extension there is no tab; the demo pins under a placeholder id.
+    const { pins, toggle: togglePin } = usePanelPins(
+        isSidePanel ? (backend.tabId ?? -1) : undefined,
+    );
 
     useEffect(() => {
         document.documentElement.classList.toggle('popup', isPopup);
-    }, [isPopup]);
+        document.documentElement.classList.toggle('side-panel', isSidePanel);
+    }, [isPopup, isSidePanel]);
+
+    // With several panels open, scroll the one picked in the chain strip to the top, just below
+    // the chain strip that stays at the top of the side panel.
+    useEffect(() => {
+        const main = document.querySelector<HTMLElement>('.main.stacked');
+        if (selectedId === undefined || !main) {
+            return;
+        }
+        const frame = main.querySelector<HTMLElement>('.chain-frame');
+        main.style.setProperty('--chain-height', `${frame?.offsetHeight ?? 0}px`);
+        main.querySelector(`.panel[data-item-id="${CSS.escape(selectedId)}"]`)?.scrollIntoView({
+            block: 'start',
+            behavior: 'smooth',
+        });
+    }, [selectedId, picks]);
 
     if (!rack) {
         return <div className="loading">Loading rack…</div>;
@@ -126,6 +156,20 @@ function RackWindow({ backend }: { backend: Backend }) {
 
     const selected: ChainItem | undefined =
         (selectedId === undefined ? undefined : findItem(rack.chain, selectedId)) ?? rack.chain[0];
+
+    // In the side panel, pinned items stay open with the selection placed among them, all in
+    // chain order.
+    const known = (id: string) => findItem(rack.chain, id) !== undefined;
+    const pinnedIds = new Set(panelOrder(rack.chain, pins));
+    const stacked = pinnedIds.size > 0;
+    const panels: (ChainItem | undefined)[] = stacked
+        ? panelOrder(rack.chain, [...pinnedIds, selected?.id]).map((id) => findItem(rack.chain, id))
+        : [selected];
+
+    const select = (id: string) => {
+        setSelectedId(id);
+        setPicks((count) => count + 1);
+    };
 
     const add = (kind: AddKind, position?: ChainPosition) => {
         const item: ChainItem =
@@ -245,7 +289,18 @@ function RackWindow({ backend }: { backend: Backend }) {
                     >
                         Bypass
                     </Toggle>
-                    {isPopup && backend.popOut && (
+                    {!isSidePanel && backend.dockToSidePanel && (
+                        <button
+                            type="button"
+                            className="ghost icon"
+                            onClick={() => backend.dockToSidePanel?.()}
+                            title="Dock in the side panel"
+                            aria-label="Dock in the side panel"
+                        >
+                            <SidePanelIcon />
+                        </button>
+                    )}
+                    {(isPopup || isSidePanel) && backend.popOut && (
                         <button
                             type="button"
                             className="ghost icon"
@@ -258,37 +313,49 @@ function RackWindow({ backend }: { backend: Backend }) {
                     )}
                 </header>
                 <div className="body">
-                    <main className="main">
+                    <main className={`main ${stacked ? 'stacked' : ''}`}>
                         <ChainStrip
                             chain={rack.chain}
                             selectedId={selected?.id}
+                            pinnedIds={pinnedIds}
                             full={countEffects(rack.chain) >= MAX_CHAIN_LENGTH}
                             handlers={{
-                                onSelect: setSelectedId,
+                                onSelect: select,
                                 onToggle: actions.toggleBypass,
                                 onRemove: actions.removeItem,
                                 onMove: actions.moveItem,
                                 onAdd: add,
                             }}
                         />
-                        <ItemPanel
-                            item={selected}
-                            placement={{
-                                kind: 'rack',
-                                onPopOut:
-                                    backend.popOutItem && selected
-                                        ? () => void backend.popOutItem?.(selected.id)
-                                        : undefined,
-                            }}
-                            actions={actions}
-                            hint={
-                                status.active
-                                    ? undefined
-                                    : backend.kind === 'local'
-                                      ? 'Press “Play demo” to hear the rack'
-                                      : 'Press “Process tab” to route this tab through the rack'
-                            }
-                        />
+                        {panels.map((item, index) => (
+                            <ItemPanel
+                                key={item?.id ?? 'empty'}
+                                item={item}
+                                selected={stacked && item !== undefined && item === selected}
+                                placement={{
+                                    kind: 'rack',
+                                    onPopOut:
+                                        backend.popOutItem && item
+                                            ? () => void backend.popOutItem?.(item.id)
+                                            : undefined,
+                                    pin:
+                                        isSidePanel && item
+                                            ? {
+                                                  pinned: pins.includes(item.id),
+                                                  onToggle: () => togglePin(item.id, known),
+                                              }
+                                            : undefined,
+                                }}
+                                actions={actions}
+                                hint={
+                                    index > 0 || status.active
+                                        ? undefined
+                                        : backend.kind === 'local'
+                                          ? 'Press “Play demo” to hear the rack'
+                                          : 'Press “Process tab” to route this tab through the rack'
+                                }
+                            />
+                        ))}
                     </main>
                     <aside className="master">
                         <div className="master-meters">

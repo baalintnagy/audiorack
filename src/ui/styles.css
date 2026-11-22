@@ -89,10 +89,6 @@ html.side-panel .app {
     grid-template-rows: auto minmax(0, 1fr);
 }
 
-html.side-panel .app > * {
-    min-width: 0;
-}
-
 /* The header wraps onto more rows instead of widening the panel. */
 html.side-panel .header {
     flex-wrap: wrap;
@@ -239,6 +235,7 @@ button:disabled {
 .app {
     display: grid;
     grid-template-rows: 52px 1fr;
+    grid-template-columns: minmax(0, 1fr);
     background:
         radial-gradient(circle at 15% -20%, rgb(255 157 77 / 8%), transparent 45%),
         radial-gradient(circle at 90% 120%, rgb(79 179 255 / 7%), transparent 50%), var(--bg);
@@ -258,6 +255,11 @@ button:disabled {
 
 .header-spacer {
     flex: 1;
+}
+
+/* The header never widens the window; its widest controls give way instead. */
+.app > * {
+    min-width: 0;
 }
 
 .brand {
@@ -345,6 +347,7 @@ button:disabled {
 .capture-state {
     font-weight: 600;
     font-size: 12px;
+    white-space: nowrap;
 }
 
 .capture-label {
@@ -496,6 +499,11 @@ button:disabled {
     min-width: 0;
 }
 
+.header > .preset-menu {
+    flex-shrink: 1;
+    min-width: 130px;
+}
+
 .segmented.vertical .segmented-options {
     flex-direction: column;
 }
@@ -553,6 +561,7 @@ button:disabled {
     align-items: center;
     gap: 8px;
     width: 210px;
+    max-width: 100%;
     height: 30px;
     padding: 0 10px;
     border: 1px solid var(--border);

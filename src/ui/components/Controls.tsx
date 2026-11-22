@@ -87,6 +87,22 @@ export function PowerIcon() {
     );
 }
 
+/** A chevron pointing left, or right when `right` is set. */
+export function ChevronIcon({ right = false }: { right?: boolean }) {
+    return (
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path
+                d={right ? 'M6 3l5 5-5 5' : 'M10 3 5 8l5 5'}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
 /** A box with an arrow leaving it, for opening something in a window of its own. */
 export function PopOutIcon() {
     return (

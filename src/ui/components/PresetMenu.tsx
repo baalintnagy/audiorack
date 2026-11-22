@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { countEffects } from '../../shared/chain';
 import type { RackState } from '../../shared/effects';
 import { normalizeRack } from '../../shared/normalize';
-import { FACTORY_PRESETS } from '../../shared/presets';
+import { FACTORY_PRESETS, MAX_PRESET_NAME, nextPresetName } from '../../shared/presets';
 import { loadUserPresets, saveUserPresets, type UserPreset } from '../../shared/storage';
 
 export function PresetMenu({
@@ -19,6 +19,16 @@ export function PresetMenu({
     const [naming, setNaming] = useState<string | undefined>(undefined);
     const ref = useRef<HTMLDivElement>(null);
     const fileInput = useRef<HTMLInputElement>(null);
+    const nameInput = useRef<HTMLInputElement>(null);
+    const nameShown = naming !== undefined;
+
+    // Select the suggested name so typing replaces it.
+    useEffect(() => {
+        if (nameShown) {
+            nameInput.current?.focus();
+            nameInput.current?.select();
+        }
+    }, [nameShown]);
 
     useEffect(() => {
         void loadUserPresets().then(setUserPresets);
@@ -49,7 +59,7 @@ export function PresetMenu({
     };
 
     const saveAs = (raw: string) => {
-        const name = raw.trim().slice(0, 60);
+        const name = raw.trim().slice(0, MAX_PRESET_NAME);
         setNaming(undefined);
         if (!name) {
             return;
@@ -146,10 +156,10 @@ export function PresetMenu({
                             }}
                         >
                             <input
-                                autoFocus
+                                ref={nameInput}
                                 aria-label="Preset name"
                                 value={naming}
-                                maxLength={60}
+                                maxLength={MAX_PRESET_NAME}
                                 onChange={(event) => setNaming(event.target.value)}
                                 onKeyDown={(event) =>
                                     event.key === 'Escape' && setNaming(undefined)
@@ -164,7 +174,14 @@ export function PresetMenu({
                         <button
                             type="button"
                             className="ghost"
-                            onClick={() => setNaming(current === 'Custom' ? 'My preset' : current)}
+                            onClick={() =>
+                                setNaming(
+                                    nextPresetName(current === 'Custom' ? undefined : current, [
+                                        ...FACTORY_PRESETS.map((preset) => preset.name),
+                                        ...userPresets.map((preset) => preset.name),
+                                    ]),
+                                )
+                            }
                         >
                             Save as…
                         </button>

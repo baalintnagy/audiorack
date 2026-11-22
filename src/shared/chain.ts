@@ -73,6 +73,31 @@ export function locate(chain: ChainItem[], id: string): ChainPosition | undefine
         .find((position) => position.index >= 0);
 }
 
+/** Item ids in the order the chain strip shows them: each group before its branches' effects. */
+export function displayOrder(chain: ChainItem[]): string[] {
+    return chain.flatMap((item) =>
+        isParallelGroup(item)
+            ? [item.id, ...allEffects([item]).map((effect) => effect.id)]
+            : [item.id],
+    );
+}
+
+/**
+ * The item `step` places from `id` in display order, stopping at either end. Without a shown
+ * `id`, stepping forward starts at the first item and stepping back at the last.
+ */
+export function stepSelection(
+    chain: ChainItem[],
+    id: string | undefined,
+    step: number,
+): string | undefined {
+    const order = displayOrder(chain);
+    const found = id === undefined ? -1 : order.indexOf(id);
+    // Without a selection, start just outside the end the step moves away from.
+    const index = found >= 0 ? found : step > 0 ? -1 : order.length;
+    return order[Math.min(order.length - 1, Math.max(0, index + step))];
+}
+
 /** The insertion point right after `id`, or the end of the main chain. */
 export function positionAfter(chain: ChainItem[], id: string | undefined): ChainPosition {
     const position = id === undefined ? undefined : locate(chain, id);

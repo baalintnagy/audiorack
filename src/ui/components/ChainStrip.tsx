@@ -1,5 +1,10 @@
-import { useRef } from 'react';
-import type { BranchRef, ChainPosition } from '../../shared/chain';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import {
+    displayOrder,
+    stepSelection,
+    type BranchRef,
+    type ChainPosition,
+} from '../../shared/chain';
 import {
     EFFECT_INFO,
     PARALLEL_INFO,
@@ -15,7 +20,7 @@ import { css } from '../graph';
 import { useCanvas } from '../useCanvas';
 import { useChainDrag, type ChainDrag } from '../useChainDrag';
 import { AddMenu, type AddKind } from './AddMenu';
-import { PowerIcon } from './Controls';
+import { ChevronIcon, PowerIcon } from './Controls';
 
 export interface ChainHandlers {
     onSelect: (id: string) => void;
@@ -119,6 +124,7 @@ function EffectSlot({
     return (
         <div
             role="listitem"
+            data-item-id={effect.id}
             className={[
                 'slot',
                 compact ? 'compact' : '',
@@ -243,6 +249,7 @@ function GroupBlock({
     return (
         <div
             role="listitem"
+            data-item-id={group.id}
             className={[
                 'group',
                 group.id === selectedId ? 'selected' : '',
@@ -282,6 +289,83 @@ function GroupBlock({
     );
 }
 
+/** Width kept clear at each scrolled edge for the scroll arrows. */
+const EDGE = 32;
+
+/** Selection steps for the keys the chain handles; Home and End go all the way. */
+const SELECTION_KEYS: Record<string, number> = {
+    ArrowLeft: -1,
+    ArrowRight: 1,
+    Home: -Infinity,
+    End: Infinity,
+};
+
+/**
+ * Whether the chain has more content past its left and right edges, and the height of its
+ * horizontal scrollbar, which the scroll arrows leave uncovered.
+ */
+function useOverflow(scroller: RefObject<HTMLDivElement | null>, chain: ChainItem[]) {
+    const [overflow, setOverflow] = useState({ left: false, right: false, bar: 0 });
+    useEffect(() => {
+        const element = scroller.current;
+        if (!element) {
+            return;
+        }
+        const measure = () => {
+            const left = element.scrollLeft > 1;
+            const right = element.scrollLeft + element.clientWidth < element.scrollWidth - 1;
+            // The offset height also holds the 1px top and bottom borders.
+            const bar = Math.max(0, element.offsetHeight - element.clientHeight - 2);
+            setOverflow((previous) =>
+                previous.left === left && previous.right === right && previous.bar === bar
+                    ? previous
+                    : { left, right, bar },
+            );
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        element.addEventListener('scroll', measure, { passive: true });
+        return () => {
+            observer.disconnect();
+            element.removeEventListener('scroll', measure);
+        };
+    }, [scroller, chain]);
+    return overflow;
+}
+
+/**
+ * Pages the chain left or right. Hovering it while dragging an item scrolls too, so items can
+ * be dropped beyond the visible part of the chain.
+ */
+function ScrollArrow({
+    right = false,
+    onPage,
+    scroller,
+    bar,
+}: {
+    right?: boolean;
+    onPage: () => void;
+    scroller: RefObject<HTMLDivElement | null>;
+    bar: number;
+}) {
+    const label = right ? 'Scroll chain right' : 'Scroll chain left';
+    return (
+        <button
+            type="button"
+            className={`chain-scroll ${right ? 'right' : 'left'}`}
+            aria-label={label}
+            title={label}
+            tabIndex={-1}
+            style={{ bottom: bar + 1 }}
+            onClick={onPage}
+            onDragOver={() => scroller.current?.scrollBy({ left: right ? 16 : -16 })}
+        >
+            <ChevronIcon right={right} />
+        </button>
+    );
+}
+
 export function ChainStrip({
     chain,
     selectedId,
@@ -295,53 +379,101 @@ export function ChainStrip({
     handlers: ChainHandlers;
 }) {
     const drag = useChainDrag(chain, handlers.onMove);
+    const scroller = useRef<HTMLDivElement>(null);
+    const overflow = useOverflow(scroller, chain);
+    const layout = displayOrder(chain).join();
+
+    // Bring the selection into view when it changes or the items around it move.
+    useEffect(() => {
+        const element = scroller.current;
+        const item =
+            selectedId === undefined
+                ? null
+                : element?.querySelector<HTMLElement>(`[data-item-id="${selectedId}"]`);
+        if (!element || !item) {
+            return;
+        }
+        const view = element.getBoundingClientRect();
+        const box = item.getBoundingClientRect();
+        // Keep the item clear of the scroll arrows.
+        if (box.left < view.left + EDGE) {
+            element.scrollBy({ left: box.left - view.left - EDGE, behavior: 'smooth' });
+        } else if (box.right > view.right - EDGE) {
+            element.scrollBy({ left: box.right - view.right + EDGE, behavior: 'smooth' });
+        }
+    }, [selectedId, layout]);
+
+    const page = (direction: number) => {
+        const element = scroller.current;
+        element?.scrollBy({ left: direction * element.clientWidth * 0.75, behavior: 'smooth' });
+    };
+
     return (
-        <div
-            className="chain"
-            role="list"
-            aria-label="Effect chain"
-            onDragOver={(event) => drag.over(event)}
-            onDragLeave={drag.leave}
-            onDrop={drag.drop}
-            onWheel={(event) => {
-                // Let a regular mouse wheel scroll the horizontal chain.
-                if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-                    event.currentTarget.scrollLeft += event.deltaY;
-                }
-            }}
-        >
-            <div className="chain-io">IN</div>
-            {chain.map((item, index) =>
-                isParallelGroup(item) ? (
-                    <GroupBlock
-                        key={item.id}
-                        group={item}
-                        index={index}
-                        last={index === chain.length - 1}
-                        selectedId={selectedId}
-                        full={full}
-                        handlers={handlers}
-                        drag={drag}
-                    />
-                ) : (
-                    <EffectSlot
-                        key={item.id}
-                        effect={item}
-                        position={{ index }}
-                        last={index === chain.length - 1}
-                        selected={item.id === selectedId}
-                        handlers={handlers}
-                        drag={drag}
-                    />
-                ),
+        <div className="chain-frame">
+            <div
+                ref={scroller}
+                className="chain"
+                role="list"
+                aria-label="Effect chain"
+                aria-keyshortcuts="ArrowLeft ArrowRight Home End"
+                tabIndex={0}
+                onDragOver={(event) => drag.over(event)}
+                onDragLeave={drag.leave}
+                onDrop={drag.drop}
+                onWheel={(event) => {
+                    // Let a regular mouse wheel scroll the horizontal chain.
+                    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+                        event.currentTarget.scrollLeft += event.deltaY;
+                    }
+                }}
+                onKeyDown={(event) => {
+                    const step = SELECTION_KEYS[event.key];
+                    if (step === undefined || event.altKey || event.ctrlKey || event.metaKey) {
+                        return;
+                    }
+                    event.preventDefault();
+                    const next = stepSelection(chain, selectedId, step);
+                    if (next !== undefined) {
+                        handlers.onSelect(next);
+                    }
+                }}
+            >
+                <div className="chain-io">IN</div>
+                {chain.map((item, index) =>
+                    isParallelGroup(item) ? (
+                        <GroupBlock
+                            key={item.id}
+                            group={item}
+                            index={index}
+                            last={index === chain.length - 1}
+                            selectedId={selectedId}
+                            full={full}
+                            handlers={handlers}
+                            drag={drag}
+                        />
+                    ) : (
+                        <EffectSlot
+                            key={item.id}
+                            effect={item}
+                            position={{ index }}
+                            last={index === chain.length - 1}
+                            selected={item.id === selectedId}
+                            handlers={handlers}
+                            drag={drag}
+                        />
+                    ),
+                )}
+                {chain.length === 0 && (
+                    <div className="chain-empty">No effects yet — add one with + Add above</div>
+                )}
+                <div className="chain-io">OUT</div>
+            </div>
+            {overflow.left && (
+                <ScrollArrow onPage={() => page(-1)} scroller={scroller} bar={overflow.bar} />
             )}
-            <AddMenu
-                variant="slot"
-                disabled={full}
-                disabledReason={`The rack holds up to ${MAX_CHAIN_LENGTH} effects`}
-                onAdd={(kind) => handlers.onAdd(kind)}
-            />
-            <div className="chain-io">OUT</div>
+            {overflow.right && (
+                <ScrollArrow right onPage={() => page(1)} scroller={scroller} bar={overflow.bar} />
+            )}
         </div>
     );
 }

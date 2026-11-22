@@ -9,7 +9,7 @@ import {
 } from '../shared/effects';
 import { MAX_CHAIN_LENGTH } from '../shared/normalize';
 import { createBackend, type Backend, type BackendStatus } from './backend';
-import type { AddKind } from './components/AddMenu';
+import { AddMenu, type AddKind } from './components/AddMenu';
 import { ChainStrip } from './components/ChainStrip';
 import { PopOutIcon, PowerIcon, Segmented, Toggle } from './components/Controls';
 import { ItemPanel } from './components/ItemPanel';
@@ -205,6 +205,12 @@ function RackWindow({ backend }: { backend: Backend }) {
                         </span>
                     )}
                     <div className="header-spacer" />
+                    <AddMenu
+                        variant="header"
+                        disabled={countEffects(rack.chain) >= MAX_CHAIN_LENGTH}
+                        disabledReason={`The rack holds up to ${MAX_CHAIN_LENGTH} effects`}
+                        onAdd={(kind) => add(kind)}
+                    />
                     {canScopeToTab && (
                         <div className="scope-switch">
                             <Segmented

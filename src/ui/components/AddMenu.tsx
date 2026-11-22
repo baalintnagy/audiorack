@@ -29,8 +29,9 @@ function MenuItem({
 }
 
 /**
- * The "+ Add" button. `slot` is the large button at the end of the main chain; `lane` is the
- * small one at the end of a parallel branch, which only offers effects.
+ * The "+ Add" button. `header` is the button in the app header, which adds to the main chain at
+ * the selection; `lane` is the small one at the end of a parallel branch, which only offers
+ * effects.
  */
 export function AddMenu({
     onAdd,
@@ -41,9 +42,9 @@ export function AddMenu({
     onAdd: (kind: AddKind) => void;
     disabled: boolean;
     disabledReason: string;
-    variant: 'slot' | 'lane';
+    variant: 'header' | 'lane';
 }) {
-    // The chain scrolls horizontally, so the menu is positioned against the viewport.
+    // Branches scroll with the chain, so the menu is positioned against the viewport.
     const [position, setPosition] = useState<{ left: number; top: number }>();
     const ref = useRef<HTMLDivElement>(null);
     const open = position !== undefined;
@@ -79,7 +80,7 @@ export function AddMenu({
         <div className={`add-menu add-menu-${variant}`} ref={ref}>
             <button
                 type="button"
-                className={variant === 'slot' ? 'slot add-slot' : 'lane-add'}
+                className={variant === 'header' ? 'ghost add-button' : 'lane-add'}
                 disabled={disabled}
                 aria-haspopup="menu"
                 aria-expanded={open}
@@ -91,7 +92,7 @@ export function AddMenu({
                 title={title}
             >
                 <span className="add-plus">+</span>
-                {variant === 'slot' && <span className="slot-name">Add</span>}
+                {variant === 'header' && <span>Add</span>}
             </button>
             {open && (
                 <div
@@ -118,7 +119,7 @@ export function AddMenu({
                             ))}
                         </div>
                     ))}
-                    {variant === 'slot' && (
+                    {variant === 'header' && (
                         <div role="group">
                             <div className="menu-heading">Routing</div>
                             <MenuItem

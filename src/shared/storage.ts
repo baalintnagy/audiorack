@@ -1,5 +1,6 @@
 import { defaultRack, type RackState } from './effects';
 import { normalizeRack } from './normalize';
+import { MAX_PRESET_NAME } from './presets';
 
 export const RACK_KEY = 'rack';
 export const TAB_RACK_PREFIX = 'tabRack:';
@@ -171,7 +172,10 @@ export async function loadUserPresets(): Promise<UserPreset[]> {
                 item !== null &&
                 typeof (item as { name?: unknown }).name === 'string',
         )
-        .map((item) => ({ name: item.name.slice(0, 60), rack: normalizeRack(item.rack) }));
+        .map((item) => ({
+            name: item.name.slice(0, MAX_PRESET_NAME),
+            rack: normalizeRack(item.rack),
+        }));
 }
 
 export function saveUserPresets(presets: UserPreset[]): Promise<void> {

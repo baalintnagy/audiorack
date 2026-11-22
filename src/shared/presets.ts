@@ -20,6 +20,9 @@ function rack(chain: ChainItem[], partial: Partial<RackState> = {}): RackState {
     return { ...defaultRack(), chain, ...partial };
 }
 
+/** The longest name a saved preset can have. */
+export const MAX_PRESET_NAME = 60;
+
 export interface FactoryPreset {
     name: string;
     description: string;
@@ -164,3 +167,22 @@ export const FACTORY_PRESETS: FactoryPreset[] = [
         create: () => rack([]),
     },
 ];
+
+/**
+ * A free name for saving the rack as a preset: `base` with the next unused counter when the
+ * rack came from a preset (a counter it already ends with is replaced), otherwise "Preset" and
+ * a counter. Names compare without regard to case.
+ */
+export function nextPresetName(base: string | undefined, taken: string[]): string {
+    const used = new Set(taken.map((name) => name.trim().toLowerCase()));
+    const stem = base?.trim().replace(/\s+\d+$/, '') || 'Preset';
+    // Shorten the stem rather than the counter to stay within the preset name limit.
+    const named = (counter: number) =>
+        `${stem.slice(0, MAX_PRESET_NAME - 1 - String(counter).length).trimEnd()} ${counter}`;
+    // A name from a preset already counts as the first one.
+    let counter = base?.trim() ? 2 : 1;
+    while (used.has(named(counter).toLowerCase())) {
+        counter++;
+    }
+    return named(counter);
+}

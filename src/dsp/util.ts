@@ -54,8 +54,12 @@ export class Smoother {
         return this.current;
     }
 
+    /**
+     * Whether the ramp has reached its target exactly. `next` snaps the last step, so callers can
+     * compare `value` against the target once this is true.
+     */
     get settled() {
-        return Math.abs(this.current - this.target) < 1e-6;
+        return this.current === this.target;
     }
 
     next(): number {

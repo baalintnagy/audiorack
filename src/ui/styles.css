@@ -571,6 +571,50 @@ button:disabled {
 
 /* Chain */
 
+.chain-frame {
+    position: relative;
+    flex: none;
+    min-width: 0;
+}
+
+.chain:focus-visible {
+    outline-offset: -1px;
+}
+
+.chain-scroll {
+    position: absolute;
+    top: 1px;
+    bottom: 1px;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    padding: 0;
+    border: 0;
+    color: var(--text-dim);
+    transition: color 0.15s;
+}
+
+.chain-scroll:hover {
+    color: var(--accent);
+}
+
+.chain-scroll.left {
+    left: 1px;
+    justify-content: start;
+    padding-left: 4px;
+    border-radius: var(--radius) 0 0 0;
+    background: linear-gradient(90deg, #12151b 55%, transparent);
+}
+
+.chain-scroll.right {
+    right: 1px;
+    justify-content: end;
+    padding-right: 4px;
+    border-radius: 0 var(--radius) 0 0;
+    background: linear-gradient(270deg, #12151b 55%, transparent);
+}
+
 .chain {
     display: flex;
     align-items: center;
@@ -583,7 +627,16 @@ button:disabled {
     background: #12151b;
     overflow-x: auto;
     overflow-y: hidden;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: #3a4150 transparent;
+}
+
+.chain-empty {
+    flex: 1;
+    padding: 0 12px;
+    color: var(--text-faint);
+    font-size: 12px;
+    text-align: center;
 }
 
 .chain-io {
@@ -742,20 +795,12 @@ button:disabled {
     border-radius: 2px;
 }
 
-.add-slot {
+.add-button {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 2px;
-    width: 64px;
-    height: 60px;
-    border-style: dashed;
-    background: transparent;
-    color: var(--text-dim);
-    cursor: pointer;
-}
-
-.add-slot::before {
-    display: none;
+    gap: 5px;
+    height: 30px;
+    padding: 0 12px 0 10px;
 }
 
 .add-plus {
@@ -764,9 +809,8 @@ button:disabled {
     color: var(--accent);
 }
 
-.add-slot .slot-name {
-    color: var(--text-dim);
-    font-size: 11px;
+.add-button .add-plus {
+    font-size: 18px;
 }
 
 /* Parallel groups in the chain */

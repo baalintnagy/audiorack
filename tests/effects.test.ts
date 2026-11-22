@@ -166,6 +166,26 @@ describe('rack processor', () => {
         expect(rack.takeMeters().effects[volume.id]).toEqual([]);
     });
 
+    it('stays fully dry once the whole rack is bypassed', () => {
+        const rack = new RackProcessor(SAMPLE_RATE);
+        const volume = createEffect('volume');
+        volume.params.gainDb = -20;
+        const state = { ...defaultRack(), chain: [volume] };
+        rack.setRack(state);
+        const input = sine(300, 1, 0.5);
+        processStereo(input, input, (l, r, frames) => rack.process(l, r, frames));
+        rack.setRack({ ...state, bypass: true });
+        const [left] = processStereo(input, input, (l, r, frames) => rack.process(l, r, frames));
+        // Once the crossfade has run out, the output must stay the untouched input.
+        const settled = SAMPLE_RATE / 2;
+        const deviation = Math.max(
+            ...left
+                .subarray(settled)
+                .map((sample, index) => Math.abs(sample - input[settled + index])),
+        );
+        expect(deviation).toBe(0);
+    });
+
     it('reports input and output levels', () => {
         const rack = new RackProcessor(SAMPLE_RATE);
         rack.setRack({ ...defaultRack(), chain: [], outputDb: -6 });

@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
     allEffects,
     canInsert,
+    displayOrder,
     insertItem,
     insertionPoint,
     locate,
     mapEffect,
     moveItem,
     removeItem,
+    stepSelection,
     toggleBypass,
     ungroup,
 } from '../src/shared/chain';
@@ -129,5 +131,32 @@ describe('chain operations', () => {
         expect(canInsert(full, createParallelGroup())).toBe(true);
         const groups = Array.from({ length: MAX_PARALLEL_GROUPS }, () => createParallelGroup());
         expect(canInsert(groups, createParallelGroup())).toBe(false);
+    });
+});
+
+describe('chain selection order', () => {
+    it('lists each group before the effects in its branches', () => {
+        const { eq, compressor, limiter, group, chain } = setup();
+        expect(displayOrder(chain)).toEqual([eq.id, group.id, compressor.id, limiter.id]);
+    });
+
+    it('steps through the display order and stops at the ends', () => {
+        const { eq, compressor, limiter, group, chain } = setup();
+        expect(stepSelection(chain, eq.id, 1)).toBe(group.id);
+        expect(stepSelection(chain, group.id, 1)).toBe(compressor.id);
+        expect(stepSelection(chain, limiter.id, -1)).toBe(compressor.id);
+        expect(stepSelection(chain, limiter.id, 1)).toBe(limiter.id);
+        expect(stepSelection(chain, eq.id, -1)).toBe(eq.id);
+        expect(stepSelection(chain, compressor.id, Infinity)).toBe(limiter.id);
+        expect(stepSelection(chain, compressor.id, -Infinity)).toBe(eq.id);
+    });
+
+    it('starts from the matching end without a selection', () => {
+        const { eq, limiter, chain } = setup();
+        expect(stepSelection(chain, undefined, 1)).toBe(eq.id);
+        expect(stepSelection(chain, undefined, -1)).toBe(limiter.id);
+        expect(stepSelection(chain, 'missing', -Infinity)).toBe(eq.id);
+        expect(stepSelection(chain, 'missing', Infinity)).toBe(limiter.id);
+        expect(stepSelection([], undefined, 1)).toBeUndefined();
     });
 });

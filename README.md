@@ -70,7 +70,7 @@ rack. The pop-out button in the panel moves the rack to a window and closes the 
 
 The pin button in an effect's or group's header keeps it open in the panel. Open panels follow
 the chain strip: left to right, and a parallel group before the effects of its branches, top to
-bottom. Picking an item in the strip scrolls to its panel; an item that is not pinned opens in
+bottom. Each keeps its own height, also when it is the only one open, and the panel scrolls. Picking an item in the strip scrolls to its panel; an item that is not pinned opens in
 its place among the pinned ones and closes again when another item is picked. The chain strip
 stays at the top while the panel scrolls. Pins belong to the tab and are forgotten when it
 closes.
@@ -120,7 +120,8 @@ npm run dev
 
 `npm run dev` serves the UI at `http://127.0.0.1:5173/rack.html` in **demo mode**: outside the
 extension the rack runs in the page itself with a generated drum & bass demo track, or with a local audio file
-via “Load audio…”.
+via “Load audio…”. Add `?panel=side` (`rack.html?panel=side`) to preview the side panel layout,
+pins included, in a narrow window.
 
 ```bash
 npm run build
@@ -137,7 +138,8 @@ Other scripts: `npm test` (Vitest DSP and state tests), `npm run check` (TypeScr
 ## Website
 
 `site/` holds the GitHub Pages site: a landing page, the privacy policy (rendered from
-`PRIVACY.md` at build time) and screenshots. `npm run site` builds it into `site-dist/`,
+`PRIVACY.md` at build time) and screenshots. `site/images/side-panel.jpg` is captured with the
+store screenshots by `npm run store:assets` (see [`store/`](store/README.md)). `npm run site` builds it into `site-dist/`,
 including the in-browser demo (`vite build --mode demo`, the rack UI with relative URLs).
 `npm run site:preview` serves the result locally.
 

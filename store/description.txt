@@ -7,6 +7,7 @@ Tame videos that are too loud, make quiet dialogue easier to follow, take the ha
 • Drag to reorder, click to bypass. Bypassing crossfades, so there are no clicks or pops.
 • Parallel groups: split the signal into up to four branches, each with its own effects, and mix them on a small mixer with faders, meters, pan, mute, solo and polarity. Great for parallel compression; branches are delay-compensated.
 • A rack per tab: every tab starts from your shared rack and keeps its own changes, so a podcast can get a voice chain while music gets a bass-heavy one. Or let a tab follow the shared rack.
+• Side panel: dock the rack next to the page you are listening to, and pin the effects you want to keep in view. Pinned effects stack in chain order, and picking one in the chain scrolls to it.
 • A global bypass for quick before/after comparison.
 • Input and output gain with level meters.
 
@@ -32,7 +33,7 @@ Start from built-in presets such as Night Mode, Voice Clarity, Bass Head, Parall
 ★ HOW TO USE
 1. Open a tab that plays audio.
 2. Click the AudioRack icon and press “Process tab”.
-3. Adjust the rack. Use the pop-out button for a larger window.
+3. Adjust the rack. Use the side panel button to dock it next to the page, or the pop-out button for a larger window.
 Press the button again or close the tab to stop. Chrome shows its usual sharing indicator on the tab while it is being processed.
 
 ★ PRIVATE BY DESIGN

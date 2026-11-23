@@ -1,5 +1,6 @@
-// Captures the Chrome Web Store screenshots and promo tiles with a headless Chromium browser.
-// The rack runs in demo mode on a Vite dev server, playing the rendered demo track.
+// Captures the Chrome Web Store screenshots, the side panel picture of the website and the promo
+// tiles with a headless Chromium browser. The rack runs in demo mode on a Vite dev server, playing
+// the rendered demo track.
 //
 //   npm run store:assets            (set CHROME_PATH if no Chrome, Brave or Edge is found)
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -14,16 +15,25 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const STORE_DIR = join(ROOT, 'store');
 const SCREENSHOT_DIR = join(STORE_DIR, 'screenshots');
 const PROMO_DIR = join(STORE_DIR, 'promo');
+const SITE_IMAGE_DIR = join(ROOT, 'site', 'images');
 const RACK = readFileSync(join(STORE_DIR, 'screenshot-rack.json'), 'utf8');
 const TAB_TITLE = 'Late-night drum & bass mix';
 const JPEG_QUALITY = 95;
 
 const SCREENSHOTS = [
     { file: '1-equalizer.jpg', slot: 'EQ', settle: 4000 },
-    { file: '2-compressor.jpg', slot: 'COMP', settle: 11000 },
-    { file: '3-multiband.jpg', slot: 'MB', settle: 4000 },
-    { file: '4-spectrogram.jpg', slot: 'SGRAM', settle: 20000 },
-    { file: '5-stereo-image.jpg', slot: 'IMAGE', settle: 4000 },
+    { file: '3-compressor.jpg', slot: 'COMP', settle: 11000 },
+    { file: '4-multiband.jpg', slot: 'MB', settle: 4000 },
+    { file: '5-spectrogram.jpg', slot: 'SGRAM', settle: 20000 },
+];
+
+// The side panel scene: a sample video page with the rack docked next to it, the equalizer picked
+// among pinned effects and the panel scrolled to where the equalizer meets the compressor below.
+const SIDE_PANEL = { pins: ['EQ', 'COMP', 'IMAGE'], slot: 'EQ', scrollTop: 330, settle: 8000 };
+const SIDE_PANEL_SHOTS = [
+    { path: join(SCREENSHOT_DIR, '2-side-panel.jpg'), width: 1280, height: 800, scale: 1 },
+    // 800×600 like the other pictures of the website, laid out at 1067×800.
+    { path: join(SITE_IMAGE_DIR, 'side-panel.jpg'), width: 1067, height: 800, scale: 0.75 },
 ];
 
 const TILES = [
@@ -151,11 +161,11 @@ class Page {
         }
     }
 
-    async goto(url, width, height) {
+    async goto(url, width, height, scale = 1) {
         await this.send('Emulation.setDeviceMetricsOverride', {
             width,
             height,
-            deviceScaleFactor: 1,
+            deviceScaleFactor: scale,
             mobile: false,
         });
         await this.send('Page.navigate', { url });
@@ -177,7 +187,13 @@ class Page {
 }
 
 // Makes the demo page look like the extension's pop-out window processing a tab.
-const DRESS_AS_EXTENSION = `(() => {
+const DRESS_AS_EXTENSION = dressAsExtension('document');
+
+// The rack document of the side panel scene.
+const PANEL_DOCUMENT = 'document.querySelector("iframe").contentDocument';
+
+function dressAsExtension(doc) {
+    return `((document) => {
     const style = document.createElement('style');
     style.textContent = '.header > .ghost { display: none !important; }';
     document.head.append(style);
@@ -186,16 +202,48 @@ const DRESS_AS_EXTENSION = `(() => {
         label.textContent = ${JSON.stringify(TAB_TITLE)};
     }
     return true;
-})()`;
+})(${doc})`;
+}
 
-function selectSlot(name) {
-    return `(() => {
+function selectSlot(name, doc = 'document') {
+    return `((document) => {
         const slot = [...document.querySelectorAll('.chain .slot')].find(
             (element) => element.querySelector('.slot-name')?.textContent === ${JSON.stringify(name)},
         );
         slot?.click();
         return slot !== undefined;
-    })()`;
+    })(${doc})`;
+}
+
+async function captureSidePanel(page, origin, { path, width, height, scale }) {
+    // Start without pins; the scene's frame shares this tab's session storage.
+    await page.evaluate('sessionStorage.clear(); true');
+    await page.goto(`${origin}/store/promo/side-panel.html`, width, height, scale);
+    await page.waitFor(`${PANEL_DOCUMENT}?.querySelector(".capture") !== null`);
+    await page.evaluate(`${PANEL_DOCUMENT}.querySelector(".capture").click(); true`);
+    await page.waitFor(`${PANEL_DOCUMENT}.querySelector(".capture.on") !== null`, 30000);
+    for (const slot of SIDE_PANEL.pins) {
+        if (!(await page.evaluate(selectSlot(slot, PANEL_DOCUMENT)))) {
+            throw new Error(`No ${slot} slot in the default rack.`);
+        }
+        await sleep(300);
+        // The picked panel is the only one until the first pin, then the highlighted one.
+        await page.evaluate(`(${PANEL_DOCUMENT}.querySelector('.panel.selected .pin-button') ??
+            ${PANEL_DOCUMENT}.querySelector('.panel .pin-button')).click(); true`);
+        await sleep(300);
+    }
+    await page.evaluate(selectSlot(SIDE_PANEL.slot, PANEL_DOCUMENT));
+    await sleep(SIDE_PANEL.settle);
+    await page.evaluate(`((document) => {
+        document.querySelectorAll('.chain-frame *').forEach((element) => {
+            element.scrollLeft = 0;
+        });
+        document.querySelector('.main').scrollTop = ${SIDE_PANEL.scrollTop};
+        return true;
+    })(${PANEL_DOCUMENT})`);
+    await page.evaluate(dressAsExtension(PANEL_DOCUMENT));
+    await sleep(500);
+    await page.capture(path);
 }
 
 async function captureScreenshots(page, origin) {
@@ -214,6 +262,9 @@ async function captureScreenshots(page, origin) {
         await page.evaluate(DRESS_AS_EXTENSION);
         await sleep(100);
         await page.capture(join(SCREENSHOT_DIR, file));
+    }
+    for (const shot of SIDE_PANEL_SHOTS) {
+        await captureSidePanel(page, origin, shot);
     }
 }
 

@@ -158,13 +158,16 @@ function RackWindow({ backend }: { backend: Backend }) {
         (selectedId === undefined ? undefined : findItem(rack.chain, selectedId)) ?? rack.chain[0];
 
     // In the side panel, pinned items stay open with the selection placed among them, all in
-    // chain order.
+    // chain order. Panels there keep their stacked size even when only one is open.
     const known = (id: string) => findItem(rack.chain, id) !== undefined;
     const pinnedIds = new Set(panelOrder(rack.chain, pins));
-    const stacked = pinnedIds.size > 0;
-    const panels: (ChainItem | undefined)[] = stacked
-        ? panelOrder(rack.chain, [...pinnedIds, selected?.id]).map((id) => findItem(rack.chain, id))
-        : [selected];
+    const stacked = isSidePanel;
+    const panels: (ChainItem | undefined)[] =
+        pinnedIds.size > 0
+            ? panelOrder(rack.chain, [...pinnedIds, selected?.id]).map((id) =>
+                  findItem(rack.chain, id),
+              )
+            : [selected];
 
     const select = (id: string) => {
         setSelectedId(id);
@@ -331,7 +334,9 @@ function RackWindow({ backend }: { backend: Backend }) {
                             <ItemPanel
                                 key={item?.id ?? 'empty'}
                                 item={item}
-                                selected={stacked && item !== undefined && item === selected}
+                                selected={
+                                    pinnedIds.size > 0 && item !== undefined && item === selected
+                                }
                                 placement={{
                                     kind: 'rack',
                                     onPopOut:

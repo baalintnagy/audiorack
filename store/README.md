@@ -39,10 +39,14 @@ npm run package
 Screenshots, in order:
 
 1. `1-equalizer.jpg`: the equalizer curve on a live spectrum
-2. `2-compressor.jpg`: compressor transfer curve and gain-reduction history
-3. `3-multiband.jpg`: four-band multiband compressor
-4. `4-spectrogram.jpg`: spectrogram
-5. `5-stereo-image.jpg`: stereo scope with correlation, balance and width
+2. `2-side-panel.jpg`: the rack docked in the side panel next to a video page, with pinned
+   effects stacked in chain order
+3. `3-compressor.jpg`: compressor transfer curve and gain-reduction history
+4. `4-multiband.jpg`: four-band multiband compressor
+5. `5-spectrogram.jpg`: spectrogram
+
+The store accepts at most five screenshots; replace the uploaded set in the dashboard when they
+change.
 
 ## Privacy
 
@@ -105,5 +109,8 @@ npm run store:assets
 It starts a Vite dev server, opens the rack in a headless Chrome, Brave or Edge (set `CHROME_PATH`
 to choose one), loads [`screenshot-rack.json`](screenshot-rack.json), plays the demo track and
 captures each editor at 1280×800. The page is dressed as the extension: the demo-only “Load audio”
-button is hidden and the status shows a sample tab title. The promo tiles are rendered from the
-HTML pages in [`promo/`](promo), and the marquee embeds the first screenshot.
+button is hidden and the status shows a sample tab title. The side panel screenshot is staged by
+[`promo/side-panel.html`](promo/side-panel.html): a sample video page with the rack docked in a
+600 px panel next to it, three effects pinned and the equalizer picked. The same scene is also
+saved at 800×600 as the website's `site/images/side-panel.jpg`. The promo tiles are rendered from
+the HTML pages in [`promo/`](promo), and the marquee embeds the first screenshot.

@@ -78,130 +78,166 @@
                     branches, and bypass any of them with a click. Bypassing crossfades, so there
                     are no clicks or pops.
                 </p>
-                <div class="cards">
-                    <article class="card" style="--tint: #4fb3ff">
+                <div class="modules">
+                    <article class="module" style="--tint: #4fb3ff">
+                        <img
+                            src="images/equalizer.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Equalizer curve with six bands drawn over the live spectrum"
+                        />
                         <h3>Equalizer</h3>
                         <p>
-                            Up to 12 bands: bells, shelves, 12–48 dB/oct cuts, notch and band pass.
-                            Drag them directly on the live spectrum.
+                            Up to 12 bands (bells, shelves, notch, band pass and 12–48 dB/oct cuts)
+                            drawn right on the live spectrum before and after the EQ. Double-click
+                            to add a band, drag it to set its frequency and gain, and use the mouse
+                            wheel for its width.
                         </p>
                     </article>
-                    <article class="card" style="--tint: #ffb347">
+                    <article class="module" style="--tint: #ffb347">
+                        <img
+                            src="images/compressor.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Compressor with transfer curve, level history and gain reduction meter"
+                        />
                         <h3>Compressor</h3>
                         <p>
-                            Soft knee, peak or RMS detection, a sidechain filter, auto makeup and
-                            parallel mix, with a transfer curve and gain-reduction history.
+                            Evens out the level: whatever rises above the threshold is turned down
+                            by the ratio. The transfer curve shows the setting and the history shows
+                            the level and the gain reduction as they happen. Peak or RMS detection,
+                            a sidechain filter that ignores the bass, auto makeup gain and a mix
+                            knob for parallel compression.
                         </p>
                     </article>
-                    <article class="card" style="--tint: #ff5e7a">
+                    <article class="module" style="--tint: #ff5e7a">
+                        <img
+                            src="images/limiter.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Limiter with gain reduction history against the ceiling"
+                        />
                         <h3>Limiter</h3>
                         <p>
-                            A lookahead brickwall limiter. The output never goes above the ceiling
-                            you set.
+                            A brickwall for the end of the chain: the output never goes above the
+                            ceiling. It looks a few milliseconds ahead, so peaks are caught smoothly
+                            instead of clipped, and the drive pushes the level into it for a louder
+                            sound.
                         </p>
                     </article>
-                    <article class="card" style="--tint: #b78bff">
+                    <article class="module" style="--tint: #b78bff">
+                        <img
+                            src="images/multiband.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Multiband compressor with four bands and crossover handles"
+                        />
                         <h3>Multiband</h3>
                         <p>
-                            Two to four bands on phase-aligned crossovers, each with its own
-                            compressor, solo, mute and bypass.
+                            Splits the sound into two to four bands on phase-aligned crossovers and
+                            compresses each one on its own, so a booming bass no longer pushes down
+                            the voice. Drag the crossovers in the display; solo, mute or bypass any
+                            band.
                         </p>
                     </article>
-                    <article class="card" style="--tint: #62f08a">
+                    <article class="module" style="--tint: #62f08a">
+                        <img
+                            src="images/gate.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Gate closing between drum hits: level history with threshold line and gate gain"
+                        />
                         <h3>Gate</h3>
                         <p>
-                            Silences hum and hiss between phrases, with hold, hysteresis and a
-                            sidechain filter so rumble doesn't open it.
+                            Turns the sound down while it stays below the threshold, to silence hum
+                            and hiss between phrases or to tighten drums. Hold and hysteresis keep
+                            it from chattering, and the sidechain filter keeps rumble from opening
+                            it.
                         </p>
                     </article>
-                    <article class="card" style="--tint: #3fe0c5">
+                    <article class="module" style="--tint: #3fe0c5">
+                        <img
+                            src="images/filter.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Resonant low-pass filter response with its cutoff swept by the LFO"
+                        />
                         <h3>Filter</h3>
                         <p>
-                            Resonant low pass, high pass, band pass or notch, with drive and a
-                            slowly sweeping LFO.
+                            A resonant low pass, high pass, band pass or notch with 12–48 dB/oct
+                            slopes and drive. The LFO sweeps the cutoff for slowly moving filter
+                            effects, and the mix knob blends in the dry sound.
                         </p>
                     </article>
-                    <article class="card" style="--tint: #ffd84f">
+                    <article class="module" style="--tint: #ffd84f">
+                        <img
+                            src="images/deesser.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="De-esser with its detection band and gain reduction history"
+                        />
                         <h3>De-esser</h3>
                         <p>
-                            Softens harsh “s” sounds in speech and vocals. Listen mode lets you hear
-                            exactly what it catches.
+                            Softens harsh “s” and “sh” sounds in speech and vocals. It listens to a
+                            narrow band around the sibilance and turns down only that band, or the
+                            whole signal in wideband mode. Listen mode lets you hear exactly what it
+                            catches.
                         </p>
                     </article>
-                    <article class="card" style="--tint: #7fd1b9">
+                    <article class="module" style="--tint: #7fd1b9">
+                        <img
+                            src="images/denoiser.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Denoiser on a track with hiss: input spectrum, learned noise floor and the reduction per frequency"
+                        />
                         <h3>Denoiser</h3>
                         <p>
-                            Spectral noise reduction for hiss, hum and fan noise. It learns the
-                            noise floor as it plays; freeze it, or listen to what it removes.
+                            Reduces steady background noise such as hiss, hum and fan noise. It
+                            learns the noise floor of each frequency from the quietest moments and
+                            turns down whatever does not rise clearly above it. Freeze the profile
+                            during a pause, or listen to what it removes.
                         </p>
                     </article>
-                    <article class="card" style="--tint: #9fe870">
+                    <article class="module" style="--tint: #9fe870">
+                        <img
+                            src="images/volume.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Volume with the stereo field, channel levels and a loudness bar"
+                        />
                         <h3>Volume</h3>
                         <p>
-                            Gain, pan, stereo width and polarity flip for each channel, with a
-                            loudness bar.
+                            Gain, pan, stereo width from mono to extra wide and a polarity flip for
+                            each channel, with a loudness bar that shows the momentary and
+                            short-term loudness of its output in LUFS.
                         </p>
                     </article>
-                    <article class="card" style="--tint: #ff8a3d">
+                    <article class="module" style="--tint: #ff8a3d">
+                        <img
+                            src="images/bass-booster.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Bass booster response with the low shelf and harmonics controls"
+                        />
                         <h3>Bass Booster</h3>
                         <p>
-                            A low boost plus added harmonics, so bass comes through even on small
-                            speakers.
+                            A low shelf boost plus generated harmonics that make the bass audible
+                            even on laptop and phone speakers. A rumble filter keeps the boost
+                            clean, and mono bass centers the low end.
                         </p>
                     </article>
                 </div>
-            </section>
-
-            <section class="section showcase">
-                <figure>
-                    <img
-                        src="images/compressor.jpg"
-                        width="800"
-                        height="600"
-                        loading="lazy"
-                        alt="Compressor with transfer curve and gain reduction history"
-                    />
-                    <figcaption>
-                        Compressor: transfer curve, live level and gain reduction.
-                    </figcaption>
-                </figure>
-                <figure>
-                    <img
-                        src="images/multiband.jpg"
-                        width="800"
-                        height="600"
-                        loading="lazy"
-                        alt="Multiband compressor with four bands and crossover handles"
-                    />
-                    <figcaption>Multiband: drag crossovers, watch each band work.</figcaption>
-                </figure>
-            </section>
-
-            <section class="section showcase">
-                <figure>
-                    <img
-                        src="images/gate.jpg"
-                        width="800"
-                        height="600"
-                        loading="lazy"
-                        alt="Gate closing between drum hits: level history with threshold line and gate gain"
-                    />
-                    <figcaption>
-                        Gate: level, threshold and the gate opening and closing.
-                    </figcaption>
-                </figure>
-                <figure>
-                    <img
-                        src="images/denoiser.jpg"
-                        width="800"
-                        height="600"
-                        loading="lazy"
-                        alt="Denoiser on a track with hiss: input spectrum, learned noise floor and the reduction per frequency"
-                    />
-                    <figcaption>
-                        Denoiser: the learned noise floor and the reduction at each frequency.
-                    </figcaption>
-                </figure>
             </section>
 
             <section id="routing" class="section feature">
@@ -287,8 +323,8 @@
                     Analyzers pass the audio through untouched. Put them anywhere in the chain, for
                     example one before and one after the EQ.
                 </p>
-                <div class="gallery">
-                    <figure>
+                <div class="modules">
+                    <article class="module" style="--tint: #6f8cff">
                         <img
                             src="images/spectrum.jpg"
                             width="800"
@@ -296,12 +332,15 @@
                             loading="lazy"
                             alt="Spectrum analyzer with peak hold"
                         />
-                        <figcaption>
-                            <strong>Spectrum</strong> Mono, left, right, mid or side, with peak
-                            hold, freeze and a readout of frequency, note and level.
-                        </figcaption>
-                    </figure>
-                    <figure>
+                        <h3>Spectrum</h3>
+                        <p>
+                            The frequency content as a smooth curve, from a 2k to 8k point FFT of
+                            mono, left, right, mid or side. Peak hold, freeze, adjustable tilt and
+                            smoothing, and a readout of frequency, musical note and level under the
+                            mouse.
+                        </p>
+                    </article>
+                    <article class="module" style="--tint: #ff6fd8">
                         <img
                             src="images/spectrogram.jpg"
                             width="800"
@@ -309,12 +348,14 @@
                             loading="lazy"
                             alt="Scrolling spectrogram of the drum and bass demo track"
                         />
-                        <figcaption>
-                            <strong>Spectrogram</strong> Frequency over time, with adjustable levels
-                            and three color schemes.
-                        </figcaption>
-                    </figure>
-                    <figure>
+                        <h3>Spectrogram</h3>
+                        <p>
+                            Frequency over time as a scrolling image, where hi-hats, basslines and
+                            noise each leave their own trace. Adjust the floor and ceiling to bring
+                            out quiet detail, and pick the Magma, Ice or Mono palette.
+                        </p>
+                    </article>
+                    <article class="module" style="--tint: #8fe3ff">
                         <img
                             src="images/stereo.jpg"
                             width="800"
@@ -322,32 +363,29 @@
                             loading="lazy"
                             alt="Stereo scope next to the stereo image by frequency, with correlation, balance and width meters below"
                         />
-                        <figcaption>
-                            <strong>Stereo Image</strong> A stereo scope next to the image by
-                            frequency: where each band sits, how wide it is and whether it holds up
-                            in mono.
-                        </figcaption>
-                    </figure>
-                </div>
-                <div class="feature after-gallery">
-                    <figure class="feature-shot">
+                        <h3>Stereo Image</h3>
+                        <p>
+                            A stereo scope next to the image by frequency: each band sits where it
+                            is panned, is as wide as its stereo content and turns red where it would
+                            cancel in mono. Correlation, balance and width meters run below.
+                        </p>
+                    </article>
+                    <article class="module" style="--tint: #ffcf6f">
                         <img
                             src="images/loudness.jpg"
                             width="800"
                             height="600"
                             loading="lazy"
-                            alt="Loudness meter: a minute of short-term and momentary loudness against a -14 LUFS target, with integrated loudness, range and true peak readings"
+                            alt="Loudness meter: short-term and momentary loudness against a -14 LUFS target, with integrated loudness, range and true peak readings"
                         />
-                    </figure>
-                    <div class="feature-text">
                         <h3>Loudness</h3>
-                        <p class="section-lead">
-                            An EBU R128 meter: momentary, short-term and gated integrated loudness,
-                            loudness range and 4× oversampled true peak. Measure a whole show
-                            against a target such as −14 LUFS for streaming or −23 LUFS for
+                        <p>
+                            An EBU R128 loudness meter: momentary, short-term and gated integrated
+                            loudness, loudness range and 4× oversampled true peak. Measure a whole
+                            show against a target such as −14 LUFS for streaming or −23 LUFS for
                             broadcast.
                         </p>
-                    </div>
+                    </article>
                 </div>
             </section>
 

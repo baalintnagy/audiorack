@@ -1,0 +1,220 @@
+{
+    "version": 1,
+    "bypass": false,
+    "inputDb": 0,
+    "outputDb": 0,
+    "chain": [
+        {
+            "type": "gate",
+            "bypass": true,
+            "params": {
+                "thresholdDb": -8,
+                "rangeDb": 24,
+                "attackMs": 0.5,
+                "holdMs": 10,
+                "releaseMs": 60,
+                "hysteresisDb": 3,
+                "sidechainHpHz": 60
+            }
+        },
+        {
+            "type": "denoiser",
+            "bypass": true,
+            "params": {
+                "reductionDb": 18,
+                "thresholdDb": 6,
+                "smoothing": 50,
+                "freeze": false,
+                "listen": false
+            }
+        },
+        {
+            "type": "eq",
+            "params": {
+                "outputDb": 0,
+                "bands": [
+                    {
+                        "type": "lowcut",
+                        "frequency": 35,
+                        "gainDb": 0,
+                        "q": 0.71,
+                        "slope": 24,
+                        "enabled": true
+                    },
+                    {
+                        "type": "lowshelf",
+                        "frequency": 110,
+                        "gainDb": 3.5,
+                        "q": 0.71,
+                        "slope": 24,
+                        "enabled": true
+                    },
+                    {
+                        "type": "bell",
+                        "frequency": 380,
+                        "gainDb": -4,
+                        "q": 1.4,
+                        "slope": 24,
+                        "enabled": true
+                    },
+                    {
+                        "type": "bell",
+                        "frequency": 2800,
+                        "gainDb": 4.5,
+                        "q": 0.9,
+                        "slope": 24,
+                        "enabled": true
+                    },
+                    {
+                        "type": "highshelf",
+                        "frequency": 9000,
+                        "gainDb": 3,
+                        "q": 0.71,
+                        "slope": 24,
+                        "enabled": true
+                    },
+                    {
+                        "type": "notch",
+                        "frequency": 6200,
+                        "gainDb": 0,
+                        "q": 6,
+                        "slope": 24,
+                        "enabled": true
+                    }
+                ]
+            }
+        },
+        {
+            "type": "deesser",
+            "params": {
+                "frequency": 6500,
+                "thresholdDb": -34,
+                "rangeDb": 10,
+                "releaseMs": 60,
+                "mode": "split",
+                "listen": false
+            },
+            "bypass": true
+        },
+        {
+            "type": "compressor",
+            "params": {
+                "thresholdDb": -26,
+                "ratio": 4,
+                "kneeDb": 8,
+                "attackMs": 8,
+                "releaseMs": 140,
+                "autoMakeup": true,
+                "mix": 100,
+                "detection": "peak",
+                "sidechainHpHz": 60,
+                "makeupDb": 0
+            }
+        },
+        {
+            "type": "parallel",
+            "branches": [
+                {
+                    "gainDb": -3,
+                    "effects": []
+                },
+                {
+                    "gainDb": -8,
+                    "effects": [
+                        {
+                            "type": "compressor",
+                            "params": {
+                                "thresholdDb": -40,
+                                "ratio": 10,
+                                "attackMs": 2,
+                                "releaseMs": 120,
+                                "kneeDb": 3,
+                                "autoMakeup": true
+                            }
+                        },
+                        {
+                            "type": "eq",
+                            "params": {
+                                "bands": [
+                                    {
+                                        "type": "highshelf",
+                                        "frequency": 6000,
+                                        "gainDb": 3,
+                                        "q": 0.71,
+                                        "slope": 24,
+                                        "enabled": true
+                                    }
+                                ],
+                                "outputDb": 0
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "multiband",
+            "params": {}
+        },
+        {
+            "type": "bassboost",
+            "params": {
+                "boostDb": 6,
+                "frequency": 70,
+                "harmonics": 40
+            }
+        },
+        {
+            "type": "filter",
+            "params": {
+                "mode": "lowpass",
+                "cutoff": 1500,
+                "q": 3,
+                "slope": 24,
+                "driveDb": 4,
+                "lfoRate": 0.2,
+                "lfoDepth": 1.5,
+                "lfoShape": "sine",
+                "mix": 100
+            },
+            "bypass": true
+        },
+        {
+            "type": "volume",
+            "params": {
+                "gainDb": -2,
+                "pan": 0,
+                "width": 120
+            }
+        },
+        {
+            "type": "limiter",
+            "params": {
+                "inputDb": 2,
+                "ceilingDb": -1
+            }
+        },
+        {
+            "type": "spectrum",
+            "params": {}
+        },
+        {
+            "type": "spectrogram",
+            "params": {}
+        },
+        {
+            "type": "stereo",
+            "params": {
+                "display": "dots",
+                "persistence": 75
+            }
+        },
+        {
+            "type": "loudness",
+            "params": {
+                "targetLufs": -14,
+                "resets": 0
+            }
+        }
+    ]
+}

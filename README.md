@@ -151,9 +151,9 @@ Other scripts: `npm test` (Vitest DSP and state tests), `npm run check` (TypeScr
 ## Website
 
 `site/` holds the GitHub Pages site: a landing page, the privacy policy (rendered from
-`PRIVACY.md` at build time) and screenshots. The side panel, gate, denoiser, loudness and
-stereo image pictures are captured with the store screenshots by `npm run store:assets`
-(see [`store/`](store/README.md)). `npm run site` builds it into `site-dist/`,
+`PRIVACY.md` at build time) and screenshots. Every picture, one per module plus the side panel,
+is captured with the store screenshots by `npm run store:assets` from
+[`site/screenshot-rack.json`](site/screenshot-rack.json) (see [`store/`](store/README.md)). `npm run site` builds it into `site-dist/`,
 including the in-browser demo (`vite build --mode demo`, the rack UI with relative URLs).
 `npm run site:preview` serves the result locally.
 

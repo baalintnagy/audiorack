@@ -111,9 +111,10 @@ to choose one), loads [`screenshot-rack.json`](screenshot-rack.json), plays the 
 captures each editor at 1280×800. The page is dressed as the extension: the demo-only “Load audio”
 button is hidden and the status shows a sample tab title. The gate and denoiser are bypassed in
 that rack and switched on for their own shots; for the denoiser the page plays the demo track
-with added hiss and hum. The same run saves the website's pictures of the newer effects and
-views (`site/images/gate.jpg`, `denoiser.jpg`, `loudness.jpg`, `stereo.jpg`) at
-800×600, undressed, as the demo looks on the site. The side panel screenshot is staged by
+with added hiss and hum. The same run then plays the demo through
+[`site/screenshot-rack.json`](../site/screenshot-rack.json), which holds every effect, analyzer
+and a parallel group, and saves one 800×600 picture of each module to `site/images/`, undressed,
+as the demo looks on the site. The side panel screenshot is staged by
 [`promo/side-panel.html`](promo/side-panel.html): a sample video page with the rack docked in a
 600 px panel next to it, three effects pinned and the equalizer picked. The same scene is also
 saved at 800×600 as the website's `site/images/side-panel.jpg`. The promo tiles are rendered from

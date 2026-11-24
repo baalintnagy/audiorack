@@ -1,5 +1,5 @@
-// Captures the Chrome Web Store screenshots, the website pictures of the newer effects and views,
-// and the promo tiles with a headless Chromium browser. The rack runs in demo mode on a Vite dev server, playing
+// Captures the Chrome Web Store screenshots, the website pictures of every module and the promo
+// tiles with a headless Chromium browser. The rack runs in demo mode on a Vite dev server, playing
 // the rendered demo track.
 //
 //   npm run store:assets            (set CHROME_PATH if no Chrome, Brave or Edge is found)
@@ -20,36 +20,45 @@ const RACK = readFileSync(join(STORE_DIR, 'screenshot-rack.json'), 'utf8');
 const TAB_TITLE = 'Late-night drum & bass mix';
 const JPEG_QUALITY = 95;
 
-// Shots of the rack window, in the order they are taken. Store screenshots are dressed as the
-// extension at 1280×800; website pictures show the demo as it runs on the site, at 800×600.
-// `enable` switches on an effect that is bypassed in the screenshot rack for its own shot, and
-// `noisy` plays the demo track with added hiss and hum from then on, for the denoiser.
+// Store screenshots of the rack window, dressed as the extension at 1280×800, in the order they
+// are taken. `enable` switches on an effect that is bypassed in the screenshot rack for its own
+// shot, and `noisy` plays the demo track with added hiss and hum from then on, for the denoiser.
 const STORE = { width: 1280, height: 800, dressed: true };
-const SITE = { width: 800, height: 600, dressed: false };
-const RACK_SHOTS = [
-    { path: join(SCREENSHOT_DIR, '1-equalizer.jpg'), slot: 'EQ', settle: 4000, ...STORE },
-    { path: join(SCREENSHOT_DIR, '3-compressor.jpg'), slot: 'COMP', settle: 11000, ...STORE },
+const STORE_SHOTS = [
+    { path: join(SCREENSHOT_DIR, '1-equalizer.jpg'), slot: 'EQ', settle: 4000 },
+    { path: join(SCREENSHOT_DIR, '3-compressor.jpg'), slot: 'COMP', settle: 11000 },
     // Long enough for half a minute of loudness history.
-    { path: join(SCREENSHOT_DIR, '4-loudness.jpg'), slot: 'LUFS', settle: 35000, ...STORE },
-    { path: join(SITE_IMAGE_DIR, 'stereo.jpg'), slot: 'IMAGE', settle: 4000, ...SITE },
-    { path: join(SITE_IMAGE_DIR, 'gate.jpg'), slot: 'GATE', enable: true, settle: 8000, ...SITE },
-    { path: join(SITE_IMAGE_DIR, 'loudness.jpg'), slot: 'LUFS', settle: 35000, ...SITE },
-    {
-        path: join(SITE_IMAGE_DIR, 'denoiser.jpg'),
-        slot: 'DN',
-        enable: true,
-        noisy: true,
-        settle: 8000,
-        ...SITE,
-    },
+    { path: join(SCREENSHOT_DIR, '4-loudness.jpg'), slot: 'LUFS', settle: 35000 },
     {
         path: join(SCREENSHOT_DIR, '5-denoiser.jpg'),
         slot: 'DN',
         enable: true,
+        noisy: true,
         settle: 8000,
-        ...STORE,
     },
-];
+].map((shot) => ({ ...shot, ...STORE }));
+
+// The website shows every module, from a rack that holds all of them, as the demo looks on the
+// site at 800×600.
+const SITE_RACK = readFileSync(join(ROOT, 'site', 'screenshot-rack.json'), 'utf8');
+const SITE = { width: 800, height: 600, dressed: false };
+const SITE_SHOTS = [
+    { file: 'equalizer.jpg', slot: 'EQ', settle: 4000 },
+    { file: 'compressor.jpg', slot: 'COMP', settle: 11000 },
+    { file: 'limiter.jpg', slot: 'LIM', settle: 6000 },
+    { file: 'multiband.jpg', slot: 'MB', settle: 5000 },
+    { file: 'gate.jpg', slot: 'GATE', enable: true, settle: 8000 },
+    { file: 'filter.jpg', slot: 'FLT', enable: true, settle: 6000 },
+    { file: 'deesser.jpg', slot: 'DS', enable: true, settle: 6000 },
+    { file: 'volume.jpg', slot: 'VOL', settle: 5000 },
+    { file: 'bass-booster.jpg', slot: 'BASS', settle: 4000 },
+    { file: 'parallel.jpg', slot: 'PAR', settle: 6000 },
+    { file: 'spectrum.jpg', slot: 'SPEC', settle: 4000 },
+    { file: 'spectrogram.jpg', slot: 'SGRAM', settle: 20000 },
+    { file: 'stereo.jpg', slot: 'IMAGE', settle: 5000 },
+    { file: 'loudness.jpg', slot: 'LUFS', settle: 35000 },
+    { file: 'denoiser.jpg', slot: 'DN', enable: true, noisy: true, settle: 8000 },
+].map(({ file, ...shot }) => ({ path: join(SITE_IMAGE_DIR, file), ...shot, ...SITE }));
 
 // Renders the demo track with white hiss and a 50 Hz hum into a WAV file and loads it with
 // "Load audio…". Runs in the page, where Vite serves the module that renders the track.
@@ -294,10 +303,14 @@ function dressAsExtension(doc) {
 })(${doc})`;
 }
 
+/** Selects an effect, or with `PAR` the parallel group, in the chain strip by its short name. */
 function selectSlot(name, doc = 'document') {
     return `((document) => {
-        const slot = [...document.querySelectorAll('.chain .slot')].find(
-            (element) => element.querySelector('.slot-name')?.textContent === ${JSON.stringify(name)},
+        const slot = [...document.querySelectorAll('.chain .slot, .chain .group')].find(
+            (element) =>
+                element.querySelector(
+                    element.classList.contains('group') ? '.group-name' : '.slot-name',
+                )?.textContent === ${JSON.stringify(name)},
         );
         slot?.click();
         return slot !== undefined;
@@ -349,16 +362,17 @@ async function captureSidePanel(page, origin, { path, width, height, scale }) {
     await page.capture(path);
 }
 
-async function captureScreenshots(page, origin) {
-    mkdirSync(SCREENSHOT_DIR, { recursive: true });
-    await page.goto(`${origin}/rack.html`, 1280, 800);
-    await page.evaluate(`localStorage.setItem('audiorack:rack', ${JSON.stringify(RACK)}); true`);
-    await page.goto(`${origin}/rack.html`, 1280, 800);
+/** Plays the demo through `rack` and takes `shots` of the rack window, one module each. */
+async function captureRack(page, origin, rack, shots) {
+    await page.goto(`${origin}/rack.html`, shots[0].width, shots[0].height);
+    await page.evaluate(
+        `localStorage.setItem('audiorack:rack', ${JSON.stringify(rack)}); sessionStorage.clear(); true`,
+    );
+    await page.goto(`${origin}/rack.html`, shots[0].width, shots[0].height);
     await page.waitFor('document.querySelector(".capture") !== null');
     await page.evaluate('document.querySelector(".capture").click()');
     await page.waitFor('document.querySelector(".capture.on") !== null', 30000);
-    mkdirSync(SITE_IMAGE_DIR, { recursive: true });
-    for (const shot of RACK_SHOTS) {
+    for (const shot of shots) {
         if (shot.noisy) {
             await page.evaluate(LOAD_NOISY_DEMO);
             await page.waitFor(
@@ -384,6 +398,13 @@ async function captureScreenshots(page, origin) {
             await page.evaluate(setEnabled(shot.slot, false));
         }
     }
+}
+
+async function captureScreenshots(page, origin) {
+    mkdirSync(SCREENSHOT_DIR, { recursive: true });
+    mkdirSync(SITE_IMAGE_DIR, { recursive: true });
+    await captureRack(page, origin, RACK, STORE_SHOTS);
+    await captureRack(page, origin, SITE_RACK, SITE_SHOTS);
     for (const shot of SIDE_PANEL_SHOTS) {
         await captureSidePanel(page, origin, shot);
     }

@@ -191,16 +191,13 @@ h1 {
 }
 
 .hero-shot,
-.feature-shot,
-.showcase figure,
-.gallery figure {
+.feature-shot {
     margin: 0;
 }
 
 .hero-shot img,
 .feature-shot img,
-.showcase img,
-.gallery img {
+.module img {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: 0 24px 60px rgb(0 0 0 / 55%);
@@ -281,14 +278,27 @@ h2 {
     grid-template-columns: 1fr;
 }
 
-.after-gallery {
-    margin-top: 28px;
-}
-
-.showcase {
+/* One picture and explanation per effect or analyzer. */
+.modules {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px;
+    gap: 40px 32px;
+}
+
+.module {
+    --tint: var(--accent);
+}
+
+.module h3 {
+    margin: 16px 0 6px;
+    color: var(--tint);
+    font-size: 19px;
+}
+
+.module p {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 15px;
 }
 
 figcaption {
@@ -300,12 +310,6 @@ figcaption {
 figcaption strong {
     display: block;
     color: var(--text);
-}
-
-.gallery {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 24px;
 }
 
 .steps {
@@ -402,8 +406,7 @@ figcaption strong {
         grid-template-columns: 1fr;
     }
 
-    .showcase,
-    .gallery {
+    .modules {
         grid-template-columns: 1fr;
     }
 }

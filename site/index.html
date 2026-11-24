@@ -48,8 +48,9 @@
                     <h1>An effect rack for <span class="gradient">every tab</span>.</h1>
                     <p class="lead">
                         Route the sound of any browser tab through a chain of EQ, compressors, a
-                        limiter, filter, de-esser and bass booster, and see it on live analyzers.
-                        Tame loud videos, clarify podcasts or make laptop speakers sound bigger.
+                        limiter, gate, denoiser, filter, de-esser and bass booster, and see it on
+                        live analyzers and a loudness meter. Tame loud videos, clarify podcasts or
+                        make laptop speakers sound bigger.
                     </p>
                     <div class="actions">
                         <a class="button primary" href="demo/rack.html">Try the live demo</a>
@@ -71,7 +72,7 @@
             </section>
 
             <section id="effects" class="section">
-                <h2>Eight effects, any order</h2>
+                <h2>Ten effects, any order</h2>
                 <p class="section-lead">
                     Add effects, drag them into the order you want, or side by side in parallel
                     branches, and bypass any of them with a click. Bypassing crossfades, so there
@@ -106,6 +107,13 @@
                             compressor, solo, mute and bypass.
                         </p>
                     </article>
+                    <article class="card" style="--tint: #62f08a">
+                        <h3>Gate</h3>
+                        <p>
+                            Silences hum and hiss between phrases, with hold, hysteresis and a
+                            sidechain filter so rumble doesn't open it.
+                        </p>
+                    </article>
                     <article class="card" style="--tint: #3fe0c5">
                         <h3>Filter</h3>
                         <p>
@@ -120,9 +128,19 @@
                             exactly what it catches.
                         </p>
                     </article>
+                    <article class="card" style="--tint: #7fd1b9">
+                        <h3>Denoiser</h3>
+                        <p>
+                            Spectral noise reduction for hiss, hum and fan noise. It learns the
+                            noise floor as it plays; freeze it, or listen to what it removes.
+                        </p>
+                    </article>
                     <article class="card" style="--tint: #9fe870">
                         <h3>Volume</h3>
-                        <p>Gain, pan, stereo width and polarity flip for each channel.</p>
+                        <p>
+                            Gain, pan, stereo width and polarity flip for each channel, with a
+                            loudness bar.
+                        </p>
                     </article>
                     <article class="card" style="--tint: #ff8a3d">
                         <h3>Bass Booster</h3>
@@ -156,6 +174,33 @@
                         alt="Multiband compressor with four bands and crossover handles"
                     />
                     <figcaption>Multiband: drag crossovers, watch each band work.</figcaption>
+                </figure>
+            </section>
+
+            <section class="section showcase">
+                <figure>
+                    <img
+                        src="images/gate.jpg"
+                        width="800"
+                        height="600"
+                        loading="lazy"
+                        alt="Gate closing between drum hits: level history with threshold line and gate gain"
+                    />
+                    <figcaption>
+                        Gate: level, threshold and the gate opening and closing.
+                    </figcaption>
+                </figure>
+                <figure>
+                    <img
+                        src="images/denoiser.jpg"
+                        width="800"
+                        height="600"
+                        loading="lazy"
+                        alt="Denoiser on a track with hiss: input spectrum, learned noise floor and the reduction per frequency"
+                    />
+                    <figcaption>
+                        Denoiser: the learned noise floor and the reduction at each frequency.
+                    </figcaption>
                 </figure>
             </section>
 
@@ -275,13 +320,34 @@
                             width="800"
                             height="600"
                             loading="lazy"
-                            alt="Stereo image scope with correlation and balance meters"
+                            alt="Stereo scope next to the stereo image by frequency, with correlation, balance and width meters below"
                         />
                         <figcaption>
-                            <strong>Stereo Image</strong> A stereo scope with phase correlation,
-                            balance and width meters.
+                            <strong>Stereo Image</strong> A stereo scope next to the image by
+                            frequency: where each band sits, how wide it is and whether it holds up
+                            in mono.
                         </figcaption>
                     </figure>
+                </div>
+                <div class="feature after-gallery">
+                    <figure class="feature-shot">
+                        <img
+                            src="images/loudness.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Loudness meter: a minute of short-term and momentary loudness against a -14 LUFS target, with integrated loudness, range and true peak readings"
+                        />
+                    </figure>
+                    <div class="feature-text">
+                        <h3>Loudness</h3>
+                        <p class="section-lead">
+                            An EBU R128 meter: momentary, short-term and gated integrated loudness,
+                            loudness range and 4× oversampled true peak. Measure a whole show
+                            against a target such as −14 LUFS for streaming or −23 LUFS for
+                            broadcast.
+                        </p>
+                    </div>
                 </div>
             </section>
 

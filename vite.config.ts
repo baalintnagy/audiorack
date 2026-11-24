@@ -8,8 +8,8 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 
 // The Chrome Web Store shows this as the listing summary; it must stay within 132 characters.
 const DESCRIPTION =
-    'An effect rack for your browser tabs: EQ, compressors, limiter, filter, de-esser, ' +
-    'bass booster and live audio analyzers.';
+    'An effect rack for your browser tabs: EQ, compressors, gate, denoiser, de-esser, ' +
+    'bass booster, a loudness meter and audio analyzers.';
 
 const ICON_SIZES = [16, 32, 48, 128];
 

@@ -3,9 +3,12 @@ import { EFFECT_INFO } from '../../shared/effects';
 import { BassBoostEditor } from './BassBoostEditor';
 import { CompressorEditor } from './CompressorEditor';
 import { DeesserEditor } from './DeesserEditor';
+import { DenoiserEditor } from './DenoiserEditor';
 import { EqEditor } from './EqEditor';
 import { FilterEditor } from './FilterEditor';
+import { GateEditor } from './GateEditor';
 import { LimiterEditor } from './LimiterEditor';
+import { LoudnessEditor } from './LoudnessEditor';
 import { MultibandEditor } from './MultibandEditor';
 import { SpectrogramEditor } from './SpectrogramEditor';
 import { SpectrumEditor } from './SpectrumEditor';
@@ -29,6 +32,12 @@ export function EffectEditor({
             return <LimiterEditor effect={effect} setParams={setParams} color={color} />;
         case 'multiband':
             return <MultibandEditor effect={effect} setParams={setParams} color={color} />;
+        case 'gate':
+            return <GateEditor effect={effect} setParams={setParams} color={color} />;
+        case 'denoiser':
+            return <DenoiserEditor effect={effect} setParams={setParams} color={color} />;
+        case 'loudness':
+            return <LoudnessEditor effect={effect} setParams={setParams} color={color} />;
         case 'filter':
             return <FilterEditor effect={effect} setParams={setParams} color={color} />;
         case 'deesser':

@@ -5,6 +5,30 @@
     "outputDb": 0,
     "chain": [
         {
+            "type": "gate",
+            "bypass": true,
+            "params": {
+                "thresholdDb": -8,
+                "rangeDb": 24,
+                "attackMs": 0.5,
+                "holdMs": 10,
+                "releaseMs": 60,
+                "hysteresisDb": 3,
+                "sidechainHpHz": 60
+            }
+        },
+        {
+            "type": "denoiser",
+            "bypass": true,
+            "params": {
+                "reductionDb": 18,
+                "thresholdDb": 6,
+                "smoothing": 50,
+                "freeze": false,
+                "listen": false
+            }
+        },
+        {
             "type": "eq",
             "params": {
                 "outputDb": 0,
@@ -75,11 +99,46 @@
                 "makeupDb": 0
             }
         },
-        { "type": "multiband", "params": {} },
-        { "type": "bassboost", "params": { "boostDb": 6, "frequency": 70, "harmonics": 40 } },
-        { "type": "limiter", "params": { "inputDb": 2, "ceilingDb": -1 } },
-        { "type": "spectrum", "params": {} },
-        { "type": "spectrogram", "params": {} },
-        { "type": "stereo", "params": { "display": "dots", "persistence": 75 } }
+        {
+            "type": "multiband",
+            "params": {}
+        },
+        {
+            "type": "bassboost",
+            "params": {
+                "boostDb": 6,
+                "frequency": 70,
+                "harmonics": 40
+            }
+        },
+        {
+            "type": "limiter",
+            "params": {
+                "inputDb": 2,
+                "ceilingDb": -1
+            }
+        },
+        {
+            "type": "spectrum",
+            "params": {}
+        },
+        {
+            "type": "spectrogram",
+            "params": {}
+        },
+        {
+            "type": "stereo",
+            "params": {
+                "display": "dots",
+                "persistence": 75
+            }
+        },
+        {
+            "type": "loudness",
+            "params": {
+                "targetLufs": -14,
+                "resets": 0
+            }
+        }
     ]
 }

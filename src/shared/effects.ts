@@ -3,13 +3,16 @@ export type EffectType =
     | 'compressor'
     | 'limiter'
     | 'multiband'
+    | 'gate'
     | 'filter'
     | 'deesser'
+    | 'denoiser'
     | 'volume'
     | 'bassboost'
     | 'spectrum'
     | 'spectrogram'
-    | 'stereo';
+    | 'stereo'
+    | 'loudness';
 
 export type AnalyzerChannel = 'mono' | 'left' | 'right' | 'mid' | 'side';
 
@@ -87,6 +90,18 @@ export interface MultibandParams {
     outputDb: number;
 }
 
+export interface GateParams {
+    thresholdDb: number;
+    /** How far the closed gate attenuates. */
+    rangeDb: number;
+    attackMs: number;
+    holdMs: number;
+    releaseMs: number;
+    /** The gate closes this far below the threshold, so it does not chatter. */
+    hysteresisDb: number;
+    sidechainHpHz: number;
+}
+
 export type FilterMode = 'lowpass' | 'highpass' | 'bandpass' | 'notch';
 
 export const FILTER_MODES: FilterMode[] = ['lowpass', 'highpass', 'bandpass', 'notch'];
@@ -109,6 +124,19 @@ export interface DeesserParams {
     rangeDb: number;
     releaseMs: number;
     mode: 'split' | 'wide';
+    listen: boolean;
+}
+
+export interface DenoiserParams {
+    /** Largest attenuation applied to noise. */
+    reductionDb: number;
+    /** How far above the noise floor a bin has to be to pass untouched. */
+    thresholdDb: number;
+    /** Time smoothing of the gains, against "musical noise" artifacts. */
+    smoothing: number;
+    /** Stops adapting the noise profile. */
+    freeze: boolean;
+    /** Outputs only what is removed. */
     listen: boolean;
 }
 
@@ -154,18 +182,27 @@ export interface StereoParams {
     autoGain: boolean;
 }
 
+export interface LoudnessParams {
+    targetLufs: number;
+    /** Incremented to restart the integrated measurement. */
+    resets: number;
+}
+
 export interface EffectParamsMap {
     eq: EqParams;
     compressor: CompressorParams;
     limiter: LimiterParams;
     multiband: MultibandParams;
+    gate: GateParams;
     filter: FilterParams;
     deesser: DeesserParams;
+    denoiser: DenoiserParams;
     volume: VolumeParams;
     bassboost: BassBoostParams;
     spectrum: SpectrumParams;
     spectrogram: SpectrogramParams;
     stereo: StereoParams;
+    loudness: LoudnessParams;
 }
 
 export type EffectOf<T extends EffectType> = {
@@ -339,6 +376,46 @@ export const SPECS = {
     floorDb: { label: 'Floor', min: -140, max: -40, default: -100, unit: 'dB' },
     spectrogramCeilingDb: { label: 'Ceiling', min: -40, max: 0, default: -10, unit: 'dB' },
     persistence: { label: 'Persistence', min: 0, max: 100, default: 60, unit: '%' },
+    gateThresholdDb: {
+        label: 'Threshold',
+        min: -80,
+        max: 0,
+        default: -45,
+        unit: 'dB',
+        decimals: 1,
+    },
+    gateRangeDb: { label: 'Range', min: 0, max: 80, default: 40, unit: 'dB', decimals: 1 },
+    gateAttackMs: {
+        label: 'Attack',
+        min: 0.05,
+        max: 50,
+        default: 1,
+        unit: 'ms',
+        scale: 'log',
+        decimals: 2,
+    },
+    holdMs: { label: 'Hold', min: 0, max: 500, default: 50, unit: 'ms' },
+    gateReleaseMs: { label: 'Release', min: 5, max: 2000, default: 150, unit: 'ms', scale: 'log' },
+    hysteresisDb: { label: 'Hysteresis', min: 0, max: 12, default: 4, unit: 'dB', decimals: 1 },
+    denoiseReductionDb: {
+        label: 'Reduction',
+        min: 0,
+        max: 40,
+        default: 12,
+        unit: 'dB',
+        decimals: 1,
+    },
+    denoiseThresholdDb: {
+        label: 'Threshold',
+        min: 0,
+        max: 20,
+        default: 6,
+        unit: 'dB',
+        decimals: 1,
+    },
+    denoiseSmoothing: { label: 'Smoothing', min: 0, max: 100, default: 50, unit: '%' },
+    targetLufs: { label: 'Target', min: -36, max: -6, default: -14, unit: 'LUFS', decimals: 1 },
+    resets: { label: 'Resets', min: 0, max: 1e9, default: 0, unit: '' },
 } satisfies Record<string, NumberSpec>;
 
 export type SpecKey = keyof typeof SPECS;
@@ -388,6 +465,13 @@ export const EFFECT_INFO: Record<EffectType, EffectInfo> = {
         color: '#3fe0c5',
         category: 'effect',
     },
+    gate: {
+        label: 'Gate',
+        short: 'GATE',
+        description: 'Noise gate with hold, hysteresis and sidechain filter',
+        color: '#62f08a',
+        category: 'effect',
+    },
     deesser: {
         label: 'De-esser',
         short: 'DS',
@@ -395,10 +479,17 @@ export const EFFECT_INFO: Record<EffectType, EffectInfo> = {
         color: '#ffd84f',
         category: 'effect',
     },
+    denoiser: {
+        label: 'Denoiser',
+        short: 'DN',
+        description: 'Spectral noise reduction that follows the noise floor',
+        color: '#7fd1b9',
+        category: 'effect',
+    },
     volume: {
         label: 'Volume',
         short: 'VOL',
-        description: 'Gain, pan, stereo width and polarity',
+        description: 'Gain, pan, stereo width, polarity and a loudness meter',
         color: '#9fe870',
         category: 'effect',
     },
@@ -426,8 +517,15 @@ export const EFFECT_INFO: Record<EffectType, EffectInfo> = {
     stereo: {
         label: 'Stereo Image',
         short: 'IMAGE',
-        description: 'Goniometer, correlation and balance meters',
+        description: 'Goniometer, correlation and balance meters, and the image by frequency',
         color: '#8fe3ff',
+        category: 'analyzer',
+    },
+    loudness: {
+        label: 'Loudness',
+        short: 'LUFS',
+        description: 'EBU R128 loudness: momentary, short-term, integrated, range, true peak',
+        color: '#ffcf6f',
         category: 'analyzer',
     },
 };
@@ -517,6 +615,15 @@ export function defaultParams<T extends EffectType>(type: T): EffectParamsMap[T]
             kneeDb: 6,
             outputDb: 0,
         },
+        gate: {
+            thresholdDb: -45,
+            rangeDb: 40,
+            attackMs: 1,
+            holdMs: 50,
+            releaseMs: 150,
+            hysteresisDb: 4,
+            sidechainHpHz: 20,
+        },
         filter: {
             mode: 'lowpass',
             cutoff: 2000,
@@ -534,6 +641,13 @@ export function defaultParams<T extends EffectType>(type: T): EffectParamsMap[T]
             rangeDb: 10,
             releaseMs: 60,
             mode: 'split',
+            listen: false,
+        },
+        denoiser: {
+            reductionDb: 12,
+            thresholdDb: 6,
+            smoothing: 50,
+            freeze: false,
             listen: false,
         },
         volume: {
@@ -569,6 +683,7 @@ export function defaultParams<T extends EffectType>(type: T): EffectParamsMap[T]
             palette: 'magma',
         },
         stereo: { display: 'dots', persistence: 60, autoGain: true },
+        loudness: { targetLufs: -14, resets: 0 },
     };
     return defaults[type];
 }

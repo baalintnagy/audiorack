@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { FFT } from '../src/dsp/fft';
 import {
     SPECTROGRAM_BINS,
+    STEREO_BANDS,
+    STEREO_BAND_FIELDS,
     STEREO_FIELDS,
-    STEREO_POINTS,
     SpectrogramKernel,
     SpectrumKernel,
     StereoKernel,
@@ -83,7 +84,7 @@ describe('stereo analyzer', () => {
         expect(readings[STEREO_FIELDS.width]).toBeCloseTo(0, 3);
         expect(readings[STEREO_FIELDS.balance]).toBeCloseTo(0, 3);
         expect(readings[STEREO_FIELDS.peak]).toBeCloseTo(0.5, 2);
-        expect(readings).toHaveLength(STEREO_FIELDS.points + STEREO_POINTS * 2);
+        expect(readings).toHaveLength(STEREO_FIELDS.bands + STEREO_BANDS * STEREO_BAND_FIELDS.size);
     });
 
     it('detects polarity problems and imbalance', () => {

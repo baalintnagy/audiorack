@@ -42,8 +42,8 @@ Screenshots, in order:
 2. `2-side-panel.jpg`: the rack docked in the side panel next to a video page, with pinned
    effects stacked in chain order
 3. `3-compressor.jpg`: compressor transfer curve and gain-reduction history
-4. `4-multiband.jpg`: four-band multiband compressor
-5. `5-spectrogram.jpg`: spectrogram
+4. `4-loudness.jpg`: EBU R128 loudness meter against a −14 LUFS target
+5. `5-denoiser.jpg`: denoiser on a track with hiss and hum, with the learned noise floor
 
 The store accepts at most five screenshots; replace the uploaded set in the dashboard when they
 change.
@@ -53,8 +53,8 @@ change.
 **Single purpose description**
 
 > AudioRack processes the audio of a browser tab that the user chooses through a configurable
-> chain of audio effects (equalizer, compressors, limiter, filter, de-esser, volume and bass
-> booster) and shows audio analyzers for that sound.
+> chain of audio effects (equalizer, compressors, limiter, gate, filter, de-esser, denoiser,
+> volume and bass booster) and shows audio analyzers for that sound.
 
 **Permission justifications**
 
@@ -109,7 +109,11 @@ npm run store:assets
 It starts a Vite dev server, opens the rack in a headless Chrome, Brave or Edge (set `CHROME_PATH`
 to choose one), loads [`screenshot-rack.json`](screenshot-rack.json), plays the demo track and
 captures each editor at 1280×800. The page is dressed as the extension: the demo-only “Load audio”
-button is hidden and the status shows a sample tab title. The side panel screenshot is staged by
+button is hidden and the status shows a sample tab title. The gate and denoiser are bypassed in
+that rack and switched on for their own shots; for the denoiser the page plays the demo track
+with added hiss and hum. The same run saves the website's pictures of the newer effects and
+views (`site/images/gate.jpg`, `denoiser.jpg`, `loudness.jpg`, `stereo.jpg`) at
+800×600, undressed, as the demo looks on the site. The side panel screenshot is staged by
 [`promo/side-panel.html`](promo/side-panel.html): a sample video page with the rack docked in a
 600 px panel next to it, three effects pinned and the equalizer picked. The same scene is also
 saved at 800×600 as the website's `site/images/side-panel.jpg`. The promo tiles are rendered from

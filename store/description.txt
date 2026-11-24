@@ -1,48 +1,47 @@
-AudioRack puts a studio-style effect rack on any browser tab. Route the sound of a video, stream, podcast or music player through a chain of EQ, compressors, a limiter, filter, de-esser and bass booster, and watch it on live analyzers.
+AudioRack puts a studio effect rack on any browser tab. Run the sound of a video, stream, podcast, call or music player through a chain of EQ, compressors, a limiter, gate, denoiser, de-esser and bass booster, and watch the result on live analyzers and a loudness meter.
 
-Tame videos that are too loud, make quiet dialogue easier to follow, take the harshness out of a voice, or give small laptop speakers more bass. Everything runs on your device, with no account and no uploads.
+Turn down videos that are too loud, bring up quiet dialogue, clean hiss and hum out of a recording, soften a harsh voice, or give small laptop speakers more bass. Everything runs on your device, with no account and no uploads.
 
 ★ BUILD YOUR OWN CHAIN
-• Add up to 16 effects and analyzers in any order.
-• Drag to reorder, click to bypass. Bypassing crossfades, so there are no clicks or pops.
-• Parallel groups: split the signal into up to four branches, each with its own effects, and mix them on a small mixer with faders, meters, pan, mute, solo and polarity. Great for parallel compression; branches are delay-compensated.
-• A rack per tab: every tab starts from your shared rack and keeps its own changes, so a podcast can get a voice chain while music gets a bass-heavy one. Or let a tab follow the shared rack.
-• Side panel: dock the rack next to the page you are listening to, and pin the effects you want to keep in view. Pinned effects stack in chain order, and picking one in the chain scrolls to it.
-• A global bypass for quick before/after comparison.
-• Input and output gain with level meters.
+• Up to 16 effects and analyzers, in any order.
+• Drag to reorder, click to bypass. Bypass crossfades, so there are no clicks or pops, and timing never shifts.
+• Parallel groups: split the signal into up to four branches with their own effects, and mix them on a small mixer with faders, meters, pan, mute, solo and polarity. Branches are delay-compensated, which makes parallel compression easy.
+• A rack per tab: each tab starts from your shared rack and keeps its own changes, so a podcast can get a voice chain while music gets a bass-heavy one. Or switch a tab to follow the shared rack.
+• Side panel: dock the rack next to the page you are listening to and pin the effects you want in view. Pinned effects stack in chain order.
+• Global bypass for instant before/after comparison, plus input and output gain with level meters.
 
 ★ TEN EFFECTS
-• Equalizer: up to 12 bands (bell, shelves, notch, band pass and 12–48 dB/oct cuts), dragged directly on top of a live spectrum.
-• Compressor: soft knee, peak or RMS detection, sidechain high-pass, auto makeup and parallel mix, with a transfer curve and gain-reduction history.
-• Limiter: a lookahead brickwall limiter that keeps the output below the ceiling you set.
-• Multiband compressor: two to four bands on phase-aligned Linkwitz-Riley crossovers, each with its own settings, solo, mute and bypass.
-• Gate: silences hum and hiss between phrases, with hold, hysteresis and a sidechain filter.
+• Equalizer: up to 12 bands (bell, shelves, notch, band pass and 12–48 dB/oct cuts), dragged right on top of a live spectrum.
+• Compressor: soft knee, peak or RMS detection, sidechain high-pass, auto makeup and a parallel mix knob, with a transfer curve and gain-reduction history.
+• Limiter: a lookahead brickwall that keeps the output under the ceiling you set.
+• Multiband compressor: two to four bands on phase-aligned crossovers, each with its own settings, solo, mute and bypass.
+• Gate: silences hum and hiss between phrases or tightens drums, with hold, hysteresis and a sidechain filter.
 • Filter: resonant low pass, high pass, band pass or notch, with drive and a sweeping LFO.
 • De-esser: softens harsh “s” sounds in speech and vocals, with a listen mode.
-• Denoiser: reduces steady background noise such as hiss, hum and fan noise. It follows the noise floor by itself, or learns a noise profile from a few seconds of noise and removes exactly that. Listen mode lets you hear what it takes out.
-• Volume: gain, pan, stereo width and polarity, with a loudness meter.
-• Bass Booster: a low boost plus added harmonics, so bass comes through even on small speakers.
+• Denoiser: reduces steady noise such as hiss, hum and fans. Let it follow the noise floor by itself, or play a few seconds of noise alone, press “Learn noise” and it removes exactly that profile. Listen mode lets you hear what it takes out.
+• Volume: gain, pan, stereo width and per-channel polarity, with a loudness bar.
+• Bass Booster: a low boost plus generated harmonics, so bass comes through even on small speakers.
 
 ★ FOUR ANALYZERS
 • Spectrum: mono, left, right, mid or side, with peak hold, freeze and a frequency, note and level readout.
 • Spectrogram: frequency over time, with adjustable levels and three color schemes.
 • Stereo Image: a stereo scope next to the image by frequency, with phase correlation, balance and width meters.
-• Loudness: an EBU R128 loudness meter with momentary, short-term and integrated loudness, loudness range and true peak, measured against a target such as -14 LUFS for streaming.
-Analyzers pass the audio through untouched, so you can place one before and one after an effect to compare.
+• Loudness: an EBU R128 meter with momentary, short-term and integrated loudness, loudness range and true peak, against a target such as −14 LUFS for streaming or −23 LUFS for broadcast.
+Analyzers leave the audio untouched, so you can put one before and one after an effect to compare.
 
 ★ PRESETS
-Start from built-in presets such as Night Mode, Voice Clarity, Bass Head, Parallel Punch, Loudness and Lo-Fi Radio, save your own (side panel pins included), and export or import them as files.
+Start from built-in presets such as Night Mode, Voice Clarity, Bass Head, Parallel Punch, Loudness and Lo-Fi Radio. Save your own, side panel pins and learned noise profiles included, and export or import them as files.
 
 ★ HOW TO USE
 1. Open a tab that plays audio.
 2. Click the AudioRack icon and press “Process tab”.
-3. Adjust the rack. Use the side panel button to dock it next to the page, or the pop-out button for a larger window.
-Press the button again or close the tab to stop. Chrome shows its usual sharing indicator on the tab while it is being processed.
+3. Adjust the rack. Dock it in the side panel, or pop it out into a larger window.
+Press the button again or close the tab to stop. Chrome shows its usual sharing indicator on the tab while it is processed.
 
 ★ PRIVATE BY DESIGN
-• All audio processing happens locally in your browser.
+• All audio is processed locally in your browser.
 • Audio is never recorded, saved or uploaded.
-• No network requests, no analytics, no ads, no account.
-• Only your rack and presets are stored, on your device.
+• No network requests, analytics, ads or account.
+• Only your racks and presets are stored, on your device.
 
 AudioRack is free and open source under the MIT license. Try the live demo, read the source or report a problem at https://github.com/baalintnagy/audiorack

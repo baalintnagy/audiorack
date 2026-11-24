@@ -425,7 +425,10 @@ const origin = server.resolvedUrls.local[0].replace(/\/$/, '');
 const browser = await launchBrowser();
 try {
     const page = await Page.open(browser.port);
-    await captureScreenshots(page, origin);
+    // `--tiles` renders only the promo tiles and keeps the screenshots they embed.
+    if (!process.argv.includes('--tiles')) {
+        await captureScreenshots(page, origin);
+    }
     await captureTiles(page, origin);
     page.close();
 } finally {

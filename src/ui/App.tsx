@@ -208,7 +208,7 @@ function RackWindow({ backend }: { backend: Backend }) {
                         onClick={() =>
                             run(() => (status.active ? backend.stop() : backend.start()))
                         }
-                        title={status.active ? 'Stop processing' : 'Process the audio of this tab'}
+                        title={`${status.active ? 'Stop processing' : 'Process the audio of this tab'}${status.label ? `: ${status.label}` : ''}`}
                     >
                         <PowerIcon />
                         <span className="capture-text">

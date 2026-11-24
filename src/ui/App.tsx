@@ -125,10 +125,10 @@ function RackWindow({ backend }: { backend: Backend }) {
     const fileInput = useRef<HTMLInputElement>(null);
     const isPopup = backend.kind === 'extension' && pageParams().tabId === undefined;
     const isSidePanel = pageParams().sidePanel === true;
-    // Outside the extension there is no tab; the demo pins under a placeholder id.
-    const { pins, toggle: togglePin } = usePanelPins(
-        isSidePanel ? (backend.tabId ?? -1) : undefined,
-    );
+    // Outside the extension there is no tab; the demo pins under a placeholder id. Every rack
+    // window of the tab reads the pins, so presets can save and restore them, but only the side
+    // panel shows them.
+    const { pins, toggle: togglePin, replace: replacePins } = usePanelPins(backend.tabId ?? -1);
 
     useEffect(() => {
         document.documentElement.classList.toggle('popup', isPopup);
@@ -160,7 +160,7 @@ function RackWindow({ backend }: { backend: Backend }) {
     // In the side panel, pinned items stay open with the selection placed among them, all in
     // chain order. Panels there keep their stacked size even when only one is open.
     const known = (id: string) => findItem(rack.chain, id) !== undefined;
-    const pinnedIds = new Set(panelOrder(rack.chain, pins));
+    const pinnedIds = new Set(isSidePanel ? panelOrder(rack.chain, pins) : []);
     const stacked = isSidePanel;
     const panels: (ChainItem | undefined)[] =
         pinnedIds.size > 0
@@ -280,7 +280,14 @@ function RackWindow({ backend }: { backend: Backend }) {
                             />
                         </div>
                     )}
-                    <PresetMenu rack={rack} onLoad={(next) => actions.setRack(next)} />
+                    <PresetMenu
+                        rack={rack}
+                        pins={pins}
+                        onLoad={(next, nextPins) => {
+                            actions.setRack(next);
+                            replacePins(nextPins);
+                        }}
+                    />
                     <Toggle
                         className="bypass-all"
                         active={rack.bypass}

@@ -75,6 +75,10 @@ its place among the pinned ones and closes again when another item is picked. Th
 stays at the top while the panel scrolls. Pins belong to the tab and are forgotten when it
 closes.
 
+Presets you save and racks you export keep the tab's pins (exported files have an optional `pins`
+list of item ids). Loading one restores them, also in an open side panel when the preset is
+loaded from the popup; factory presets and presets without pins clear them.
+
 ### Controls
 
 - **Knobs:** drag vertically (Shift for fine), mouse wheel, arrow keys; double-click resets;

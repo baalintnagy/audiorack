@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createParallelGroup, defaultRack } from '../src/shared/effects';
+import { createEffect, createParallelGroup, defaultRack, type Effect } from '../src/shared/effects';
 import {
     forgetTab,
     loadPanelPins,
+    loadUserPresets,
+    presetPins,
     resolveTabRack,
     savePanelPins,
+    saveUserPresets,
     setTabScope,
     sharedRackStore,
     tabRackStore,
@@ -64,5 +67,26 @@ describe('rack storage', () => {
         expect(await loadPanelPins(4)).toEqual(['a', 'b']);
         sessionStorage.setItem('audiorack:panelPins:4', JSON.stringify({ a: 1 }));
         expect(await loadPanelPins(4)).toEqual([]);
+    });
+
+    it('keeps side panel pins with user presets, dropping stale ones', async () => {
+        const eq = createEffect('eq') as Effect;
+        const limiter = createEffect('limiter') as Effect;
+        const rack = { ...defaultRack(), chain: [eq, limiter] };
+        await saveUserPresets([
+            { name: 'Pinned', rack, pins: [limiter.id, 'gone', eq.id, limiter.id] },
+            { name: 'Plain', rack },
+        ]);
+        const [pinned, plain] = await loadUserPresets();
+        expect(pinned.pins).toEqual([eq.id, limiter.id]);
+        expect(plain.pins).toBeUndefined();
+    });
+
+    it('validates pins read from preset files', () => {
+        const eq = createEffect('eq') as Effect;
+        const rack = { ...defaultRack(), chain: [eq] };
+        expect(presetPins(rack, [eq.id, 4, ''])).toEqual([eq.id]);
+        expect(presetPins(rack, 'nope')).toEqual([]);
+        expect(presetPins(rack, undefined)).toEqual([]);
     });
 });

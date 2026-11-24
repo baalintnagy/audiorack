@@ -1,3 +1,4 @@
+import { panelOrder } from './chain';
 import { defaultRack, type RackState } from './effects';
 import { MAX_CHAIN_LENGTH, normalizeRack } from './normalize';
 import { MAX_PRESET_NAME } from './presets';
@@ -19,6 +20,8 @@ export type RackScope = 'shared' | 'tab';
 export interface UserPreset {
     name: string;
     rack: RackState;
+    /** Items of `rack` pinned open in the side panel when the preset was saved. */
+    pins?: string[];
 }
 
 /** `local` persists across browser restarts; `session` is cleared when the browser closes. */
@@ -159,9 +162,8 @@ function panelPinsKey(tabId: number): string {
     return `${PANEL_PINS_PREFIX}${tabId}`;
 }
 
-/** The ids of the items pinned open in the tab's side panel, in the order they were pinned. */
-export async function loadPanelPins(tabId: number): Promise<string[]> {
-    const raw = await read('session', panelPinsKey(tabId));
+/** Validates an untrusted list of pinned item ids: unique, non-empty strings. */
+export function normalizePins(raw: unknown): string[] {
     if (!Array.isArray(raw)) {
         return [];
     }
@@ -169,10 +171,36 @@ export async function loadPanelPins(tabId: number): Promise<string[]> {
     return [...new Set(ids)].slice(0, MAX_CHAIN_LENGTH);
 }
 
+/** Validates the pins saved with a preset, keeping only items of its rack, in chain order. */
+export function presetPins(rack: RackState, raw: unknown): string[] {
+    return panelOrder(rack.chain, normalizePins(raw));
+}
+
+/** The ids of the items pinned open in the tab's side panel, in the order they were pinned. */
+export async function loadPanelPins(tabId: number): Promise<string[]> {
+    return normalizePins(await read('session', panelPinsKey(tabId)));
+}
+
 export function savePanelPins(tabId: number, ids: string[]): Promise<void> {
     return ids.length > 0
         ? write('session', panelPinsKey(tabId), ids)
         : remove('session', panelPinsKey(tabId));
+}
+
+/** Reports pin changes made by other extension pages of the tab, such as the popup. */
+export function subscribePanelPins(tabId: number, listener: (ids: string[]) => void): () => void {
+    if (!extensionArea('session')) {
+        return () => {};
+    }
+    const key = panelPinsKey(tabId);
+    const handler = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+        const change = changes[key];
+        if (area === 'session' && change) {
+            listener(normalizePins(change.newValue));
+        }
+    };
+    chrome.storage.onChanged.addListener(handler);
+    return () => chrome.storage.onChanged.removeListener(handler);
 }
 
 /** Drops everything stored for a closed tab. */
@@ -189,15 +217,20 @@ export async function loadUserPresets(): Promise<UserPreset[]> {
     }
     return raw
         .filter(
-            (item): item is { name: string; rack: unknown } =>
+            (item): item is { name: string; rack: unknown; pins?: unknown } =>
                 typeof item === 'object' &&
                 item !== null &&
                 typeof (item as { name?: unknown }).name === 'string',
         )
-        .map((item) => ({
-            name: item.name.slice(0, MAX_PRESET_NAME),
-            rack: normalizeRack(item.rack),
-        }));
+        .map((item) => {
+            const rack = normalizeRack(item.rack);
+            const pins = presetPins(rack, item.pins);
+            return {
+                name: item.name.slice(0, MAX_PRESET_NAME),
+                rack,
+                ...(pins.length > 0 ? { pins } : {}),
+            };
+        });
 }
 
 export function saveUserPresets(presets: UserPreset[]): Promise<void> {

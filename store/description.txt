@@ -28,7 +28,7 @@ Tame videos that are too loud, make quiet dialogue easier to follow, take the ha
 Analyzers pass the audio through untouched, so you can place one before and one after an effect to compare.
 
 ★ PRESETS
-Start from built-in presets such as Night Mode, Voice Clarity, Bass Head, Parallel Punch, Loudness and Lo-Fi Radio, save your own, and export or import them as files.
+Start from built-in presets such as Night Mode, Voice Clarity, Bass Head, Parallel Punch, Loudness and Lo-Fi Radio, save your own (side panel pins included), and export or import them as files.
 
 ★ HOW TO USE
 1. Open a tab that plays audio.

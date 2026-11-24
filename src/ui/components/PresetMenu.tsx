@@ -3,14 +3,28 @@ import { countEffects } from '../../shared/chain';
 import type { RackState } from '../../shared/effects';
 import { normalizeRack } from '../../shared/normalize';
 import { FACTORY_PRESETS, MAX_PRESET_NAME, nextPresetName } from '../../shared/presets';
-import { loadUserPresets, saveUserPresets, type UserPreset } from '../../shared/storage';
+import {
+    loadUserPresets,
+    presetPins,
+    saveUserPresets,
+    type UserPreset,
+} from '../../shared/storage';
 
+/** A rack as exported to a file, with the side panel pins when there are any. */
+type RackFile = RackState & { pins?: string[] };
+
+/**
+ * Factory presets, user presets and files. User presets and files also keep the items pinned in
+ * the side panel; loading one replaces the pins, and a preset without pins clears them.
+ */
 export function PresetMenu({
     rack,
+    pins,
     onLoad,
 }: {
     rack: RackState;
-    onLoad: (rack: RackState, name: string) => void;
+    pins: string[];
+    onLoad: (rack: RackState, pins: string[], name: string) => void;
 }) {
     const [open, setOpen] = useState(false);
     const [current, setCurrent] = useState<string>('Custom');
@@ -52,8 +66,11 @@ export function PresetMenu({
         void saveUserPresets(presets);
     };
 
-    const load = (next: RackState, name: string) => {
-        onLoad(next, name);
+    // Pins of items that are no longer in the rack are left out.
+    const currentPins = presetPins(rack, pins);
+
+    const load = (next: RackState, nextPins: string[], name: string) => {
+        onLoad(next, nextPins, name);
         setCurrent(name);
         setOpen(false);
     };
@@ -64,13 +81,16 @@ export function PresetMenu({
         if (!name) {
             return;
         }
-        persist([...userPresets.filter((preset) => preset.name !== name), { name, rack }]);
+        const preset: UserPreset =
+            currentPins.length > 0 ? { name, rack, pins: currentPins } : { name, rack };
+        persist([...userPresets.filter((item) => item.name !== name), preset]);
         setCurrent(name);
         setOpen(false);
     };
 
     const exportRack = () => {
-        const blob = new Blob([JSON.stringify(rack, null, 2)], { type: 'application/json' });
+        const file: RackFile = currentPins.length > 0 ? { ...rack, pins: currentPins } : rack;
+        const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -83,7 +103,12 @@ export function PresetMenu({
     const importRack = async (file: File) => {
         try {
             const parsed: unknown = JSON.parse(await file.text());
-            load(normalizeRack(parsed), file.name.replace(/\.audiorack\.json$|\.json$/i, ''));
+            const next = normalizeRack(parsed);
+            const nextPins =
+                typeof parsed === 'object' && parsed !== null
+                    ? presetPins(next, (parsed as { pins?: unknown }).pins)
+                    : [];
+            load(next, nextPins, file.name.replace(/\.audiorack\.json$|\.json$/i, ''));
             setError(undefined);
         } catch (_) {
             setError('That file is not a valid AudioRack preset.');
@@ -113,7 +138,7 @@ export function PresetMenu({
                             role="menuitem"
                             key={preset.name}
                             className="menu-item"
-                            onClick={() => load(preset.create(), preset.name)}
+                            onClick={() => load(preset.create(), [], preset.name)}
                         >
                             <span className="menu-item-text">
                                 <strong>{preset.name}</strong>
@@ -128,7 +153,7 @@ export function PresetMenu({
                                 type="button"
                                 role="menuitem"
                                 className="menu-item"
-                                onClick={() => load(preset.rack, preset.name)}
+                                onClick={() => load(preset.rack, preset.pins ?? [], preset.name)}
                             >
                                 <span className="menu-item-text">
                                     <strong>{preset.name}</strong>

@@ -8,6 +8,7 @@ import {
     MAX_BRANCHES,
     MAX_EQ_BANDS,
     MIN_BRANCHES,
+    NOISE_PROFILE_BANDS,
     SLOPES,
     SPECS,
     createBranch,
@@ -82,6 +83,18 @@ function normalizeMultibandBand(raw: unknown): MultibandBand {
         bypass: bool(band.bypass, false),
         mute: bool(band.mute, false),
     };
+}
+
+/** A learned noise profile: exactly one finite level per band, or none at all. */
+function noiseProfile(raw: unknown): number[] {
+    if (
+        !Array.isArray(raw) ||
+        raw.length !== NOISE_PROFILE_BANDS ||
+        !raw.every((value) => typeof value === 'number' && Number.isFinite(value))
+    ) {
+        return [];
+    }
+    return raw.map((value: number) => Math.round(Math.min(40, Math.max(-200, value)) * 10) / 10);
 }
 
 const normalizers: { [T in EffectType]: (raw: Loose) => EffectParamsMap[T] } = {
@@ -161,8 +174,11 @@ const normalizers: { [T in EffectType]: (raw: Loose) => EffectParamsMap[T] } = {
         reductionDb: num(raw.reductionDb, 'denoiseReductionDb'),
         thresholdDb: num(raw.thresholdDb, 'denoiseThresholdDb'),
         smoothing: num(raw.smoothing, 'denoiseSmoothing'),
+        mode: oneOf(raw.mode, ['adaptive', 'profile'] as const, 'adaptive'),
         freeze: bool(raw.freeze, false),
         listen: bool(raw.listen, false),
+        learning: bool(raw.learning, false),
+        profile: noiseProfile(raw.profile),
     }),
     volume: (raw) => ({
         gainDb: num(raw.gainDb, 'volumeDb'),

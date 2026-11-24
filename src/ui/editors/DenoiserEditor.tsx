@@ -1,9 +1,9 @@
 import { useRef } from 'react';
 import { DENOISER_FIELDS, DENOISER_POINTS } from '../../dsp/kernels/denoiser';
-import { SPECS } from '../../shared/effects';
+import { NOISE_PROFILE_BANDS, SPECS } from '../../shared/effects';
 import type { Telemetry } from '../../shared/messages';
 import { logFrequencies } from '../../shared/spectrum';
-import { ControlGroup, Toggle } from '../components/Controls';
+import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { ReductionMeter } from '../components/Meters';
 import { css, drawGrid, frequencyToX, withAlpha } from '../graph';
@@ -23,8 +23,18 @@ interface Curves {
     gain: Float32Array;
 }
 
-/** Input spectrum, estimated noise floor and the reduction applied at each frequency. */
-function NoiseDisplay({ id, color }: { id: string; color: string }) {
+/** Input spectrum, noise floor (adaptive or profile) and the reduction at each frequency. */
+function NoiseDisplay({
+    id,
+    color,
+    noiseLabel,
+    learning,
+}: {
+    id: string;
+    color: string;
+    noiseLabel: string;
+    learning: boolean;
+}) {
     const curves = useRef<Curves>({
         input: new Float32Array(DENOISER_POINTS).fill(FLOOR_DB),
         noise: new Float32Array(DENOISER_POINTS).fill(FLOOR_DB),
@@ -100,21 +110,61 @@ function NoiseDisplay({ id, color }: { id: string; color: string }) {
             ctx.fillStyle = css('--grid-label');
             ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
             ctx.fillText('reduction', 6, 14);
-            ctx.fillText('noise floor (dashed)', 6, height - 18);
+            ctx.fillText(`${noiseLabel} (dashed)`, 6, height - 18);
+            if (learning) {
+                ctx.fillStyle = color;
+                ctx.font = '600 13px ui-sans-serif, system-ui, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Learning the noise: play a stretch of noise only', width / 2, 40);
+                ctx.textAlign = 'start';
+            }
         },
-        [color],
+        [color, noiseLabel, learning],
     );
     return <canvas ref={ref} className="display-canvas" />;
 }
 
 export function DenoiserEditor({ effect, setParams, color }: EditorProps<'denoiser'>) {
     const p = effect.params;
+    const hasProfile = p.profile.length === NOISE_PROFILE_BANDS;
+    const usesProfile = p.mode === 'profile' && hasProfile;
+    // The profile being learned arrives with the readings; stopping saves the latest one.
+    const learned = useRef<number[]>([]);
+    const seconds = useRef<HTMLSpanElement>(null);
+    useTelemetry((telemetry) => {
+        const data = telemetry.meters.effects[effect.id];
+        if (!data || data.length <= DENOISER_FIELDS.learnedSeconds) {
+            return;
+        }
+        const profile = data.slice(DENOISER_FIELDS.profile);
+        if (profile.length === NOISE_PROFILE_BANDS) {
+            learned.current = profile;
+        }
+        if (seconds.current) {
+            seconds.current.textContent = `${data[DENOISER_FIELDS.learnedSeconds].toFixed(1)} s`;
+        }
+    });
+    const learn = (start: boolean) => {
+        if (start) {
+            learned.current = [];
+            setParams({ learning: true });
+        } else if (learned.current.length === NOISE_PROFILE_BANDS) {
+            setParams({ learning: false, profile: learned.current, mode: 'profile' });
+        } else {
+            setParams({ learning: false });
+        }
+    };
     const reduction = (telemetry: Telemetry) =>
         telemetry.meters.effects[effect.id]?.[DENOISER_FIELDS.reduction] ?? 0;
     return (
         <div className="editor dynamics-editor">
             <div className="display split">
-                <NoiseDisplay id={effect.id} color={color} />
+                <NoiseDisplay
+                    id={effect.id}
+                    color={color}
+                    noiseLabel={usesProfile ? 'noise profile' : 'noise floor'}
+                    learning={p.learning}
+                />
                 <ReductionMeter value={reduction} color={color} range={24} />
             </div>
             <div className="control-row">
@@ -139,16 +189,68 @@ export function DenoiserEditor({ effect, setParams, color }: EditorProps<'denois
                         color={color}
                     />
                 </ControlGroup>
-                <ControlGroup title="Profile">
+                <ControlGroup title="Noise floor">
                     <div className="stack">
-                        <Toggle
-                            active={p.freeze}
-                            onChange={(freeze) => setParams({ freeze })}
+                        <Segmented
+                            value={p.mode}
+                            options={[
+                                {
+                                    value: 'adaptive',
+                                    label: 'Adaptive',
+                                    title: 'Follow the noise floor of the audio as it plays',
+                                },
+                                {
+                                    value: 'profile',
+                                    label: 'Profile',
+                                    title: 'Remove the learned noise profile',
+                                },
+                            ]}
+                            onChange={(mode) => setParams({ mode })}
                             color={color}
-                            title="Stop following the noise floor and keep the current profile"
-                        >
-                            Freeze
-                        </Toggle>
+                        />
+                        <div className="denoiser-learn">
+                            <Toggle
+                                active={p.learning}
+                                onChange={learn}
+                                color={color}
+                                title={
+                                    p.learning
+                                        ? 'Stop and use what was learned as the noise profile'
+                                        : 'Record the noise: start while only noise plays'
+                                }
+                            >
+                                {p.learning ? 'Stop' : 'Learn noise'}
+                                {p.learning && (
+                                    <span className="denoiser-seconds" ref={seconds}>
+                                        0.0 s
+                                    </span>
+                                )}
+                            </Toggle>
+                            {hasProfile && !p.learning && (
+                                <button
+                                    type="button"
+                                    className="ghost small"
+                                    title="Forget the learned noise profile"
+                                    onClick={() => setParams({ profile: [], mode: 'adaptive' })}
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </ControlGroup>
+                <ControlGroup title="Monitor">
+                    <div className="stack">
+                        {!usesProfile && (
+                            <Toggle
+                                active={p.freeze}
+                                onChange={(freeze) => setParams({ freeze })}
+                                color={color}
+                                title="Stop following the noise floor and keep the current one"
+                            >
+                                Freeze
+                            </Toggle>
+                        )}
                         <Toggle
                             active={p.listen}
                             onChange={(listen) => setParams({ listen })}
@@ -160,9 +262,12 @@ export function DenoiserEditor({ effect, setParams, color }: EditorProps<'denois
                     </div>
                 </ControlGroup>
                 <div className="control-note">
-                    The noise floor is learned from the quietest moments of each frequency over the
-                    last two seconds. Freeze it during a pause to keep that profile. Adds about 32
-                    ms of latency.
+                    {usesProfile
+                        ? 'Removes the learned noise profile. Learn a new one by pressing Learn noise while only the noise plays, then Stop.'
+                        : p.mode === 'profile'
+                          ? 'No profile yet: press Learn noise while only the noise plays, then Stop. Until then the noise floor adapts to the audio.'
+                          : 'The noise floor follows the quietest moments of each frequency over the last two seconds. For steady noise under steady sounds, learn a profile instead.'}{' '}
+                    Adds about 32 ms of latency.
                 </div>
             </div>
         </div>

@@ -6,7 +6,12 @@ import { GATE_FIELDS } from '../src/dsp/kernels/gate';
 import { LOUDNESS_FIELDS } from '../src/dsp/kernels/loudness';
 import { VOLUME_FIELDS } from '../src/dsp/kernels/volume';
 import { logFrequencies } from '../src/shared/spectrum';
-import { defaultParams, type EffectParamsMap, type EffectType } from '../src/shared/effects';
+import {
+    NOISE_PROFILE_BANDS,
+    defaultParams,
+    type EffectParamsMap,
+    type EffectType,
+} from '../src/shared/effects';
 import { SAMPLE_RATE, db, noise, processStereo, rms, sine } from './helpers';
 
 function kernelFor<T extends EffectType>(type: T, params: Partial<EffectParamsMap[T]> = {}) {
@@ -161,6 +166,59 @@ describe('denoiser', () => {
         const [output] = processStereo(left, left, (l, r, frames) => kernel.process(l, r, frames));
         const from = SAMPLE_RATE;
         expect(db(rms(output, from) / rms(left, from))).toBeGreaterThan(-3);
+    });
+});
+
+describe('denoiser noise profile', () => {
+    /** Learns a profile from two seconds of the given noise, as the editor does. */
+    function learnProfile(left: Float32Array, right: Float32Array): number[] {
+        const kernel = kernelFor('denoiser', { learning: true });
+        processStereo(left, right, (l, r, frames) => kernel.process(l, r, frames));
+        const readings = kernel.takeMeters?.() ?? [];
+        expect(readings[DENOISER_FIELDS.learnedSeconds]).toBeGreaterThan(1.8);
+        return readings.slice(DENOISER_FIELDS.profile);
+    }
+
+    it('learns one level per band from the recorded noise', () => {
+        const profile = learnProfile(noise(2, 0.01, 7), noise(2, 0.01, 8));
+        expect(profile).toHaveLength(NOISE_PROFILE_BANDS);
+        // White noise has the same power in every FFT bin, so the profile is flat.
+        const mids = profile.slice(40, 120);
+        expect(Math.max(...mids) - Math.min(...mids)).toBeLessThan(3);
+    });
+
+    it('removes the profiled noise and keeps a steady tone that adaptive mode would take', () => {
+        const profile = learnProfile(noise(2, 0.01, 7), noise(2, 0.01, 8));
+        const tone = sine(1000, 3, 0.05);
+        const hissLeft = noise(3, 0.01, 9);
+        const hissRight = noise(3, 0.01, 10);
+        const left = tone.map((value, i) => value + hissLeft[i]);
+        const right = tone.map((value, i) => value + hissRight[i]);
+        const latency = 1536;
+        const from = SAMPLE_RATE * 2;
+        const toneLevel = (mode: 'adaptive' | 'profile') => {
+            const kernel = kernelFor('denoiser', { reductionDb: 20, mode, profile });
+            const [output] = processStereo(left, right, (l, r, frames) =>
+                kernel.process(l, r, frames),
+            );
+            // Compare against the tone alone: what is left of the hiss is far quieter.
+            return db(rms(output.subarray(from + latency)) / rms(tone.subarray(from)));
+        };
+        expect(toneLevel('profile')).toBeGreaterThan(-1);
+        expect(toneLevel('adaptive')).toBeLessThan(-3);
+
+        const kernel = kernelFor('denoiser', { reductionDb: 20, mode: 'profile', profile });
+        const [cleaned] = processStereo(hissLeft, hissRight, (l, r, frames) =>
+            kernel.process(l, r, frames),
+        );
+        expect(db(rms(cleaned, from) / rms(hissLeft, from))).toBeLessThan(-12);
+    });
+
+    it('falls back to adaptive mode without a profile', () => {
+        const kernel = kernelFor('denoiser', { reductionDb: 20, mode: 'profile' });
+        const left = noise(3, 0.01, 3);
+        const [output] = processStereo(left, left, (l, r, frames) => kernel.process(l, r, frames));
+        expect(db(rms(output, SAMPLE_RATE * 2) / rms(left, SAMPLE_RATE * 2))).toBeLessThan(-12);
     });
 });
 

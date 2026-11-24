@@ -127,6 +127,9 @@ export interface DeesserParams {
     listen: boolean;
 }
 
+/** Number of log-spaced bands in a learned noise profile. */
+export const NOISE_PROFILE_BANDS = 128;
+
 export interface DenoiserParams {
     /** Largest attenuation applied to noise. */
     reductionDb: number;
@@ -134,10 +137,22 @@ export interface DenoiserParams {
     thresholdDb: number;
     /** Time smoothing of the gains, against "musical noise" artifacts. */
     smoothing: number;
-    /** Stops adapting the noise profile. */
+    /**
+     * `adaptive` follows the noise floor of the audio; `profile` removes the learned noise
+     * profile instead (and falls back to adaptive while there is none).
+     */
+    mode: 'adaptive' | 'profile';
+    /** Stops adapting the noise floor (adaptive mode). */
     freeze: boolean;
     /** Outputs only what is removed. */
     listen: boolean;
+    /** Averaging the spectrum of the audio into a new noise profile. */
+    learning: boolean;
+    /**
+     * Learned noise power per band in dB, {@link NOISE_PROFILE_BANDS} log-spaced bands from 20 Hz
+     * to 20 kHz, or empty.
+     */
+    profile: number[];
 }
 
 export interface VolumeParams {
@@ -647,8 +662,11 @@ export function defaultParams<T extends EffectType>(type: T): EffectParamsMap[T]
             reductionDb: 12,
             thresholdDb: 6,
             smoothing: 50,
+            mode: 'adaptive',
             freeze: false,
             listen: false,
+            learning: false,
+            profile: [],
         },
         volume: {
             gainDb: 0,

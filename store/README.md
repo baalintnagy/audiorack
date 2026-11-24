@@ -39,11 +39,12 @@ npm run package
 Screenshots, in order:
 
 1. `1-equalizer.jpg`: the equalizer curve on a live spectrum
-2. `2-side-panel.jpg`: the rack docked in the side panel next to a video page, with pinned
+2. `2-compressor.jpg`: compressor transfer curve and gain-reduction history
+3. `3-spectrogram.jpg`: spectrogram of the demo track
+4. `4-stereo-image.jpg`: stereo scope next to the image by frequency, with correlation, balance
+   and width
+5. `5-side-panel.jpg`: the rack docked in the side panel next to a video page, with pinned
    effects stacked in chain order
-3. `3-compressor.jpg`: compressor transfer curve and gain-reduction history
-4. `4-loudness.jpg`: EBU R128 loudness meter against a −14 LUFS target
-5. `5-denoiser.jpg`: denoiser on a track with hiss and hum, with the learned noise floor
 
 The store accepts at most five screenshots; replace the uploaded set in the dashboard when they
 change.
@@ -109,12 +110,12 @@ npm run store:assets
 It starts a Vite dev server, opens the rack in a headless Chrome, Brave or Edge (set `CHROME_PATH`
 to choose one), loads [`screenshot-rack.json`](screenshot-rack.json), plays the demo track and
 captures each editor at 1280×800. The page is dressed as the extension: the demo-only “Load audio”
-button is hidden and the status shows a sample tab title. The gate and denoiser are bypassed in
-that rack and switched on for their own shots; for the denoiser the page plays the demo track
-with added hiss and hum. The same run then plays the demo through
-[`site/screenshot-rack.json`](../site/screenshot-rack.json), which holds every effect, analyzer
-and a parallel group, and saves one 800×600 picture of each module to `site/images/`, undressed,
-as the demo looks on the site. The side panel screenshot is staged by
+button is hidden and the status shows a sample tab title. The same run then plays the demo
+through [`site/screenshot-rack.json`](../site/screenshot-rack.json), which holds every effect,
+analyzer and a parallel group, and saves one 800×600 picture of each module to `site/images/`,
+undressed, as the demo looks on the site. The gate, filter, de-esser and denoiser are bypassed in
+that rack and switched on for their own pictures; for the denoiser the page plays the demo track
+with added hiss and hum. The side panel screenshot is staged by
 [`promo/side-panel.html`](promo/side-panel.html): a sample video page with the rack docked in a
 600 px panel next to it, three effects pinned and the equalizer picked. The same scene is also
 saved at 800×600 as the website's `site/images/side-panel.jpg`. The promo tiles are rendered from

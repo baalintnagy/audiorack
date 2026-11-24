@@ -1,4 +1,4 @@
-import type { DenoiserParams } from '../../shared/effects';
+import { NOISE_PROFILE_BANDS, type DenoiserParams } from '../../shared/effects';
 import { logFrequencies } from '../../shared/spectrum';
 import { FFT } from '../fft';
 import { dbToGain } from '../util';
@@ -25,20 +25,66 @@ const MINIMUM_BIAS = 2.5;
 /** Number of log-spaced points in each of the denoiser's display curves. */
 export const DENOISER_POINTS = 96;
 
-/** Layout of the readings produced by {@link DenoiserKernel}. */
+/**
+ * Layout of the readings produced by {@link DenoiserKernel}. While a profile is being learned,
+ * the learned profile follows the seconds learned so far.
+ */
 export const DENOISER_FIELDS = {
     reduction: 0,
     input: 1,
     noise: 1 + DENOISER_POINTS,
     gain: 1 + DENOISER_POINTS * 2,
+    learnedSeconds: 1 + DENOISER_POINTS * 3,
+    profile: 2 + DENOISER_POINTS * 3,
 };
+
+/** FFT bins averaged into each band of a noise profile, inclusive. */
+function profileBands(binWidth: number): [number, number][] {
+    const frequencies = logFrequencies(NOISE_PROFILE_BANDS);
+    return Array.from(frequencies, (frequency, index) => {
+        const lower = index > 0 ? Math.sqrt(frequency * frequencies[index - 1]) : 0;
+        const upper =
+            index < NOISE_PROFILE_BANDS - 1
+                ? Math.sqrt(frequency * frequencies[index + 1])
+                : Infinity;
+        const from = Math.min(BINS - 1, Math.round(lower / binWidth));
+        const to = Math.min(BINS - 1, Math.max(from, Math.round(upper / binWidth) - 1));
+        return [from, to];
+    });
+}
+
+/**
+ * For each FFT bin, the two profile bands around it and the weight of the upper one, so a
+ * profile can be interpolated (in dB, over log frequency) back to bins.
+ */
+function profileInterpolation(binWidth: number) {
+    const centers = Array.from(logFrequencies(NOISE_PROFILE_BANDS), (frequency) =>
+        Math.log(frequency),
+    );
+    const lower = new Uint16Array(BINS);
+    const weight = new Float64Array(BINS);
+    for (let k = 0; k < BINS; k++) {
+        const position = Math.log(Math.max(k, 0.5) * binWidth);
+        let band = 0;
+        while (band < NOISE_PROFILE_BANDS - 2 && centers[band + 1] < position) {
+            band++;
+        }
+        lower[k] = band;
+        weight[k] = Math.min(
+            1,
+            Math.max(0, (position - centers[band]) / (centers[band + 1] - centers[band])),
+        );
+    }
+    return { lower, weight };
+}
 
 /**
  * Spectral noise reduction. The stereo signal is analysed in 2048-sample frames with 75% overlap
- * (both channels in one complex FFT). The noise floor of each bin is the bias-corrected minimum
- * of its smoothed power over the last two seconds, and bins that are not clearly above that floor
- * are attenuated by up to the reduction amount. Both channels get the same gains, so the stereo
- * image stays intact.
+ * (both channels in one complex FFT). In adaptive mode the noise floor of each bin is the
+ * bias-corrected minimum of its smoothed power over the last two seconds; in profile mode it is
+ * a noise profile learned earlier by averaging the spectrum of a stretch of noise. Bins that are
+ * not clearly above that floor are attenuated by up to the reduction amount. Both channels get
+ * the same gains, so the stereo image stays intact.
  */
 export class DenoiserKernel implements Kernel<DenoiserParams> {
     readonly latency = FRAME - HOP;
@@ -59,6 +105,20 @@ export class DenoiserKernel implements Kernel<DenoiserParams> {
     /** Minima of the previous sub-windows, `SUB_WINDOWS` per bin. */
     private readonly history = new Float64Array(BINS * SUB_WINDOWS);
     private readonly noise = new Float64Array(BINS);
+    /** The noise floor actually used, adaptive or from the profile. */
+    private readonly applied = new Float64Array(BINS);
+    /** The profile from the parameters, interpolated to bins; empty means none. */
+    private readonly profileNoise = new Float64Array(BINS);
+    private hasProfile = false;
+    private useProfile = false;
+    private profileKey = '';
+    private readonly bandBins: [number, number][];
+    private readonly interpolation: { lower: Uint16Array; weight: Float64Array };
+    /** Power summed per bin while learning, and the number of frames summed. */
+    private readonly learnSum = new Float64Array(BINS);
+    private learnFrames = 0;
+    private learning = false;
+    private readonly frameSeconds: number;
     private readonly rawGains = new Float64Array(BINS);
     private readonly rawPowers = new Float64Array(BINS);
     private readonly gains = new Float64Array(BINS);
@@ -85,6 +145,9 @@ export class DenoiserKernel implements Kernel<DenoiserParams> {
             Math.sqrt(0.5 - 0.5 * Math.cos((2 * Math.PI * i) / FRAME)),
         );
         const binWidth = sampleRate / FRAME;
+        this.bandBins = profileBands(binWidth);
+        this.interpolation = profileInterpolation(binWidth);
+        this.frameSeconds = HOP / sampleRate;
         this.displayBins = Uint32Array.from(logFrequencies(DENOISER_POINTS), (frequency) =>
             Math.min(BINS - 1, Math.max(1, Math.round(frequency / binWidth))),
         );
@@ -101,6 +164,37 @@ export class DenoiserKernel implements Kernel<DenoiserParams> {
         this.smoothing = (p.smoothing / 100) * 0.9;
         this.freeze = p.freeze;
         this.listen = p.listen;
+        if (p.learning && !this.learning) {
+            this.learnSum.fill(0);
+            this.learnFrames = 0;
+        }
+        this.learning = p.learning;
+        const key = p.profile.join(',');
+        if (key !== this.profileKey) {
+            this.profileKey = key;
+            this.hasProfile = p.profile.length === NOISE_PROFILE_BANDS;
+            if (this.hasProfile) {
+                const { lower, weight } = this.interpolation;
+                for (let k = 0; k < BINS; k++) {
+                    const band = lower[k];
+                    const db = p.profile[band] * (1 - weight[k]) + p.profile[band + 1] * weight[k];
+                    this.profileNoise[k] = Math.pow(10, db / 10);
+                }
+            }
+        }
+        this.useProfile = p.mode === 'profile' && this.hasProfile;
+    }
+
+    /** The profile learned so far: mean power per band in dB. */
+    private learnedProfile(): number[] {
+        return this.bandBins.map(([from, to]) => {
+            let sum = 0;
+            for (let k = from; k <= to; k++) {
+                sum += this.learnSum[k];
+            }
+            const mean = sum / (to - from + 1) / Math.max(1, this.learnFrames);
+            return Math.round(10 * Math.log10(Math.max(mean, 1e-20)) * 10) / 10;
+        });
     }
 
     reset() {
@@ -117,6 +211,7 @@ export class DenoiserKernel implements Kernel<DenoiserParams> {
         this.subWindowFrame = 0;
         this.subWindow = 0;
         this.noise.fill(Infinity);
+        this.applied.fill(0);
         this.gains.fill(1);
         this.rover = FRAME - HOP;
         this.warmup = 0;
@@ -210,7 +305,15 @@ export class DenoiserKernel implements Kernel<DenoiserParams> {
                 }
                 this.noise[k] = minimum * MINIMUM_BIAS;
             }
-            const noise = Number.isFinite(this.noise[k]) ? this.noise[k] : power;
+            if (this.learning && !filling) {
+                this.learnSum[k] += current;
+            }
+            const noise = this.useProfile
+                ? this.profileNoise[k]
+                : Number.isFinite(this.noise[k])
+                  ? this.noise[k]
+                  : power;
+            this.applied[k] = noise;
             const wiener = power > 0 ? 1 - (this.threshold * noise) / power : 0;
             this.rawGains[k] = Math.min(1, Math.max(this.floor, wiener));
         }
@@ -226,6 +329,9 @@ export class DenoiserKernel implements Kernel<DenoiserParams> {
             this.energyIn += powers[k];
             this.energyOut += powers[k] * gain * gain;
         }
+        if (this.learning && this.warmup >= FRAME / HOP) {
+            this.learnFrames++;
+        }
         this.warmup = Math.min(this.warmup + 1, FRAME / HOP);
         if (!this.freeze && ++this.subWindowFrame >= this.subWindowFrames) {
             // Replace the oldest sub-window with the one just completed.
@@ -240,7 +346,8 @@ export class DenoiserKernel implements Kernel<DenoiserParams> {
 
     /**
      * How much quieter the output is than the input in dB, then input level, noise floor (dB)
-     * and gain (dB) at {@link DENOISER_POINTS} log-spaced frequencies.
+     * and gain (dB) at {@link DENOISER_POINTS} log-spaced frequencies, the seconds of noise
+     * learned, and while learning the profile learned so far.
      */
     takeMeters(): number[] {
         const reduction =
@@ -257,10 +364,12 @@ export class DenoiserKernel implements Kernel<DenoiserParams> {
         return [
             Math.round(reduction * 10) / 10,
             ...bins.map((bin) => toDb(this.power[bin])),
-            ...bins.map((bin) => toDb(Number.isFinite(this.noise[bin]) ? this.noise[bin] : 0)),
+            ...bins.map((bin) => toDb(Number.isFinite(this.applied[bin]) ? this.applied[bin] : 0)),
             ...bins.map(
                 (bin) => Math.round(20 * Math.log10(Math.max(this.gains[bin], 1e-4)) * 10) / 10,
             ),
+            Math.round(this.learnFrames * this.frameSeconds * 10) / 10,
+            ...(this.learning && this.learnFrames > 0 ? this.learnedProfile() : []),
         ];
     }
 }

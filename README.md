@@ -16,7 +16,7 @@ effects, with a dark, analyzer-driven interface inspired by modern plug-in suite
 | Gate         | Noise gate with range, attack, hold, release, hysteresis and a sidechain high-pass.                                  |
 | Filter       | Resonant LP/HP/BP/notch filter with drive and a sine/triangle LFO on the cutoff.                                     |
 | De-esser     | Band-pass sidechain detector, split-band or wideband reduction, and a listen mode.                                   |
-| Denoiser     | Spectral noise reduction (STFT) that follows the noise floor, with freeze and listen modes; about 32 ms latency.     |
+| Denoiser     | Spectral noise reduction (STFT) on an adaptive noise floor or a learned noise profile, with listen; ~32 ms latency.  |
 | Volume       | Gain, constant-power pan, stereo width, per-channel polarity and a momentary/short-term loudness bar.                |
 | Bass Booster | Low shelf boost plus a harmonic enhancer that suggests bass on small speakers, optional rumble filter and mono bass. |
 

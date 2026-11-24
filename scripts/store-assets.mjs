@@ -21,21 +21,16 @@ const TAB_TITLE = 'Late-night drum & bass mix';
 const JPEG_QUALITY = 95;
 
 // Store screenshots of the rack window, dressed as the extension at 1280×800, in the order they
-// are taken. `enable` switches on an effect that is bypassed in the screenshot rack for its own
-// shot, and `noisy` plays the demo track with added hiss and hum from then on, for the denoiser.
+// are taken; the fifth is the side panel scene below. Shots of both racks may also set `enable`,
+// to switch on an effect that is bypassed in the screenshot rack for its own shot, and `noisy`,
+// to play the demo track with added hiss and hum from then on, for the denoiser.
 const STORE = { width: 1280, height: 800, dressed: true };
 const STORE_SHOTS = [
     { path: join(SCREENSHOT_DIR, '1-equalizer.jpg'), slot: 'EQ', settle: 4000 },
-    { path: join(SCREENSHOT_DIR, '3-compressor.jpg'), slot: 'COMP', settle: 11000 },
-    // Long enough for half a minute of loudness history.
-    { path: join(SCREENSHOT_DIR, '4-loudness.jpg'), slot: 'LUFS', settle: 35000 },
-    {
-        path: join(SCREENSHOT_DIR, '5-denoiser.jpg'),
-        slot: 'DN',
-        enable: true,
-        noisy: true,
-        settle: 8000,
-    },
+    { path: join(SCREENSHOT_DIR, '2-compressor.jpg'), slot: 'COMP', settle: 11000 },
+    // Long enough to fill the spectrogram.
+    { path: join(SCREENSHOT_DIR, '3-spectrogram.jpg'), slot: 'SGRAM', settle: 20000 },
+    { path: join(SCREENSHOT_DIR, '4-stereo-image.jpg'), slot: 'IMAGE', settle: 5000 },
 ].map((shot) => ({ ...shot, ...STORE }));
 
 // The website shows every module, from a rack that holds all of them, as the demo looks on the
@@ -110,7 +105,7 @@ const LOAD_NOISY_DEMO = `(async () => {
 // among pinned effects and the panel scrolled to where the equalizer meets the compressor below.
 const SIDE_PANEL = { pins: ['EQ', 'COMP', 'IMAGE'], slot: 'EQ', scrollTop: 330, settle: 8000 };
 const SIDE_PANEL_SHOTS = [
-    { path: join(SCREENSHOT_DIR, '2-side-panel.jpg'), width: 1280, height: 800, scale: 1 },
+    { path: join(SCREENSHOT_DIR, '5-side-panel.jpg'), width: 1280, height: 800, scale: 1 },
     // 800×600 like the other pictures of the website, laid out at 1067×800.
     { path: join(SITE_IMAGE_DIR, 'side-panel.jpg'), width: 1067, height: 800, scale: 0.75 },
 ];
@@ -404,10 +399,11 @@ async function captureScreenshots(page, origin) {
     mkdirSync(SCREENSHOT_DIR, { recursive: true });
     mkdirSync(SITE_IMAGE_DIR, { recursive: true });
     await captureRack(page, origin, RACK, STORE_SHOTS);
-    await captureRack(page, origin, SITE_RACK, SITE_SHOTS);
+    // The side panel scene loads whichever rack the page stored last: the store rack here.
     for (const shot of SIDE_PANEL_SHOTS) {
         await captureSidePanel(page, origin, shot);
     }
+    await captureRack(page, origin, SITE_RACK, SITE_SHOTS);
 }
 
 async function captureTiles(page, origin) {

@@ -1646,6 +1646,20 @@ button:disabled {
     height: 64px;
 }
 
+/* Denoiser */
+
+.denoiser-learn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.denoiser-seconds {
+    margin-left: 6px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.8;
+}
+
 /* Loudness */
 
 .display.split .loudness-readouts {

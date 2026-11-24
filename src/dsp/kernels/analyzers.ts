@@ -126,7 +126,21 @@ export const STEREO_POINTS = 256;
 const STEREO_WINDOW = 2048;
 
 /** Layout of the readings produced by {@link StereoKernel}. */
-export const STEREO_FIELDS = { correlation: 0, balance: 1, width: 2, peak: 3, points: 4 };
+export const STEREO_FIELDS = {
+    correlation: 0,
+    balance: 1,
+    width: 2,
+    peak: 3,
+    points: 4,
+    /** Start of the per-band readings of the image by frequency. */
+    bands: 4 + STEREO_POINTS * 2,
+};
+
+/** Log-spaced bands of the image by frequency. */
+export const STEREO_BANDS = 48;
+/** Readings per band: level (dB), position (-1 left .. 1 right), width (S/M), correlation. */
+export const STEREO_BAND_FIELDS = { level: 0, position: 1, width: 2, correlation: 3, size: 4 };
+const STEREO_FFT = 4096;
 
 function round(value: number) {
     return Math.round(value * 10000) / 10000;
@@ -139,10 +153,34 @@ function round(value: number) {
  */
 export class StereoKernel implements Kernel<StereoParams> {
     private readonly tap = new Tap();
+    private readonly fft = new FFT(STEREO_FFT);
+    private readonly window = hannWindow(STEREO_FFT);
+    private readonly re = new Float64Array(STEREO_FFT);
+    private readonly im = new Float64Array(STEREO_FFT);
+    /** FFT bin range of each band, inclusive. */
+    private readonly bandBins: [number, number][];
+    private readonly levelOffset: number;
 
-    constructor(_sampleRate: number) {}
+    constructor(sampleRate: number) {
+        const frequencies = logFrequencies(STEREO_BANDS);
+        const binWidth = sampleRate / STEREO_FFT;
+        const last = STEREO_FFT / 2 - 1;
+        this.bandBins = Array.from(frequencies, (frequency, index) => {
+            const lower = index > 0 ? Math.sqrt(frequency * frequencies[index - 1]) : frequency;
+            const upper =
+                index < STEREO_BANDS - 1
+                    ? Math.sqrt(frequency * frequencies[index + 1])
+                    : frequency;
+            const from = Math.min(last, Math.max(1, Math.round(lower / binWidth)));
+            const to = Math.min(last, Math.max(from, Math.round(upper / binWidth) - 1));
+            return [from, to];
+        });
+        // A full-scale sine in both channels reads about 0 dB.
+        const windowSum = this.window.reduce((total, value) => total + value, 0);
+        this.levelOffset = -20 * Math.log10(windowSum / 2);
+    }
 
-    setParams() {}
+    setParams(_params: StereoParams) {}
 
     process(left: Float32Array, right: Float32Array, frames: number) {
         this.tap.write(left, right, frames);
@@ -185,6 +223,57 @@ export class StereoKernel implements Kernel<StereoParams> {
             round(Math.min(width, 10)),
             round(peak),
             ...points,
+            ...this.bands(),
         ];
+    }
+
+    /**
+     * Stereo statistics per band from one FFT of both channels (left in the real part, right
+     * in the imaginary part).
+     */
+    private bands(): number[] {
+        const n = STEREO_FFT;
+        const { left, right } = this.tap;
+        for (let i = 0; i < n; i++) {
+            const index = this.tap.index(n - 1 - i);
+            this.re[i] = left[index] * this.window[i];
+            this.im[i] = right[index] * this.window[i];
+        }
+        this.fft.forward(this.re, this.im);
+        return this.bandBins.flatMap(([from, to]) => {
+            let ll = 0;
+            let rr = 0;
+            let lr = 0;
+            for (let k = from; k <= to; k++) {
+                const zr = this.re[k];
+                const zi = this.im[k];
+                const mr = this.re[n - k];
+                const mi = this.im[n - k];
+                // Separate the two real spectra: L = (Z[k] + conj Z[n-k]) / 2,
+                // R = (Z[k] - conj Z[n-k]) / 2i.
+                const lRe = (zr + mr) / 2;
+                const lIm = (zi - mi) / 2;
+                const rRe = (zi + mi) / 2;
+                const rIm = (mr - zr) / 2;
+                ll += lRe * lRe + lIm * lIm;
+                rr += rRe * rRe + rIm * rIm;
+                lr += lRe * rRe + lIm * rIm;
+            }
+            const count = to - from + 1;
+            const total = ll + rr;
+            if (total / count < 1e-14) {
+                return [-140, 0, 0, 0];
+            }
+            const mid = total + 2 * lr;
+            const side = total - 2 * lr;
+            return [
+                Math.round(
+                    Math.max(-140, 10 * Math.log10(total / 2 / count) + this.levelOffset) * 10,
+                ) / 10,
+                round((rr - ll) / total),
+                round(Math.min(10, Math.sqrt(side / Math.max(mid, 1e-20)))),
+                round(Math.max(-1, Math.min(1, lr / Math.sqrt(Math.max(ll * rr, 1e-30))))),
+            ];
+        });
     }
 }

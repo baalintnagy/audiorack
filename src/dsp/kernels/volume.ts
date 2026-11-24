@@ -1,4 +1,5 @@
 import type { VolumeParams } from '../../shared/effects';
+import { LoudnessMeter } from '../loudness';
 import { Smoother, dbToGain, panGains } from '../util';
 import type { Kernel } from './kernel';
 
@@ -15,15 +16,20 @@ export function volumeGains(p: VolumeParams): { left: number; right: number; wid
     };
 }
 
+/** Layout of the readings produced by {@link VolumeKernel}: loudness of its output in LUFS. */
+export const VOLUME_FIELDS = { momentary: 0, shortTerm: 1 };
+
 export class VolumeKernel implements Kernel<VolumeParams> {
     private readonly left: Smoother;
     private readonly right: Smoother;
     private readonly width: Smoother;
+    private readonly loudness: LoudnessMeter;
 
     constructor(sampleRate: number) {
         this.left = new Smoother(1, 15, sampleRate);
         this.right = new Smoother(1, 15, sampleRate);
         this.width = new Smoother(1, 15, sampleRate);
+        this.loudness = new LoudnessMeter(sampleRate);
     }
 
     setParams(p: VolumeParams) {
@@ -40,7 +46,16 @@ export class VolumeKernel implements Kernel<VolumeParams> {
             left[i] = (mid + side) * this.left.next();
             right[i] = (mid - side) * this.right.next();
         }
+        this.loudness.process(left, right, frames);
     }
 
-    reset() {}
+    reset() {
+        this.loudness.reset();
+    }
+
+    takeMeters() {
+        return [this.loudness.momentary, this.loudness.shortTerm].map(
+            (value) => Math.round(value * 10) / 10,
+        );
+    }
 }

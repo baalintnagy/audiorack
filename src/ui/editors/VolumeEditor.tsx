@@ -1,8 +1,8 @@
-import { volumeGains } from '../../dsp/kernels/volume';
+import { VOLUME_FIELDS, volumeGains } from '../../dsp/kernels/volume';
 import { SPECS } from '../../shared/effects';
 import { ControlGroup, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
-import { LevelMeter } from '../components/Meters';
+import { LevelMeter, LoudnessBar } from '../components/Meters';
 import { css, withAlpha } from '../graph';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
@@ -90,6 +90,21 @@ export function VolumeEditor({ effect, setParams, color }: EditorProps<'volume'>
                     <div>
                         <span className="readout-label">Right</span>
                         <span className="readout-value">{balance(gains.right)} dB</span>
+                    </div>
+                    <div title="Momentary (bar) and short-term (marker) loudness of the output">
+                        <span className="readout-label">Loudness, LUFS</span>
+                        <LoudnessBar
+                            color={color}
+                            source={(telemetry) => {
+                                const data = telemetry.meters.effects[effect.id];
+                                return data && data.length > VOLUME_FIELDS.shortTerm
+                                    ? {
+                                          momentary: data[VOLUME_FIELDS.momentary],
+                                          shortTerm: data[VOLUME_FIELDS.shortTerm],
+                                      }
+                                    : undefined;
+                            }}
+                        />
                     </div>
                 </div>
                 <LevelMeter

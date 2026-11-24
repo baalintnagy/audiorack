@@ -1,7 +1,7 @@
 {
     "name": "audiorack",
     "private": true,
-    "version": "0.5.3",
+    "version": "0.6.0",
     "description": "Audio effect rack for browser tabs",
     "type": "module",
     "license": "MIT",

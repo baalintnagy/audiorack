@@ -163,7 +163,8 @@ describe('rack processor', () => {
         rack.setRack({ ...state, chain: [{ ...volume, bypass: true }] });
         const [left] = processStereo(input, input, (l, r, frames) => rack.process(l, r, frames));
         expect(rms(left, 4800)).toBeCloseTo(rms(input, 4800), 4);
-        expect(rack.takeMeters().effects[volume.id]).toEqual([]);
+        // Meters are still collected: momentary and short-term loudness.
+        expect(rack.takeMeters().effects[volume.id]).toHaveLength(2);
     });
 
     it('stays fully dry once the whole rack is bypassed', () => {

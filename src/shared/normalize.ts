@@ -129,6 +129,15 @@ const normalizers: { [T in EffectType]: (raw: Loose) => EffectParamsMap[T] } = {
             outputDb: num(raw.outputDb, 'outputDb'),
         };
     },
+    gate: (raw) => ({
+        thresholdDb: num(raw.thresholdDb, 'gateThresholdDb'),
+        rangeDb: num(raw.rangeDb, 'gateRangeDb'),
+        attackMs: num(raw.attackMs, 'gateAttackMs'),
+        holdMs: num(raw.holdMs, 'holdMs'),
+        releaseMs: num(raw.releaseMs, 'gateReleaseMs'),
+        hysteresisDb: num(raw.hysteresisDb, 'hysteresisDb'),
+        sidechainHpHz: num(raw.sidechainHpHz, 'sidechainHpHz'),
+    }),
     filter: (raw) => ({
         mode: oneOf(raw.mode, FILTER_MODES, 'lowpass'),
         cutoff: num(raw.cutoff, 'cutoff'),
@@ -146,6 +155,13 @@ const normalizers: { [T in EffectType]: (raw: Loose) => EffectParamsMap[T] } = {
         rangeDb: num(raw.rangeDb, 'rangeDb'),
         releaseMs: num(raw.releaseMs, 'deessReleaseMs'),
         mode: oneOf(raw.mode, ['split', 'wide'] as const, 'split'),
+        listen: bool(raw.listen, false),
+    }),
+    denoiser: (raw) => ({
+        reductionDb: num(raw.reductionDb, 'denoiseReductionDb'),
+        thresholdDb: num(raw.thresholdDb, 'denoiseThresholdDb'),
+        smoothing: num(raw.smoothing, 'denoiseSmoothing'),
+        freeze: bool(raw.freeze, false),
         listen: bool(raw.listen, false),
     }),
     volume: (raw) => ({
@@ -187,6 +203,10 @@ const normalizers: { [T in EffectType]: (raw: Loose) => EffectParamsMap[T] } = {
         display: oneOf(raw.display, ['lines', 'dots'] as const, 'dots'),
         persistence: num(raw.persistence, 'persistence'),
         autoGain: bool(raw.autoGain, true),
+    }),
+    loudness: (raw) => ({
+        targetLufs: num(raw.targetLufs, 'targetLufs'),
+        resets: Math.round(num(raw.resets, 'resets')),
     }),
 };
 

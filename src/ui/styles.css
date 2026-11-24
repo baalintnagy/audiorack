@@ -138,6 +138,16 @@ html.side-panel .main.stacked .display {
     height: 200px;
 }
 
+/* Room for all of the loudness readings. */
+html.side-panel .main.stacked .loudness-editor .display {
+    height: 250px;
+}
+
+/* Room for the stereo views above their meters. */
+html.side-panel .main.stacked .stereo-editor .display {
+    height: 300px;
+}
+
 html.side-panel .main.stacked .mixer {
     flex: none;
     height: 360px;
@@ -1544,7 +1554,7 @@ button:disabled {
     justify-content: center;
     gap: 10px;
     flex: none;
-    width: 120px;
+    width: 150px;
     padding: 12px;
 }
 
@@ -1592,18 +1602,78 @@ button:disabled {
     background: #000;
 }
 
-.display.split .stereo-scope {
+/* Stereo Image: scope and image by frequency side by side, the meters in a row below. */
+.stereo-display {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: #0b0d11;
+}
+
+.stereo-views {
+    display: flex;
+    flex: 1;
+    gap: 1px;
+    min-height: 0;
+}
+
+.stereo-views > *,
+.stereo-display > .stereo-meters {
+    background: var(--display);
+}
+
+.stereo-scope {
+    display: block;
     flex: none;
     height: 100%;
     width: auto;
+    max-width: 50%;
     aspect-ratio: 1;
     min-width: 0;
 }
 
-.display.split .stereo-meters {
+.stereo-bands {
+    display: block;
     flex: 1;
     min-width: 0;
     height: 100%;
+}
+
+.stereo-meters {
+    display: block;
+    flex: none;
+    width: 100%;
+    height: 64px;
+}
+
+/* Loudness */
+
+.display.split .loudness-readouts {
+    display: block;
+    flex: none;
+    width: 230px;
+    height: 100%;
+}
+
+.loudness-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.loudness-bar-canvas {
+    display: block;
+    width: 100%;
+    height: 10px;
+    border-radius: 2px;
+}
+
+.loudness-bar-readout {
+    color: var(--text-dim);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 /* Parallel editor: a small mixer */

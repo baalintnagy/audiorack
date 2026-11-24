@@ -13,9 +13,11 @@ effects, with a dark, analyzer-driven interface inspired by modern plug-in suite
 | Compressor   | Feed-forward soft-knee compressor with peak/RMS detection, sidechain high-pass, auto makeup and parallel mix.        |
 | Limiter      | Lookahead brickwall limiter; the output never exceeds the ceiling.                                                   |
 | Multiband    | 2–4 band compressor on phase-compensated Linkwitz-Riley crossovers, with solo/mute/bypass per band.                  |
+| Gate         | Noise gate with range, attack, hold, release, hysteresis and a sidechain high-pass.                                  |
 | Filter       | Resonant LP/HP/BP/notch filter with drive and a sine/triangle LFO on the cutoff.                                     |
 | De-esser     | Band-pass sidechain detector, split-band or wideband reduction, and a listen mode.                                   |
-| Volume       | Gain, constant-power pan, stereo width and per-channel polarity.                                                     |
+| Denoiser     | Spectral noise reduction (STFT) that follows the noise floor, with freeze and listen modes; about 32 ms latency.     |
+| Volume       | Gain, constant-power pan, stereo width, per-channel polarity and a momentary/short-term loudness bar.                |
 | Bass Booster | Low shelf boost plus a harmonic enhancer that suggests bass on small speakers, optional rumble filter and mono bass. |
 
 ### Analyzers
@@ -27,7 +29,13 @@ that point (for example one before and one after the EQ).
 | ------------ | --------------------------------------------------------------------------------------------------------------- |
 | Spectrum     | 2k–8k point FFT of mono, left, right, mid or side, with tilt, smoothing, peak hold, freeze and a hover readout. |
 | Spectrogram  | Scrolling time-frequency image with adjustable floor/ceiling, tilt and Magma, Ice or Mono palettes.             |
-| Stereo Image | Goniometer with persistence and auto zoom, plus phase correlation, balance and side/mid width meters.           |
+| Stereo Image | Goniometer with persistence and auto zoom next to the image by frequency; correlation, balance and width.       |
+| Loudness     | EBU R128 meter: momentary, short-term, gated integrated loudness, loudness range and 4× oversampled true peak.  |
+
+The Loudness analyzer follows ITU-R BS.1770-4 and EBU Tech 3341/3342 (K-weighting, 400 ms gating
+blocks with absolute and relative gates, short-term values for the range). Integrated loudness,
+range and the maxima cover everything played through the rack since the last **Reset**; the
+history shows the last minute against a target (−14, −16, −23 or −24 LUFS, or any value).
 
 The chain can be reordered by dragging slots, each effect can be bypassed (with a short
 crossfade), and the whole rack can be bypassed for comparison. Factory presets are included;
@@ -70,8 +78,9 @@ rack. The pop-out button in the panel moves the rack to a window and closes the 
 
 The pin button in an effect's or group's header keeps it open in the panel. Open panels follow
 the chain strip: left to right, and a parallel group before the effects of its branches, top to
-bottom. Each keeps its own height, also when it is the only one open, and the panel scrolls. Picking an item in the strip scrolls to its panel; an item that is not pinned opens in
-its place among the pinned ones and closes again when another item is picked. The chain strip
+bottom. Each keeps its own height, also when it is the only one open, and the panel scrolls.
+Picking an item in the strip scrolls to its panel; an item that is not pinned opens in its place
+among the pinned ones and closes again when another item is picked. The chain strip
 stays at the top while the panel scrolls. Pins belong to the tab and are forgotten when it
 closes.
 
@@ -142,8 +151,9 @@ Other scripts: `npm test` (Vitest DSP and state tests), `npm run check` (TypeScr
 ## Website
 
 `site/` holds the GitHub Pages site: a landing page, the privacy policy (rendered from
-`PRIVACY.md` at build time) and screenshots. `site/images/side-panel.jpg` is captured with the
-store screenshots by `npm run store:assets` (see [`store/`](store/README.md)). `npm run site` builds it into `site-dist/`,
+`PRIVACY.md` at build time) and screenshots. The side panel, gate, denoiser, loudness and
+stereo image pictures are captured with the store screenshots by `npm run store:assets`
+(see [`store/`](store/README.md)). `npm run site` builds it into `site-dist/`,
 including the in-browser demo (`vite build --mode demo`, the rack UI with relative URLs).
 `npm run site:preview` serves the result locally.
 

@@ -241,3 +241,73 @@ export function DynamicsHistory({
     );
     return <canvas ref={ref} className="history-canvas" />;
 }
+
+const LOUDNESS_MIN = -48;
+const LOUDNESS_MAX = 0;
+
+/** Formats a loudness reading, with silence as minus infinity. */
+export function formatLoudness(lufs: number): string {
+    return lufs <= -99 ? '-∞' : lufs.toFixed(1);
+}
+
+/**
+ * Horizontal momentary loudness bar with a short-term marker, both in LUFS, and an optional
+ * target tick.
+ */
+export function LoudnessBar({
+    source,
+    color,
+    target,
+}: {
+    source: (telemetry: Telemetry) => { momentary: number; shortTerm: number } | undefined;
+    color: string;
+    target?: number;
+}) {
+    const readout = useRef<HTMLSpanElement>(null);
+    const shown = useRef(LOUDNESS_MIN);
+    const ref = useCanvas(
+        ({ ctx, width, height, telemetry, live, ticks }) => {
+            const reading = telemetry ? source(telemetry) : undefined;
+            const momentary = reading?.momentary ?? -120;
+            const shortTerm = reading?.shortTerm ?? -120;
+            if (live) {
+                shown.current = Math.max(momentary, shown.current - 0.6 * ticks);
+            }
+            const toX = (lufs: number) =>
+                ((Math.max(LOUDNESS_MIN, Math.min(LOUDNESS_MAX, lufs)) - LOUDNESS_MIN) /
+                    (LOUDNESS_MAX - LOUDNESS_MIN)) *
+                width;
+            ctx.fillStyle = css('--meter-bg');
+            ctx.fillRect(0, 0, width, height);
+            const gradient = ctx.createLinearGradient(0, 0, width, 0);
+            gradient.addColorStop(0, `${color}55`);
+            gradient.addColorStop(1, color);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, toX(shown.current), height);
+            ctx.fillStyle = css('--meter-tick');
+            for (let lufs = LOUDNESS_MIN + 6; lufs < LOUDNESS_MAX; lufs += 6) {
+                ctx.fillRect(Math.round(toX(lufs)), 0, 1, height);
+            }
+            if (target !== undefined) {
+                ctx.fillStyle = css('--threshold');
+                ctx.fillRect(Math.round(toX(target)) - 1, 0, 2, height);
+            }
+            if (shortTerm > LOUDNESS_MIN) {
+                ctx.fillStyle = css('--text');
+                ctx.fillRect(Math.round(toX(shortTerm)) - 1, 0, 2, height);
+            }
+            if (readout.current) {
+                readout.current.textContent = `M ${formatLoudness(momentary)} · S ${formatLoudness(shortTerm)}`;
+            }
+        },
+        [color, target],
+    );
+    return (
+        <div className="loudness-bar">
+            <canvas ref={ref} className="loudness-bar-canvas" />
+            <span className="loudness-bar-readout" ref={readout}>
+                M -∞ · S -∞
+            </span>
+        </div>
+    );
+}

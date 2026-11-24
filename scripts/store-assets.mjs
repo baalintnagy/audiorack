@@ -1,5 +1,5 @@
-// Captures the Chrome Web Store screenshots, the side panel picture of the website and the promo
-// tiles with a headless Chromium browser. The rack runs in demo mode on a Vite dev server, playing
+// Captures the Chrome Web Store screenshots, the website pictures of the newer effects and views,
+// and the promo tiles with a headless Chromium browser. The rack runs in demo mode on a Vite dev server, playing
 // the rendered demo track.
 //
 //   npm run store:assets            (set CHROME_PATH if no Chrome, Brave or Edge is found)
@@ -20,12 +20,82 @@ const RACK = readFileSync(join(STORE_DIR, 'screenshot-rack.json'), 'utf8');
 const TAB_TITLE = 'Late-night drum & bass mix';
 const JPEG_QUALITY = 95;
 
-const SCREENSHOTS = [
-    { file: '1-equalizer.jpg', slot: 'EQ', settle: 4000 },
-    { file: '3-compressor.jpg', slot: 'COMP', settle: 11000 },
-    { file: '4-multiband.jpg', slot: 'MB', settle: 4000 },
-    { file: '5-spectrogram.jpg', slot: 'SGRAM', settle: 20000 },
+// Shots of the rack window, in the order they are taken. Store screenshots are dressed as the
+// extension at 1280×800; website pictures show the demo as it runs on the site, at 800×600.
+// `enable` switches on an effect that is bypassed in the screenshot rack for its own shot, and
+// `noisy` plays the demo track with added hiss and hum from then on, for the denoiser.
+const STORE = { width: 1280, height: 800, dressed: true };
+const SITE = { width: 800, height: 600, dressed: false };
+const RACK_SHOTS = [
+    { path: join(SCREENSHOT_DIR, '1-equalizer.jpg'), slot: 'EQ', settle: 4000, ...STORE },
+    { path: join(SCREENSHOT_DIR, '3-compressor.jpg'), slot: 'COMP', settle: 11000, ...STORE },
+    // Long enough for half a minute of loudness history.
+    { path: join(SCREENSHOT_DIR, '4-loudness.jpg'), slot: 'LUFS', settle: 35000, ...STORE },
+    { path: join(SITE_IMAGE_DIR, 'stereo.jpg'), slot: 'IMAGE', settle: 4000, ...SITE },
+    { path: join(SITE_IMAGE_DIR, 'gate.jpg'), slot: 'GATE', enable: true, settle: 8000, ...SITE },
+    { path: join(SITE_IMAGE_DIR, 'loudness.jpg'), slot: 'LUFS', settle: 35000, ...SITE },
+    {
+        path: join(SITE_IMAGE_DIR, 'denoiser.jpg'),
+        slot: 'DN',
+        enable: true,
+        noisy: true,
+        settle: 8000,
+        ...SITE,
+    },
+    {
+        path: join(SCREENSHOT_DIR, '5-denoiser.jpg'),
+        slot: 'DN',
+        enable: true,
+        settle: 8000,
+        ...STORE,
+    },
 ];
+
+// Renders the demo track with white hiss and a 50 Hz hum into a WAV file and loads it with
+// "Load audio…". Runs in the page, where Vite serves the module that renders the track.
+const LOAD_NOISY_DEMO = `(async () => {
+    const { demoTrack } = await import('/src/ui/demo-signal.ts');
+    const buffer = await demoTrack();
+    const channels = [0, 1].map((channel) =>
+        buffer.getChannelData(Math.min(channel, buffer.numberOfChannels - 1)),
+    );
+    const { length, sampleRate } = buffer;
+    const data = new DataView(new ArrayBuffer(44 + length * 4));
+    const text = (offset, value) =>
+        [...value].forEach((char, index) => data.setUint8(offset + index, char.charCodeAt(0)));
+    text(0, 'RIFF');
+    data.setUint32(4, 36 + length * 4, true);
+    text(8, 'WAVE');
+    text(12, 'fmt ');
+    data.setUint32(16, 16, true);
+    data.setUint16(20, 1, true);
+    data.setUint16(22, 2, true);
+    data.setUint32(24, sampleRate, true);
+    data.setUint32(28, sampleRate * 4, true);
+    data.setUint16(32, 4, true);
+    data.setUint16(34, 16, true);
+    text(36, 'data');
+    data.setUint32(40, length * 4, true);
+    let seed = 1;
+    const random = () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return (seed / 0xffffffff) * 2 - 1;
+    };
+    for (let i = 0; i < length; i++) {
+        const hum = 0.004 * Math.sin((2 * Math.PI * 50 * i) / sampleRate);
+        for (let channel = 0; channel < 2; channel++) {
+            const value = channels[channel][i] + random() * 0.012 + hum;
+            data.setInt16(44 + (i * 2 + channel) * 2, Math.max(-1, Math.min(1, value)) * 32767, true);
+        }
+    }
+    const file = new File([data.buffer], 'Demo track with hiss.wav', { type: 'audio/wav' });
+    const input = document.querySelector('input[type=file][accept^="audio"]');
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+})()`;
 
 // The side panel scene: a sample video page with the rack docked next to it, the equalizer picked
 // among pinned effects and the panel scrolled to where the equalizer meets the compressor below.
@@ -161,13 +231,17 @@ class Page {
         }
     }
 
-    async goto(url, width, height, scale = 1) {
+    async viewport(width, height, scale = 1) {
         await this.send('Emulation.setDeviceMetricsOverride', {
             width,
             height,
             deviceScaleFactor: scale,
             mobile: false,
         });
+    }
+
+    async goto(url, width, height, scale = 1) {
+        await this.viewport(width, height, scale);
         await this.send('Page.navigate', { url });
         await this.waitFor('document.readyState === "complete"');
     }
@@ -189,17 +263,32 @@ class Page {
 // Makes the demo page look like the extension's pop-out window processing a tab.
 const DRESS_AS_EXTENSION = dressAsExtension('document');
 
+// Shows the demo page as it is again, apart from the status label, which updates by itself.
+const UNDRESS = `(() => {
+    document.getElementById('store-dress')?.remove();
+    return true;
+})()`;
+
 // The rack document of the side panel scene.
 const PANEL_DOCUMENT = 'document.querySelector("iframe").contentDocument';
 
+/**
+ * Hides the demo-only buttons and shows the sample tab title in place of the status label, with
+ * a style sheet only: React keeps owning the label, so its text can still change underneath.
+ */
 function dressAsExtension(doc) {
+    const title = JSON.stringify(JSON.stringify(TAB_TITLE));
     return `((document) => {
-    const style = document.createElement('style');
-    style.textContent = '.header > .ghost { display: none !important; }';
-    document.head.append(style);
-    const label = document.querySelector('.capture-label');
-    if (label) {
-        label.textContent = ${JSON.stringify(TAB_TITLE)};
+    if (!document.getElementById('store-dress')) {
+        const label = document.querySelector('.capture-label');
+        const size = label ? getComputedStyle(label).fontSize : '11px';
+        const style = document.createElement('style');
+        style.id = 'store-dress';
+        style.textContent =
+            '.header > .ghost { display: none !important; }' +
+            '.capture-label { font-size: 0 !important; }' +
+            '.capture-label::after { content: ' + ${title} + '; font-size: ' + size + '; }';
+        document.head.append(style);
     }
     return true;
 })(${doc})`;
@@ -213,6 +302,20 @@ function selectSlot(name, doc = 'document') {
         slot?.click();
         return slot !== undefined;
     })(${doc})`;
+}
+
+/** Switches an effect in the chain strip on or off with its power button. */
+function setEnabled(name, enabled) {
+    return `(() => {
+        const slot = [...document.querySelectorAll('.chain .slot')].find(
+            (element) => element.querySelector('.slot-name')?.textContent === ${JSON.stringify(name)},
+        );
+        const power = slot?.querySelector('.slot-power');
+        if (power && power.classList.contains('on') !== ${enabled}) {
+            power.click();
+        }
+        return power !== undefined;
+    })()`;
 }
 
 async function captureSidePanel(page, origin, { path, width, height, scale }) {
@@ -254,14 +357,32 @@ async function captureScreenshots(page, origin) {
     await page.waitFor('document.querySelector(".capture") !== null');
     await page.evaluate('document.querySelector(".capture").click()');
     await page.waitFor('document.querySelector(".capture.on") !== null', 30000);
-    for (const { file, slot, settle } of SCREENSHOTS) {
-        if (!(await page.evaluate(selectSlot(slot)))) {
-            throw new Error(`No ${slot} slot in the default rack.`);
+    mkdirSync(SITE_IMAGE_DIR, { recursive: true });
+    for (const shot of RACK_SHOTS) {
+        if (shot.noisy) {
+            await page.evaluate(LOAD_NOISY_DEMO);
+            await page.waitFor(
+                'document.querySelector(".capture-label")?.textContent.includes("hiss")',
+            );
+            await page.waitFor('document.querySelector(".capture.on") !== null', 30000);
         }
-        await sleep(settle);
-        await page.evaluate(DRESS_AS_EXTENSION);
+        await page.viewport(shot.width, shot.height);
+        await page.evaluate(UNDRESS);
+        if (shot.enable) {
+            await page.evaluate(setEnabled(shot.slot, true));
+        }
+        if (!(await page.evaluate(selectSlot(shot.slot)))) {
+            throw new Error(`No ${shot.slot} slot in the screenshot rack.`);
+        }
+        await sleep(shot.settle);
+        if (shot.dressed) {
+            await page.evaluate(DRESS_AS_EXTENSION);
+        }
         await sleep(100);
-        await page.capture(join(SCREENSHOT_DIR, file));
+        await page.capture(shot.path);
+        if (shot.enable) {
+            await page.evaluate(setEnabled(shot.slot, false));
+        }
     }
     for (const shot of SIDE_PANEL_SHOTS) {
         await captureSidePanel(page, origin, shot);

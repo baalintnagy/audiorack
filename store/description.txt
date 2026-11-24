@@ -11,20 +11,23 @@ Tame videos that are too loud, make quiet dialogue easier to follow, take the ha
 • A global bypass for quick before/after comparison.
 • Input and output gain with level meters.
 
-★ EIGHT EFFECTS
+★ TEN EFFECTS
 • Equalizer: up to 12 bands (bell, shelves, notch, band pass and 12–48 dB/oct cuts), dragged directly on top of a live spectrum.
 • Compressor: soft knee, peak or RMS detection, sidechain high-pass, auto makeup and parallel mix, with a transfer curve and gain-reduction history.
 • Limiter: a lookahead brickwall limiter that keeps the output below the ceiling you set.
 • Multiband compressor: two to four bands on phase-aligned Linkwitz-Riley crossovers, each with its own settings, solo, mute and bypass.
+• Gate: silences hum and hiss between phrases, with hold, hysteresis and a sidechain filter.
 • Filter: resonant low pass, high pass, band pass or notch, with drive and a sweeping LFO.
 • De-esser: softens harsh “s” sounds in speech and vocals, with a listen mode.
-• Volume: gain, pan, stereo width and polarity.
+• Denoiser: reduces steady background noise such as hiss, hum and fan noise by following the noise floor, with a freeze and listen mode.
+• Volume: gain, pan, stereo width and polarity, with a loudness meter.
 • Bass Booster: a low boost plus added harmonics, so bass comes through even on small speakers.
 
-★ THREE ANALYZERS
+★ FOUR ANALYZERS
 • Spectrum: mono, left, right, mid or side, with peak hold, freeze and a frequency, note and level readout.
 • Spectrogram: frequency over time, with adjustable levels and three color schemes.
-• Stereo Image: a stereo scope with phase correlation, balance and width meters.
+• Stereo Image: a stereo scope next to the image by frequency, with phase correlation, balance and width meters.
+• Loudness: an EBU R128 loudness meter with momentary, short-term and integrated loudness, loudness range and true peak, measured against a target such as -14 LUFS for streaming.
 Analyzers pass the audio through untouched, so you can place one before and one after an effect to compare.
 
 ★ PRESETS

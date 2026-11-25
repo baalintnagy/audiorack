@@ -238,7 +238,10 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
             const { band, part } = hit(event);
             event.currentTarget.style.cursor =
                 part === 'ring' ? 'ns-resize' : part === 'center' ? 'move' : '';
-            setHotRing(part === 'ring' ? band?.id : undefined);
+            const hot = part === 'ring' ? band?.id : undefined;
+            if (hot !== hotRing) {
+                setHotRing(hot);
+            }
             return;
         }
         const band = bands.find((candidate) => candidate.id === drag.current?.id);
@@ -287,7 +290,7 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
                     onPointerMove={onPointerMove}
                     onPointerUp={() => (drag.current = undefined)}
                     onPointerCancel={() => (drag.current = undefined)}
-                    onPointerLeave={() => !drag.current && setHotRing(undefined)}
+                    onPointerLeave={() => !drag.current && hotRing && setHotRing(undefined)}
                     onWheel={onWheel}
                     onContextMenu={(event) => {
                         event.preventDefault();

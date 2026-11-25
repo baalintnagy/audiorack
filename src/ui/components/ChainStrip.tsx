@@ -323,10 +323,12 @@ const SELECTION_KEYS: Record<string, number> = {
 
 /**
  * Whether the chain has more content past its left and right edges, and the height of its
- * horizontal scrollbar, which the scroll arrows leave uncovered.
+ * horizontal scrollbar, which the scroll arrows leave uncovered. `layout` names the items in
+ * display order: the chain is measured again when it changes, not on every parameter edit.
  */
-function useOverflow(scroller: RefObject<HTMLDivElement | null>, chain: ChainItem[]) {
+function useOverflow(scroller: RefObject<HTMLDivElement | null>, layout: string) {
     const [overflow, setOverflow] = useState({ left: false, right: false, bar: 0 });
+    const shown = useRef(overflow);
     useEffect(() => {
         const element = scroller.current;
         if (!element) {
@@ -337,11 +339,13 @@ function useOverflow(scroller: RefObject<HTMLDivElement | null>, chain: ChainIte
             const right = element.scrollLeft + element.clientWidth < element.scrollWidth - 1;
             // The offset height also holds the 1px top and bottom borders.
             const bar = Math.max(0, element.offsetHeight - element.clientHeight - 2);
-            setOverflow((previous) =>
-                previous.left === left && previous.right === right && previous.bar === bar
-                    ? previous
-                    : { left, right, bar },
-            );
+            const previous = shown.current;
+            // Only a real change sets state: an update queued on every edit, even one that
+            // changes nothing, counts towards React's limit of nested updates while dragging.
+            if (previous.left !== left || previous.right !== right || previous.bar !== bar) {
+                shown.current = { left, right, bar };
+                setOverflow(shown.current);
+            }
         };
         measure();
         const observer = new ResizeObserver(measure);
@@ -351,7 +355,7 @@ function useOverflow(scroller: RefObject<HTMLDivElement | null>, chain: ChainIte
             observer.disconnect();
             element.removeEventListener('scroll', measure);
         };
-    }, [scroller, chain]);
+    }, [scroller, layout]);
     return overflow;
 }
 
@@ -406,8 +410,8 @@ export function ChainStrip({
 }) {
     const drag = useChainDrag(chain, handlers.onMove);
     const scroller = useRef<HTMLDivElement>(null);
-    const overflow = useOverflow(scroller, chain);
     const layout = displayOrder(chain).join();
+    const overflow = useOverflow(scroller, layout);
 
     // Bring the selection into view when it changes or the items around it move.
     useEffect(() => {

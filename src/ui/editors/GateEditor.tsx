@@ -1,10 +1,19 @@
+import { useState } from 'react';
 import { GATE_FIELDS } from '../../dsp/kernels/gate';
 import { SPECS } from '../../shared/effects';
 import type { Telemetry } from '../../shared/messages';
 import { ControlGroup } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { DynamicsHistory, ReductionMeter } from '../components/Meters';
-import { LINE_GRAB, specValue, useCanvasDrag, wheelStep, type DragHandle } from '../canvasDrag';
+import {
+    LINE_GRAB,
+    nodePart,
+    ringHandle,
+    specValue,
+    useCanvasDrag,
+    wheelStep,
+    type DragHandle,
+} from '../canvasDrag';
 import { RING_RADIUS, css, drawGuide, drawNode, ringTurn, withAlpha } from '../graph';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
@@ -30,6 +39,8 @@ function GateCurve({
     color: string;
     onChange: (patch: { thresholdDb?: number; rangeDb?: number; hysteresisDb?: number }) => void;
 }) {
+    // The node part under the pointer, to highlight the ring.
+    const [hot, setHot] = useState<string>();
     const ref = useCanvas(
         ({ ctx, width, height }) => {
             const toX = (db: number) => ((db - CURVE_MIN) / -CURVE_MIN) * width;
@@ -99,6 +110,8 @@ function GateCurve({
                 toY(thresholdDb - rangeDb),
                 color,
                 ringTurn(SPECS.hysteresisDb, hysteresisDb),
+                true,
+                hot === 'ring',
             );
             ctx.fillStyle = css('--grid-label');
             ctx.fillText(
@@ -107,7 +120,7 @@ function GateCurve({
                 14,
             );
         },
-        [thresholdDb, rangeDb, hysteresisDb, color],
+        [thresholdDb, rangeDb, hysteresisDb, color, hot],
     );
     const pointer = useCanvasDrag(({ x, y, width, height }) => {
         const toX = (db: number) => ((db - CURVE_MIN) / -CURVE_MIN) * width;
@@ -120,7 +133,18 @@ function GateCurve({
                 hysteresisDb: wheelStep(SPECS.hysteresisDb, hysteresisDb, direction, fine),
             });
         const thresholdX = toX(thresholdDb);
-        if (Math.hypot(x - thresholdX, y - nodeY) <= RING_RADIUS + 3) {
+        const part = nodePart({ x, y }, thresholdX, nodeY);
+        if (part === 'ring') {
+            return ringHandle(
+                'ring',
+                SPECS.hysteresisDb,
+                hysteresisDb,
+                y,
+                (value) => onChange({ hysteresisDb: value }),
+                { wheel: hysteresis },
+            );
+        }
+        if (part === 'center') {
             const offsetX = thresholdX - x;
             const dbPerPixel = -CURVE_MIN / height;
             return {
@@ -151,7 +175,7 @@ function GateCurve({
             };
         }
         return { cursor: '', wheel: hysteresis };
-    });
+    }, setHot);
     return (
         <canvas
             ref={ref}

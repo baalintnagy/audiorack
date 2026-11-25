@@ -82,6 +82,8 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
     const [selected, setSelected] = useState(0);
     const shown = useRef<number[]>([]);
     const count = p.crossovers.length + 1;
+    // The node part under the pointer, to highlight a ring.
+    const [hot, setHot] = useState<string>();
     const bandIndex = Math.min(selected, count - 1);
     const band = p.bands[bandIndex];
     const tint = bandColor(bandIndex);
@@ -155,7 +157,7 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
                 );
                 ctx.textAlign = 'start';
             });
-            drawBandNodes(ctx, nodes, edges, height, bandIndex, bandColor);
+            drawBandNodes(ctx, nodes, edges, height, bandIndex, bandColor, hot);
             p.crossovers.forEach((frequency, index) => {
                 const x = Math.round(frequencyToX(frequency, w)) + 0.5;
                 ctx.strokeStyle = color;
@@ -173,7 +175,7 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
                 ctx.fillText(formatFrequency(frequency), x + 6, 14 + (index % 2) * 12);
             });
         },
-        [p, bandIndex, color, count],
+        [p, bandIndex, color, count, hot],
     );
 
     const curveRef = useCanvas(
@@ -208,14 +210,16 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
         [band.style, band.driveDb, band.bypass, tint],
     );
 
-    const pointer = useCanvasDrag((point) =>
-        bandHandle({
-            point,
-            crossovers: p.crossovers,
-            onCrossovers: (crossovers) => setParams({ crossovers }),
-            select: setSelected,
-            node: nodes,
-        }),
+    const pointer = useCanvasDrag(
+        (point) =>
+            bandHandle({
+                point,
+                crossovers: p.crossovers,
+                onCrossovers: (crossovers) => setParams({ crossovers }),
+                select: setSelected,
+                node: nodes,
+            }),
+        setHot,
     );
 
     const curvePointer = useCanvasDrag(({ y, height }) => {

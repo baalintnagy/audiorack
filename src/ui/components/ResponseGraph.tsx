@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { cascadeMagnitude, type BiquadCoefficients } from '../../dsp/biquad';
 import type { NumberSpec } from '../../shared/effects';
 import {
@@ -17,7 +17,7 @@ import {
     xToFrequency,
     yToDb,
 } from '../graph';
-import { useCanvasDrag, wheelStep } from '../canvasDrag';
+import { nodePart, ringHandle, useCanvasDrag, wheelStep } from '../canvasDrag';
 import { useTelemetryStore } from '../telemetry';
 import { useCanvas, type CanvasFrame } from '../useCanvas';
 
@@ -58,6 +58,8 @@ export function ResponseGraph({
     title?: string;
 }) {
     const store = useTelemetryStore();
+    // The node part under the pointer, to highlight the ring.
+    const [hot, setHot] = useState<string>();
     const frequenciesFor = useMemo(() => {
         let cache: { width: number; values: Float32Array } | undefined;
         return (width: number) => {
@@ -114,21 +116,30 @@ export function ResponseGraph({
                     drawGuide(ctx, [x + gap, y], [width, y], color);
                 }
                 const turn = node.ring ? ringTurn(node.ring.spec, node.ring.value) : 0;
-                drawNode(ctx, x, y, color, turn);
+                drawNode(ctx, x, y, color, turn, true, hot === 'ring');
             }
         },
-        [range, color, ...deps],
+        [range, color, hot, ...deps],
     );
 
     const pointer = useCanvasDrag(({ x, y, width, height }) => {
         if (!node) {
             return undefined;
         }
-        const nearNode =
-            Math.hypot(x - frequencyToX(node.frequency, width), y - dbToY(node.db, height, range)) <
-            12;
+        const part = nodePart(
+            { x, y },
+            frequencyToX(node.frequency, width),
+            dbToY(node.db, height, range),
+        );
+        const { ring } = node;
+        if (part === 'ring' && ring) {
+            return ringHandle('ring', ring.spec, ring.value, y, ring.onChange, {
+                wheel: (direction, fine) =>
+                    ring.onChange(wheelStep(ring.spec, ring.value, direction, fine)),
+            });
+        }
         return {
-            cursor: nearNode ? 'move' : '',
+            cursor: part ? 'move' : '',
             // A press anywhere moves the handle there.
             drag: (to) =>
                 node.onDrag(
@@ -143,7 +154,7 @@ export function ResponseGraph({
                     ring?.onChange(wheelStep(ring.spec, ring.value, direction, fine));
                 }),
         };
-    });
+    }, setHot);
 
     return (
         <canvas

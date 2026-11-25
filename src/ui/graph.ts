@@ -182,7 +182,7 @@ export function drawGrip(ctx: CanvasRenderingContext2D, x: number, y: number, co
 }
 
 export const NODE_RADIUS = 6;
-export const RING_RADIUS = 11;
+export const RING_RADIUS = 14;
 
 /**
  * How far a node's ring is turned, as a share of a full circle, clockwise from the top.
@@ -210,8 +210,9 @@ export function drawNode(
     color: string,
     turn: number,
     selected = true,
+    hot = false,
 ) {
-    drawRing(ctx, x, y, RING_RADIUS, color, turn);
+    drawRing(ctx, x, y, RING_RADIUS, color, turn, hot);
     ctx.beginPath();
     ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
     ctx.fillStyle = color;
@@ -223,7 +224,8 @@ export function drawNode(
 
 /**
  * The ring of a node on its own, for points drawn in their own style (the EQ's). `turn` is a
- * share of a full circle from the top: positive clockwise, negative counterclockwise.
+ * share of a full circle from the top: positive clockwise, negative counterclockwise. `hot`
+ * highlights it while the pointer is over it.
  */
 export function drawRing(
     ctx: CanvasRenderingContext2D,
@@ -232,9 +234,15 @@ export function drawRing(
     radius: number,
     color: string,
     turn: number,
+    hot = false,
 ) {
-    ctx.strokeStyle = withAlpha(color, 0.25);
-    ctx.lineWidth = 3;
+    ctx.save();
+    ctx.lineWidth = hot ? 5 : 3.5;
+    ctx.strokeStyle = withAlpha(color, hot ? 0.45 : 0.22);
+    if (hot) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+    }
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.stroke();
@@ -245,6 +253,7 @@ export function drawRing(
         ctx.arc(x, y, radius, -Math.PI / 2, -Math.PI / 2 + sweep, turn < 0);
         ctx.stroke();
     }
+    ctx.restore();
 }
 
 /**

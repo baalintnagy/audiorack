@@ -1,5 +1,12 @@
 import { SPECS, type NumberSpec } from '../../shared/effects';
-import { specValue, wheelStep, type CanvasPoint, type DragHandle } from '../canvasDrag';
+import {
+    nodePart,
+    ringHandle,
+    specValue,
+    wheelStep,
+    type CanvasPoint,
+    type DragHandle,
+} from '../canvasDrag';
 import { fromNormalized, toNormalized } from '../format';
 import {
     RING_RADIUS,
@@ -80,6 +87,8 @@ export function drawBandNodes(
     height: number,
     selected: number,
     tint: (index: number) => string,
+    /** The `id` of the handle under the pointer, to highlight its ring. */
+    hot?: string,
 ) {
     const { specs } = node;
     node.values.forEach((value, index) => {
@@ -94,7 +103,7 @@ export function drawBandNodes(
         drawGuide(ctx, [left + 4, y], [x - RING_RADIUS - 2, y], color, alpha);
         drawGuide(ctx, [x + RING_RADIUS + 2, y], [right - 4, y], color, alpha);
         drawGuide(ctx, [x, y + RING_RADIUS + 2], [x, height - NODE_BOTTOM], color, alpha);
-        drawNode(ctx, x, y, color, ringTurn(specs.ring, value.ring), on);
+        drawNode(ctx, x, y, color, ringTurn(specs.ring, value.ring), on, hot === `ring:${index}`);
         if (on && right - left > 60) {
             ctx.fillStyle = css('--grid-label');
             ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
@@ -181,13 +190,28 @@ function nodeHandle(
         set({ ring: wheelStep(specs.ring, value.ring, direction, fine) });
     const x = nodeX(specs.x, value.x, left, right);
     const y = nodeY(specs.y, value.y, height);
-    if (Math.hypot(point.x - x, point.y - y) > RING_RADIUS + 3) {
+    const part = nodePart(point, x, y);
+    if (!part) {
         return { cursor: '', press, wheel };
+    }
+    if (part === 'ring') {
+        return ringHandle(
+            `ring:${band}`,
+            specs.ring,
+            value.ring,
+            point.y,
+            (ring) => set({ ring }),
+            {
+                press,
+                wheel,
+            },
+        );
     }
     // The node moves with the pointer from where it was grabbed, without jumping to it.
     const offsetX = x - point.x;
     const offsetY = y - point.y;
     return {
+        id: `node:${band}`,
         cursor: 'move',
         press,
         drag: (to) =>

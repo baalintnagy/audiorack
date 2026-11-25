@@ -11,8 +11,8 @@ import {
 } from '../../shared/effects';
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
-import { wheelStep } from '../canvasDrag';
-import { formatFrequency } from '../format';
+import { nodePart, specValue, wheelEditsDisplays, wheelStep } from '../canvasDrag';
+import { formatFrequency, fromNormalized, toNormalized } from '../format';
 import {
     css,
     dbToY,
@@ -34,6 +34,12 @@ import { BAND_COLORS, type EditorProps } from './types';
 
 const RANGES = [6, 12, 18, 30];
 const NODE_RADIUS = 7;
+/** Radius of the Q ring around each band's point. */
+const RING_RADIUS = NODE_RADIUS + 7;
+/** Pointer travel, in pixels, that turns the Q ring through its whole range. */
+const RING_DRAG_PIXELS = 160;
+/** Share of the pointer movement applied while Shift is held. */
+const FINE_SCALE = 0.2;
 
 const TYPE_LABELS: Record<EqBandType, string> = {
     bell: 'Bell',
@@ -59,7 +65,17 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
     const [range, setRange] = useState(18);
     const [showPre, setShowPre] = useState(true);
     const store = useTelemetryStore();
-    const drag = useRef<{ id: string; pointerId: number } | undefined>(undefined);
+    const drag = useRef<
+        | {
+              id: string;
+              pointerId: number;
+              /** Set while the ring is turned: Q along the knob's scale, and the last pointer y. */
+              ring?: { position: number; lastY: number };
+          }
+        | undefined
+    >(undefined);
+    // The band whose ring is under the pointer, to highlight it.
+    const [hotRing, setHotRing] = useState<string>();
     const size = useRef({ width: 1, height: 1 });
     const selected = bands.find((band) => band.id === selectedId);
 
@@ -139,9 +155,10 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
                     ctx,
                     x,
                     y,
-                    NODE_RADIUS + 5,
+                    RING_RADIUS,
                     band.enabled ? tint : css('--node-disabled'),
                     ringTurn(SPECS.q, band.q),
+                    hotRing === band.id,
                 );
                 ctx.beginPath();
                 ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
@@ -159,7 +176,7 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
                 ctx.textAlign = 'start';
             });
         },
-        [bands, selectedId, range, showPre],
+        [bands, selectedId, range, showPre, hotRing],
     );
 
     const hit = (event: PointerEvent<HTMLCanvasElement> | WheelEvent<HTMLCanvasElement>) => {
@@ -167,16 +184,33 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         const { width, height } = size.current;
-        const band = [...bands].reverse().find((candidate) => {
-            const bx = frequencyToX(candidate.frequency, width);
-            const by = dbToY(hasGain(candidate.type) ? candidate.gainDb : 0, height, range);
-            return Math.hypot(bx - x, by - y) <= NODE_RADIUS + 4;
-        });
-        return { x, y, band, width, height };
+        // The point's center moves it, its ring sets Q; centers win over overlapping rings.
+        const partOf = (candidate: EqBand) =>
+            nodePart(
+                { x, y },
+                frequencyToX(candidate.frequency, width),
+                dbToY(hasGain(candidate.type) ? candidate.gainDb : 0, height, range),
+                RING_RADIUS,
+            );
+        const reversed = [...bands].reverse();
+        const band =
+            reversed.find((candidate) => partOf(candidate) === 'center') ??
+            reversed.find((candidate) => partOf(candidate) === 'ring');
+        return { x, y, band, part: band && partOf(band), width, height };
     };
 
     const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
-        const { band, x, y, width, height } = hit(event);
+        const { band, part, x, y, width, height } = hit(event);
+        if (band && part === 'ring' && event.button === 0 && !event.altKey) {
+            setSelectedId(band.id);
+            drag.current = {
+                id: band.id,
+                pointerId: event.pointerId,
+                ring: { position: toNormalized(SPECS.q, band.q), lastY: y },
+            };
+            event.currentTarget.setPointerCapture(event.pointerId);
+            return;
+        }
         if (band) {
             if (event.button === 2 || event.altKey) {
                 if (event.altKey) {
@@ -201,6 +235,10 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
 
     const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
         if (!drag.current) {
+            const { band, part } = hit(event);
+            event.currentTarget.style.cursor =
+                part === 'ring' ? 'ns-resize' : part === 'center' ? 'move' : '';
+            setHotRing(part === 'ring' ? band?.id : undefined);
             return;
         }
         const band = bands.find((candidate) => candidate.id === drag.current?.id);
@@ -208,6 +246,15 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
             return;
         }
         const { x, y, width, height } = hit(event);
+        const ring = drag.current.ring;
+        if (ring) {
+            // Up raises Q like a knob; Shift for fine steps.
+            const scale = event.shiftKey ? FINE_SCALE : 1;
+            ring.position += ((ring.lastY - y) / RING_DRAG_PIXELS) * scale;
+            ring.lastY = y;
+            updateBand(band.id, { q: specValue(SPECS.q, fromNormalized(SPECS.q, ring.position)) });
+            return;
+        }
         const frequency = Math.min(20000, Math.max(20, xToFrequency(x, width)));
         const patch: Partial<EqBand> = { frequency: Math.round(frequency * 10) / 10 };
         if (hasGain(band.type) && !event.shiftKey) {
@@ -223,7 +270,7 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
     const onWheel = (event: WheelEvent<HTMLCanvasElement>) => {
         const { band } = hit(event);
         const target = band ?? selected;
-        if (!target) {
+        if (!target || !wheelEditsDisplays()) {
             return;
         }
         const direction = event.deltaY < 0 ? 1 : -1;
@@ -240,6 +287,7 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
                     onPointerMove={onPointerMove}
                     onPointerUp={() => (drag.current = undefined)}
                     onPointerCancel={() => (drag.current = undefined)}
+                    onPointerLeave={() => !drag.current && setHotRing(undefined)}
                     onWheel={onWheel}
                     onContextMenu={(event) => {
                         event.preventDefault();
@@ -248,7 +296,7 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
                             removeBand(band.id);
                         }
                     }}
-                    title="Double-click to add a band · drag to move · wheel for Q · right-click to delete · Alt-click to toggle"
+                    title="Double-click to add a band · drag a point to move it, its ring for Q · right-click to delete · Alt-click to toggle"
                 />
                 <div className="display-overlay top-right">
                     <Segmented

@@ -46,6 +46,8 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
     const [selected, setSelected] = useState(1);
     const shown = useRef<number[]>([]);
     const count = p.crossovers.length + 1;
+    // The node part under the pointer, to highlight a ring.
+    const [hot, setHot] = useState<string>();
     const band = p.bands[Math.min(selected, count - 1)];
     const bandIndex = Math.min(selected, count - 1);
 
@@ -120,7 +122,7 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
                 ctx.fillText(bandLabel(index, count), x + bandWidth / 2, height - 18);
                 ctx.textAlign = 'start';
             });
-            drawBandNodes(ctx, nodes, edges, height, bandIndex, tint);
+            drawBandNodes(ctx, nodes, edges, height, bandIndex, tint, hot);
             p.crossovers.forEach((frequency, index) => {
                 const x = Math.round(frequencyToX(frequency, w)) + 0.5;
                 ctx.strokeStyle = color;
@@ -138,17 +140,19 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
                 ctx.fillText(formatFrequency(frequency), x + 6, 14 + (index % 2) * 12);
             });
         },
-        [p, bandIndex, color, count],
+        [p, bandIndex, color, count, hot],
     );
 
-    const pointer = useCanvasDrag((point) =>
-        bandHandle({
-            point,
-            crossovers: p.crossovers,
-            onCrossovers: (crossovers) => setParams({ crossovers }),
-            select: setSelected,
-            node: nodes,
-        }),
+    const pointer = useCanvasDrag(
+        (point) =>
+            bandHandle({
+                point,
+                crossovers: p.crossovers,
+                onCrossovers: (crossovers) => setParams({ crossovers }),
+                select: setSelected,
+                node: nodes,
+            }),
+        setHot,
     );
 
     const bandColor = BAND_COLORS[(bandIndex + 4) % BAND_COLORS.length];

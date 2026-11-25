@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SPECS, type NumberSpec } from '../src/shared/effects';
-import { specValue, wheelStep, type CanvasPoint } from '../src/ui/canvasDrag';
+import { nodePart, ringHandle, specValue, wheelStep, type CanvasPoint } from '../src/ui/canvasDrag';
 import { bandHandle, type BandNode, type NodeValue } from '../src/ui/editors/bandDisplay';
 import { toNormalized } from '../src/ui/format';
 import { frequencyToX, ringTurn } from '../src/ui/graph';
@@ -161,5 +161,44 @@ describe('band display handles', () => {
             y: SPECS.thresholdDb.default,
             ring: SPECS.makeupDb.default,
         });
+    });
+});
+
+describe('node rings', () => {
+    it('tells the center from the ring', () => {
+        expect(nodePart({ x: 103, y: 100 }, 100, 100)).toBe('center');
+        expect(nodePart({ x: 114, y: 100 }, 100, 100)).toBe('ring');
+        expect(nodePart({ x: 100, y: 85 }, 100, 100)).toBe('ring');
+        expect(nodePart({ x: 125, y: 100 }, 100, 100)).toBeUndefined();
+    });
+
+    it('turns the ring by dragging up or down, like a knob', () => {
+        const values: number[] = [];
+        const handle = ringHandle('ring', SPECS.kneeDb, 6, 100, (value) => values.push(value));
+        expect(handle.cursor).toBe('ns-resize');
+        handle.drag?.(at(0, 100));
+        handle.drag?.(at(0, 60));
+        handle.drag?.(at(0, 180));
+        handle.reset?.();
+        expect(values[0]).toBe(6);
+        expect(values[1]).toBeGreaterThan(6);
+        expect(values[2]).toBe(0);
+        expect(values[3]).toBe(SPECS.kneeDb.default);
+    });
+
+    it("turns a band node's ring from its rim", () => {
+        const values = [
+            { x: 0, y: 6, ring: 0 },
+            { x: 0, y: 6, ring: 0 },
+        ];
+        const { calls, handle } = recorder(SATURATOR, values);
+        const center = nodeAt(SATURATOR, values[0], 0, SPLIT);
+        const grabbed = handle(at(center.x + 13, center.y));
+        expect(grabbed.cursor).toBe('ns-resize');
+        expect(grabbed.id).toBe('ring:0');
+        grabbed.drag?.(at(center.x + 13, center.y - 40));
+        expect(calls.patches[0].index).toBe(0);
+        expect(calls.patches[0].patch.ring).toBeGreaterThan(0);
+        expect(calls.patches[0].patch.x).toBeUndefined();
     });
 });

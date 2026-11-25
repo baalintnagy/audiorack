@@ -1,11 +1,19 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { autoMakeupDb, gainComputerDb, gainReductionDb } from '../../dsp/dynamics';
 import { SPECS } from '../../shared/effects';
 import type { Telemetry } from '../../shared/messages';
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { DynamicsHistory, ReductionMeter } from '../components/Meters';
-import { LINE_GRAB, specValue, useCanvasDrag, wheelStep, type DragHandle } from '../canvasDrag';
+import {
+    LINE_GRAB,
+    nodePart,
+    ringHandle,
+    specValue,
+    useCanvasDrag,
+    wheelStep,
+    type DragHandle,
+} from '../canvasDrag';
 import { fromNormalized, toNormalized } from '../format';
 import { RING_RADIUS, css, drawGuide, drawNode, ringTurn } from '../graph';
 import { useCanvas } from '../useCanvas';
@@ -57,6 +65,8 @@ export function TransferCurve({
     onChange?: (patch: { thresholdDb?: number; ratio?: number; kneeDb?: number }) => void;
 }) {
     const dot = useRef(CURVE_MIN);
+    // The node part under the pointer, to highlight the ring.
+    const [hot, setHot] = useState<string>();
     const ref = useCanvas(
         ({ ctx, width, height, telemetry, live }) => {
             const toX = (db: number) => ((db - CURVE_MIN) / -CURVE_MIN) * width;
@@ -106,7 +116,15 @@ export function TransferCurve({
                 const nodeX = toX(thresholdDb);
                 const nodeY = toY(thresholdDb + makeupDb);
                 drawGuide(ctx, [nodeX, nodeY + RING_RADIUS + 2], [nodeX, height], color);
-                drawNode(ctx, nodeX, nodeY, color, ringTurn(SPECS.kneeDb, kneeDb));
+                drawNode(
+                    ctx,
+                    nodeX,
+                    nodeY,
+                    color,
+                    ringTurn(SPECS.kneeDb, kneeDb),
+                    true,
+                    hot === 'ring',
+                );
                 ctx.fillStyle = css('--grid-label');
                 ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
                 ctx.fillText(
@@ -131,7 +149,7 @@ export function TransferCurve({
                 ctx.shadowBlur = 0;
             }
         },
-        [thresholdDb, ratio, kneeDb, makeupDb, color, onChange !== undefined],
+        [thresholdDb, ratio, kneeDb, makeupDb, color, onChange !== undefined, hot],
     );
     const pointer = useCanvasDrag(({ x, y, width, height }) => {
         if (!onChange) {
@@ -145,7 +163,20 @@ export function TransferCurve({
             onChange({ kneeDb: wheelStep(SPECS.kneeDb, kneeDb, direction, fine) });
         const thresholdX = toX(thresholdDb);
         const kneeY = toY(thresholdDb + makeupDb);
-        if (Math.hypot(x - thresholdX, y - kneeY) <= RING_RADIUS + 3) {
+        const part = nodePart({ x, y }, thresholdX, kneeY);
+        if (part === 'ring') {
+            return ringHandle(
+                'ring',
+                SPECS.kneeDb,
+                kneeDb,
+                y,
+                (value) => onChange({ kneeDb: value }),
+                {
+                    wheel: knee,
+                },
+            );
+        }
+        if (part === 'center') {
             // Across for the threshold, from where the node was grabbed; up and down for the
             // ratio along its knob scale: down compresses harder.
             const offsetX = thresholdX - x;
@@ -200,7 +231,7 @@ export function TransferCurve({
             };
         }
         return { cursor: '', wheel: knee };
-    });
+    }, setHot);
     return (
         <canvas
             ref={ref}

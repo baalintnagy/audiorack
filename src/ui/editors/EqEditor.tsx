@@ -11,14 +11,18 @@ import {
 } from '../../shared/effects';
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
+import { wheelStep } from '../canvasDrag';
 import { formatFrequency } from '../format';
 import {
     css,
     dbToY,
     drawGrid,
+    drawGuide,
+    drawRing,
     drawSpectrum,
     frequencyToX,
     pixelFrequencies,
+    ringTurn,
     strokeCurve,
     withAlpha,
     xToFrequency,
@@ -121,6 +125,24 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
                 const x = frequencyToX(band.frequency, width);
                 const y = toY(hasGain(band.type) ? band.gainDb : 0);
                 const tint = bandColor(bands, band);
+                if (band.id === selectedId) {
+                    const gap = NODE_RADIUS + 7;
+                    drawGuide(ctx, [x, 0], [x, y - gap], tint);
+                    drawGuide(ctx, [x, y + gap], [x, height], tint);
+                    if (hasGain(band.type)) {
+                        drawGuide(ctx, [0, y], [x - gap, y], tint);
+                        drawGuide(ctx, [x + gap, y], [width, y], tint);
+                    }
+                }
+                // The ring shows Q, which the wheel sets.
+                drawRing(
+                    ctx,
+                    x,
+                    y,
+                    NODE_RADIUS + 5,
+                    band.enabled ? tint : css('--node-disabled'),
+                    ringTurn(SPECS.q, band.q),
+                );
                 ctx.beginPath();
                 ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
                 ctx.fillStyle = band.enabled ? tint : css('--node-disabled');
@@ -204,9 +226,8 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
         if (!target) {
             return;
         }
-        const factor = event.deltaY < 0 ? 1.08 : 1 / 1.08;
-        const q = Math.min(SPECS.q.max, Math.max(SPECS.q.min, target.q * factor));
-        updateBand(target.id, { q: Math.round(q * 100) / 100 });
+        const direction = event.deltaY < 0 ? 1 : -1;
+        updateBand(target.id, { q: wheelStep(SPECS.q, target.q, direction, event.shiftKey) });
     };
 
     return (

@@ -6,7 +6,8 @@ import { logFrequencies } from '../../shared/spectrum';
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { ReductionMeter } from '../components/Meters';
-import { css, drawGrid, frequencyToX, withAlpha } from '../graph';
+import { LINE_GRAB, specValue, useCanvasDrag, wheelStep } from '../canvasDrag';
+import { css, drawGrid, drawGrip, frequencyToX, withAlpha, xToFrequency } from '../graph';
 import { useTelemetry } from '../telemetry';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
@@ -23,17 +24,53 @@ interface Curves {
     gain: Float32Array;
 }
 
-/** Input spectrum, noise floor (adaptive or profile) and the reduction at each frequency. */
+function toY(db: number, height: number) {
+    return (
+        height -
+        ((Math.max(FLOOR_DB, Math.min(CEILING_DB, db)) - FLOOR_DB) / (CEILING_DB - FLOOR_DB)) *
+            height
+    );
+}
+
+/** Height of the reduction curve, hanging from the top, for a gain in dB. */
+function reductionY(gainDb: number, height: number) {
+    return (Math.min(40, -gainDb) / 40) * height * REDUCTION_HEIGHT;
+}
+
+/** The noise level at a horizontal position, from the nearest analysis point. */
+function noiseAt(noise: Float32Array, x: number, width: number) {
+    const frequency = xToFrequency(x, width);
+    const index = FREQUENCIES.reduce(
+        (best, value, i) =>
+            Math.abs(Math.log(value / frequency)) <
+            Math.abs(Math.log(FREQUENCIES[best] / frequency))
+                ? i
+                : best,
+        0,
+    );
+    return noise[index];
+}
+
+/**
+ * Input spectrum, noise floor (adaptive or profile) and the reduction at each frequency. The
+ * line of the largest reduction and the pass curve (noise plus threshold) can be dragged.
+ */
 function NoiseDisplay({
     id,
     color,
     noiseLabel,
     learning,
+    reductionDb,
+    thresholdDb,
+    onChange,
 }: {
     id: string;
     color: string;
     noiseLabel: string;
     learning: boolean;
+    reductionDb: number;
+    thresholdDb: number;
+    onChange: (patch: { reductionDb?: number; thresholdDb?: number }) => void;
 }) {
     const curves = useRef<Curves>({
         input: new Float32Array(DENOISER_POINTS).fill(FLOOR_DB),
@@ -56,16 +93,12 @@ function NoiseDisplay({
         ({ ctx, width, height }) => {
             drawGrid(ctx, width, height);
             const c = curves.current;
-            const toY = (db: number) =>
-                height -
-                ((Math.max(FLOOR_DB, Math.min(CEILING_DB, db)) - FLOOR_DB) /
-                    (CEILING_DB - FLOOR_DB)) *
-                    height;
+            const y = (db: number) => toY(db, height);
             const xs = Array.from(FREQUENCIES, (frequency) => frequencyToX(frequency, width));
             // Input spectrum.
             ctx.beginPath();
             ctx.moveTo(0, height);
-            xs.forEach((x, i) => ctx.lineTo(x, toY(c.input[i])));
+            xs.forEach((x, i) => ctx.lineTo(x, y(c.input[i])));
             ctx.lineTo(width, height);
             ctx.closePath();
             ctx.fillStyle = css('--spectrum-post');
@@ -73,11 +106,11 @@ function NoiseDisplay({
             // Noise floor.
             ctx.beginPath();
             xs.forEach((x, i) => {
-                const y = toY(c.noise[i]);
+                const py = y(c.noise[i]);
                 if (i === 0) {
-                    ctx.moveTo(x, y);
+                    ctx.moveTo(x, py);
                 } else {
-                    ctx.lineTo(x, y);
+                    ctx.lineTo(x, py);
                 }
             });
             ctx.setLineDash([4, 3]);
@@ -85,30 +118,58 @@ function NoiseDisplay({
             ctx.lineWidth = 1.5;
             ctx.stroke();
             ctx.setLineDash([]);
+            // Pass curve: bins this far above the noise are left alone.
+            ctx.beginPath();
+            xs.forEach((x, i) => {
+                const py = y(c.noise[i] + thresholdDb);
+                if (i === 0) {
+                    ctx.moveTo(x, py);
+                } else {
+                    ctx.lineTo(x, py);
+                }
+            });
+            ctx.strokeStyle = withAlpha(color, 0.6);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            const passX = width * 0.9;
+            drawGrip(ctx, passX, y(noiseAt(c.noise, passX, width) + thresholdDb), color);
             // Reduction, hanging from the top.
-            const reductionY = (gainDb: number) =>
-                (Math.min(40, -gainDb) / 40) * height * REDUCTION_HEIGHT;
+            const hang = (gainDb: number) => reductionY(gainDb, height);
             ctx.beginPath();
             ctx.moveTo(0, 0);
-            xs.forEach((x, i) => ctx.lineTo(x, reductionY(c.gain[i])));
+            xs.forEach((x, i) => ctx.lineTo(x, hang(c.gain[i])));
             ctx.lineTo(width, 0);
             ctx.closePath();
             ctx.fillStyle = withAlpha(color, 0.25);
             ctx.fill();
             ctx.beginPath();
             xs.forEach((x, i) => {
-                const y = reductionY(c.gain[i]);
+                const py = hang(c.gain[i]);
                 if (i === 0) {
-                    ctx.moveTo(x, y);
+                    ctx.moveTo(x, py);
                 } else {
-                    ctx.lineTo(x, y);
+                    ctx.lineTo(x, py);
                 }
             });
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
             ctx.stroke();
+            // The largest reduction allowed.
+            const limitY = Math.round(hang(-reductionDb)) + 0.5;
+            ctx.setLineDash([5, 4]);
+            ctx.strokeStyle = css('--threshold');
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, limitY);
+            ctx.lineTo(width, limitY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            drawGrip(ctx, width - 14, limitY, color);
             ctx.fillStyle = css('--grid-label');
             ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(`max -${reductionDb.toFixed(1)} dB`, width - 26, limitY + 12);
+            ctx.textAlign = 'start';
             ctx.fillText('reduction', 6, 14);
             ctx.fillText(`${noiseLabel} (dashed)`, 6, height - 18);
             if (learning) {
@@ -119,9 +180,44 @@ function NoiseDisplay({
                 ctx.textAlign = 'start';
             }
         },
-        [color, noiseLabel, learning],
+        [color, noiseLabel, learning, reductionDb, thresholdDb],
     );
-    return <canvas ref={ref} className="display-canvas" />;
+    const pointer = useCanvasDrag(({ x, y, width, height }) => {
+        const setReduction = (value: number) =>
+            onChange({ reductionDb: specValue(SPECS.denoiseReductionDb, value) });
+        const setThreshold = (value: number) =>
+            onChange({ thresholdDb: specValue(SPECS.denoiseThresholdDb, value) });
+        if (Math.abs(y - reductionY(-reductionDb, height)) <= LINE_GRAB) {
+            return {
+                cursor: 'ns-resize',
+                drag: (to) => setReduction((to.y / (height * REDUCTION_HEIGHT)) * 40),
+                reset: () => setReduction(SPECS.denoiseReductionDb.default),
+                wheel: (direction, fine) =>
+                    setReduction(wheelStep(SPECS.denoiseReductionDb, reductionDb, direction, fine)),
+            };
+        }
+        const passY = toY(noiseAt(curves.current.noise, x, width) + thresholdDb, height);
+        if (Math.abs(y - passY) <= LINE_GRAB + 2) {
+            const dbPerPixel = (CEILING_DB - FLOOR_DB) / height;
+            return {
+                cursor: 'ns-resize',
+                // The noise moves on its own, so the drag is relative to where it started.
+                drag: (to) => setThreshold(thresholdDb + (y - to.y) * dbPerPixel),
+                reset: () => setThreshold(SPECS.denoiseThresholdDb.default),
+                wheel: (direction, fine) =>
+                    setThreshold(wheelStep(SPECS.denoiseThresholdDb, thresholdDb, direction, fine)),
+            };
+        }
+        return undefined;
+    });
+    return (
+        <canvas
+            ref={ref}
+            className="display-canvas"
+            title="Drag the dashed line for the largest reduction, the pass curve above the noise for the threshold"
+            {...pointer}
+        />
+    );
 }
 
 export function DenoiserEditor({ effect, setParams, color }: EditorProps<'denoiser'>) {
@@ -164,6 +260,9 @@ export function DenoiserEditor({ effect, setParams, color }: EditorProps<'denois
                     color={color}
                     noiseLabel={usesProfile ? 'noise profile' : 'noise floor'}
                     learning={p.learning}
+                    reductionDb={p.reductionDb}
+                    thresholdDb={p.thresholdDb}
+                    onChange={setParams}
                 />
                 <ReductionMeter value={reduction} color={color} range={24} />
             </div>

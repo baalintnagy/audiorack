@@ -16,6 +16,10 @@ export function LimiterEditor({ effect, setParams, color }: EditorProps<'limiter
                     color={color}
                     thresholdDb={p.ceilingDb}
                     range={30}
+                    threshold={{
+                        spec: SPECS.ceilingDb,
+                        onChange: (ceilingDb) => setParams({ ceilingDb }),
+                    }}
                 />
                 <ReductionMeter value={reduction} color={color} range={12} />
             </div>

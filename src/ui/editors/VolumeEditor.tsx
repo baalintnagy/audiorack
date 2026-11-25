@@ -3,27 +3,63 @@ import { SPECS } from '../../shared/effects';
 import { ControlGroup, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { LevelMeter, LoudnessBar } from '../components/Meters';
-import { css, withAlpha } from '../graph';
+import { specValue, useCanvasDrag, wheelStep, type DragHandle } from '../canvasDrag';
+import { css, drawGrip, drawGuide, withAlpha } from '../graph';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
 
-/** Visualizes the stereo image after width and pan as a sound stage. */
+/** Where the sound stage sits in a canvas of the given size. */
+function stage(w: number, height: number) {
+    return { cx: w / 2, cy: height - 16, radius: Math.min(w / 2 - 20, height - 32) };
+}
+
+/** The arc covered by the image: its center and edges as canvas angles (-π is left). */
+function arc(width: number, pan: number) {
+    // 100% width spans the full stage; wider settings add a halo instead.
+    const spread = Math.max(0.04, Math.PI * Math.min(1, width / 100));
+    const center = -Math.PI / 2 + (pan / 100) * (Math.PI / 2);
+    return {
+        center,
+        from: Math.max(-Math.PI, center - spread / 2),
+        to: Math.min(0, center + spread / 2),
+    };
+}
+
+/** Distance of the handle from the stage center, as a share of the radius, for a width. */
+const HANDLE_INNER = 0.15;
+
+function handleDistance(width: number, radius: number) {
+    return radius * (HANDLE_INNER + (1 - HANDLE_INNER) * (width / SPECS.width.max));
+}
+
+/** The handle sits on the image's center line: its angle is the pan, its distance the width. */
+function handlePosition(width: number, pan: number, w: number, height: number) {
+    const { cx, cy, radius } = stage(w, height);
+    const { center } = arc(width, pan);
+    const distance = handleDistance(width, radius);
+    return { x: cx + Math.cos(center) * distance, y: cy + Math.sin(center) * distance };
+}
+
+/**
+ * Visualizes the stereo image after width and pan as a sound stage. One handle sets both: drag
+ * it around the stage to pan, towards or away from the center for the width.
+ */
 function StereoField({
     width,
     pan,
     color,
     mute,
+    onChange,
 }: {
     width: number;
     pan: number;
     color: string;
     mute: boolean;
+    onChange: (patch: { pan?: number; width?: number }) => void;
 }) {
     const ref = useCanvas(
         ({ ctx, width: w, height }) => {
-            const cx = w / 2;
-            const cy = height - 16;
-            const radius = Math.min(w / 2 - 20, height - 32);
+            const { cx, cy, radius } = stage(w, height);
             ctx.strokeStyle = css('--grid');
             ctx.lineWidth = 1;
             [0.33, 0.66, 1].forEach((scale) => {
@@ -43,11 +79,7 @@ function StereoField({
                 ctx.textAlign = 'start';
                 return;
             }
-            // 100% width spans the full stage; wider settings add a halo instead.
-            const spread = Math.max(0.04, Math.PI * Math.min(1, width / 100));
-            const center = -Math.PI / 2 + (pan / 100) * (Math.PI / 2);
-            const from = Math.max(-Math.PI, center - spread / 2);
-            const to = Math.min(0, center + spread / 2);
+            const { from, to } = arc(width, pan);
             if (width > 100) {
                 ctx.beginPath();
                 ctx.arc(cx, cy, radius * (1 + (width - 100) / 1000), from, to);
@@ -67,10 +99,52 @@ function StereoField({
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
             ctx.stroke();
+            const handle = handlePosition(width, pan, w, height);
+            drawGuide(ctx, [cx, cy], [handle.x, handle.y], color);
+            drawGrip(ctx, handle.x, handle.y, color);
         },
         [width, pan, color, mute],
     );
-    return <canvas ref={ref} className="stereo-canvas" />;
+    const pointer = useCanvasDrag(({ x, y, width: w, height }) => {
+        if (mute) {
+            return undefined;
+        }
+        const { cx, cy, radius } = stage(w, height);
+        const wheel: DragHandle['wheel'] = (direction, fine) =>
+            onChange({ width: wheelStep(SPECS.width, width, direction, fine) });
+        if (Math.hypot(x - cx, y - cy) > radius * 1.15) {
+            return { cursor: '', wheel };
+        }
+        // The drag moves the handle by the pointer's movement, wherever it was pressed.
+        const handle = handlePosition(width, pan, w, height);
+        const offsetX = handle.x - x;
+        const offsetY = handle.y - y;
+        return {
+            cursor: 'move',
+            drag: (point) => {
+                const hx = point.x + offsetX - cx;
+                const hy = Math.min(0, point.y + offsetY - cy);
+                // Below the stage the handle stays on its floor: hard left or right.
+                const angle =
+                    hy < 0 ? Math.atan2(hy, hx) : hx < 0 ? -Math.PI : hx > 0 ? 0 : -Math.PI / 2;
+                const share = (Math.hypot(hx, hy) / radius - HANDLE_INNER) / (1 - HANDLE_INNER);
+                onChange({
+                    pan: specValue(SPECS.pan, ((angle + Math.PI / 2) / (Math.PI / 2)) * 100),
+                    width: specValue(SPECS.width, share * SPECS.width.max),
+                });
+            },
+            reset: () => onChange({ pan: SPECS.pan.default, width: SPECS.width.default }),
+            wheel,
+        };
+    });
+    return (
+        <canvas
+            ref={ref}
+            className="stereo-canvas"
+            title="Drag the handle around the stage to pan, in or out for the width · wheel for the width"
+            {...pointer}
+        />
+    );
 }
 
 export function VolumeEditor({ effect, setParams, color }: EditorProps<'volume'>) {
@@ -81,7 +155,13 @@ export function VolumeEditor({ effect, setParams, color }: EditorProps<'volume'>
     return (
         <div className="editor volume-editor">
             <div className="display split">
-                <StereoField width={p.width} pan={p.pan} color={color} mute={p.mute} />
+                <StereoField
+                    width={p.width}
+                    pan={p.pan}
+                    color={color}
+                    mute={p.mute}
+                    onChange={setParams}
+                />
                 <div className="volume-readout">
                     <div>
                         <span className="readout-label">Left</span>

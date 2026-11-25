@@ -5,11 +5,15 @@ import type { Telemetry } from '../../shared/messages';
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { DynamicsHistory, ReductionMeter } from '../components/Meters';
-import { css } from '../graph';
+import { LINE_GRAB, specValue, useCanvasDrag, wheelStep, type DragHandle } from '../canvasDrag';
+import { fromNormalized, toNormalized } from '../format';
+import { RING_RADIUS, css, drawGuide, drawNode, ringTurn } from '../graph';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
 
 const CURVE_MIN = -60;
+/** Share of the ratio knob's range covered by dragging the knee node the full display height. */
+const RATIO_DRAG = 1.2;
 
 /** Inverts the static curve to estimate the detector level from a reduction reading. */
 export function levelForReduction(
@@ -41,6 +45,7 @@ export function TransferCurve({
     makeupDb,
     color,
     reduction,
+    onChange,
 }: {
     thresholdDb: number;
     ratio: number;
@@ -48,6 +53,8 @@ export function TransferCurve({
     makeupDb: number;
     color: string;
     reduction: (telemetry: Telemetry) => number;
+    /** Makes the curve editable: drag the knee for the threshold, the slope for the ratio. */
+    onChange?: (patch: { thresholdDb?: number; ratio?: number; kneeDb?: number }) => void;
 }) {
     const dot = useRef(CURVE_MIN);
     const ref = useCanvas(
@@ -94,6 +101,20 @@ export function TransferCurve({
             ctx.shadowBlur = 10;
             ctx.stroke();
             ctx.shadowBlur = 0;
+            if (onChange) {
+                // The knee node: threshold across, ratio up and down, the knee on its ring.
+                const nodeX = toX(thresholdDb);
+                const nodeY = toY(thresholdDb + makeupDb);
+                drawGuide(ctx, [nodeX, nodeY + RING_RADIUS + 2], [nodeX, height], color);
+                drawNode(ctx, nodeX, nodeY, color, ringTurn(SPECS.kneeDb, kneeDb));
+                ctx.fillStyle = css('--grid-label');
+                ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+                ctx.fillText(
+                    `${thresholdDb.toFixed(1)} dB · ${ratio >= SPECS.ratio.max ? '∞' : ratio.toFixed(1)}:1 · knee ${kneeDb.toFixed(1)}`,
+                    6,
+                    14,
+                );
+            }
             if (telemetry) {
                 const target = levelForReduction(reduction(telemetry), thresholdDb, ratio, kneeDb);
                 if (live) {
@@ -110,9 +131,88 @@ export function TransferCurve({
                 ctx.shadowBlur = 0;
             }
         },
-        [thresholdDb, ratio, kneeDb, makeupDb, color],
+        [thresholdDb, ratio, kneeDb, makeupDb, color, onChange !== undefined],
     );
-    return <canvas ref={ref} className="transfer-canvas" />;
+    const pointer = useCanvasDrag(({ x, y, width, height }) => {
+        if (!onChange) {
+            return undefined;
+        }
+        const toX = (db: number) => ((db - CURVE_MIN) / -CURVE_MIN) * width;
+        const toY = (db: number) => height - ((db - CURVE_MIN) / -CURVE_MIN) * height;
+        const xToDb = (px: number) => CURVE_MIN + (px / width) * -CURVE_MIN;
+        const yToDb = (py: number) => (py / height) * CURVE_MIN;
+        const knee: DragHandle['wheel'] = (direction, fine) =>
+            onChange({ kneeDb: wheelStep(SPECS.kneeDb, kneeDb, direction, fine) });
+        const thresholdX = toX(thresholdDb);
+        const kneeY = toY(thresholdDb + makeupDb);
+        if (Math.hypot(x - thresholdX, y - kneeY) <= RING_RADIUS + 3) {
+            // Across for the threshold, from where the node was grabbed; up and down for the
+            // ratio along its knob scale: down compresses harder.
+            const offsetX = thresholdX - x;
+            const ratioPosition = toNormalized(SPECS.ratio, ratio);
+            return {
+                cursor: 'move',
+                drag: (point) =>
+                    onChange({
+                        thresholdDb: specValue(SPECS.thresholdDb, xToDb(point.x + offsetX)),
+                        ratio: specValue(
+                            SPECS.ratio,
+                            fromNormalized(
+                                SPECS.ratio,
+                                ratioPosition + ((point.y - y) / height) * RATIO_DRAG,
+                            ),
+                        ),
+                    }),
+                reset: () =>
+                    onChange({
+                        thresholdDb: SPECS.thresholdDb.default,
+                        ratio: SPECS.ratio.default,
+                        kneeDb: SPECS.kneeDb.default,
+                    }),
+                wheel: knee,
+            };
+        }
+        if (Math.abs(x - thresholdX) < LINE_GRAB) {
+            return {
+                cursor: 'ew-resize',
+                drag: (point) =>
+                    onChange({ thresholdDb: specValue(SPECS.thresholdDb, xToDb(point.x)) }),
+                reset: () => onChange({ thresholdDb: SPECS.thresholdDb.default }),
+                wheel: knee,
+            };
+        }
+        const input = xToDb(x);
+        const curveY = toY(gainComputerDb(input, thresholdDb, ratio, kneeDb) + makeupDb);
+        if (x > thresholdX && Math.abs(y - curveY) < 10) {
+            return {
+                cursor: 'ns-resize',
+                // The input level stays where the curve was grabbed; the output follows the
+                // pointer, which sets the slope above the threshold.
+                drag: (point) => {
+                    const output = yToDb(point.y) - makeupDb;
+                    const above = input - thresholdDb;
+                    const ratioValue =
+                        output <= thresholdDb ? SPECS.ratio.max : above / (output - thresholdDb);
+                    onChange({ ratio: specValue(SPECS.ratio, ratioValue) });
+                },
+                reset: () => onChange({ ratio: SPECS.ratio.default }),
+                wheel: knee,
+            };
+        }
+        return { cursor: '', wheel: knee };
+    });
+    return (
+        <canvas
+            ref={ref}
+            className="transfer-canvas"
+            title={
+                onChange
+                    ? 'Drag the node sideways for the threshold, up and down for the ratio · wheel for the knee · the curve above the threshold drags the ratio too'
+                    : undefined
+            }
+            {...(onChange ? pointer : {})}
+        />
+    );
 }
 
 export function CompressorEditor({ effect, setParams, color }: EditorProps<'compressor'>) {
@@ -129,8 +229,17 @@ export function CompressorEditor({ effect, setParams, color }: EditorProps<'comp
                     makeupDb={makeup}
                     color={color}
                     reduction={reduction}
+                    onChange={setParams}
                 />
-                <DynamicsHistory reduction={reduction} color={color} thresholdDb={p.thresholdDb} />
+                <DynamicsHistory
+                    reduction={reduction}
+                    color={color}
+                    thresholdDb={p.thresholdDb}
+                    threshold={{
+                        spec: SPECS.thresholdDb,
+                        onChange: (thresholdDb) => setParams({ thresholdDb }),
+                    }}
+                />
                 <ReductionMeter value={reduction} color={color} />
             </div>
             <div className="control-row">

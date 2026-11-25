@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from 'react';
+import { useRef, useState } from 'react';
 import { saturate } from '../../dsp/kernels/saturator';
 import {
     OVERSAMPLING_FACTORS,
@@ -12,8 +12,10 @@ import {
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { formatFrequency } from '../format';
-import { css, drawGrid, drawSpectrum, frequencyToX, withAlpha, xToFrequency } from '../graph';
+import { specValue, useCanvasDrag, wheelStep } from '../canvasDrag';
+import { css, drawGrid, drawSpectrum, frequencyToX, withAlpha } from '../graph';
 import { useCanvas } from '../useCanvas';
+import { bandEdges, bandHandle, drawBandNodes, type BandNode } from './bandDisplay';
 import { BAND_COLORS, type EditorProps } from './types';
 
 const STYLE_LABELS: Record<SaturationStyle, string> = {
@@ -37,7 +39,6 @@ const STYLE_TITLES: Record<SaturationStyle, string> = {
 /** Level into the curve, in dB, that fills the heat bar; 0 dB is where clipping starts. */
 const HEAT_FLOOR = -24;
 const HEAT_CEILING = 12;
-const MIN_GAP = 1.25;
 
 const CROSSOVER_PRESETS: Record<number, number[]> = {
     1: [],
@@ -59,6 +60,10 @@ function bandLabel(index: number, count: number) {
     return ['Low', 'Low Mid', 'High Mid', 'High'][index];
 }
 
+function signed(value: number, decimals: number) {
+    return `${value > 0 ? '+' : ''}${value.toFixed(decimals)}`;
+}
+
 function bandColor(index: number) {
     return BAND_COLORS[(index + 1) % BAND_COLORS.length];
 }
@@ -76,8 +81,6 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
     const p = effect.params;
     const [selected, setSelected] = useState(0);
     const shown = useRef<number[]>([]);
-    const drag = useRef<number | undefined>(undefined);
-    const width = useRef(1);
     const count = p.crossovers.length + 1;
     const bandIndex = Math.min(selected, count - 1);
     const band = p.bands[bandIndex];
@@ -88,12 +91,23 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
             bands: p.bands.map((item, i) => (i === index ? { ...item, ...patch } : item)),
         });
 
+    // Each band's node: up for drive, across the band for tone, the wheel for dynamics.
+    const nodes: BandNode = {
+        specs: { x: SPECS.satTone, y: SPECS.satDriveDb, ring: SPECS.satDynamics },
+        values: p.bands.map((item) => ({ x: item.tone, y: item.driveDb, ring: item.dynamics })),
+        onChange: (index, { x, y, ring }) =>
+            updateBand(index, {
+                ...(x === undefined ? {} : { tone: x }),
+                ...(y === undefined ? {} : { driveDb: y }),
+                ...(ring === undefined ? {} : { dynamics: ring }),
+            }),
+        format: ({ x, y, ring }) =>
+            `drive +${y.toFixed(1)} · tone ${signed(x, 1)} · dyn ${signed(ring, 0)}%`,
+    };
+
     const ref = useCanvas(
         ({ ctx, width: w, height, telemetry, live }) => {
-            width.current = w;
-            const edges = [20, ...p.crossovers, 20000].map((frequency) =>
-                frequencyToX(frequency, w),
-            );
+            const edges = bandEdges(p.crossovers, w);
             p.bands.forEach((_, index) => {
                 ctx.fillStyle = withAlpha(bandColor(index), index === bandIndex ? 0.07 : 0.025);
                 ctx.fillRect(edges[index], 0, edges[index + 1] - edges[index], height);
@@ -125,21 +139,23 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
                 const barHeight = heat * height * 0.6;
                 ctx.fillStyle = withAlpha(bandColor(index), 0.2 + 0.4 * heat);
                 ctx.fillRect(x + bandWidth * 0.3, height - barHeight, bandWidth * 0.4, barHeight);
-                ctx.fillStyle = css('--text');
-                ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif';
-                ctx.textAlign = 'center';
-                const drive = bandWidth > 100 ? ` +${item.driveDb.toFixed(1)} dB` : '';
-                const label = item.mute
+                // The band name and its curve at the bottom, clear of the node above.
+                const state = item.mute
                     ? 'MUTED'
                     : item.bypass
                       ? 'BYPASS'
-                      : `${STYLE_LABELS[item.style]}${drive}`;
-                // Below the crossover frequency labels.
-                ctx.fillText(label, x + bandWidth / 2, 46);
+                      : STYLE_LABELS[item.style];
+                ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif';
+                ctx.textAlign = 'center';
                 ctx.fillStyle = css('--grid-label');
-                ctx.fillText(bandLabel(index, count), x + bandWidth / 2, height - 18);
+                ctx.fillText(
+                    `${bandLabel(index, count)} · ${state}`,
+                    x + bandWidth / 2,
+                    height - 18,
+                );
                 ctx.textAlign = 'start';
             });
+            drawBandNodes(ctx, nodes, edges, height, bandIndex, bandColor);
             p.crossovers.forEach((frequency, index) => {
                 const x = Math.round(frequencyToX(frequency, w)) + 0.5;
                 ctx.strokeStyle = color;
@@ -192,43 +208,28 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
         [band.style, band.driveDb, band.bypass, tint],
     );
 
-    const position = (event: PointerEvent<HTMLCanvasElement>) =>
-        event.clientX - event.currentTarget.getBoundingClientRect().left;
+    const pointer = useCanvasDrag((point) =>
+        bandHandle({
+            point,
+            crossovers: p.crossovers,
+            onCrossovers: (crossovers) => setParams({ crossovers }),
+            select: setSelected,
+            node: nodes,
+        }),
+    );
 
-    const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
-        const x = position(event);
-        const handle = p.crossovers.findIndex(
-            (frequency) => Math.abs(frequencyToX(frequency, width.current) - x) < 8,
-        );
-        if (handle >= 0) {
-            drag.current = handle;
-            event.currentTarget.setPointerCapture(event.pointerId);
-            return;
-        }
-        const frequency = xToFrequency(x, width.current);
-        setSelected(p.crossovers.filter((crossover) => crossover < frequency).length);
-    };
-
-    const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
-        const handle = drag.current;
-        if (handle === undefined) {
-            return;
-        }
-        const lower = handle > 0 ? p.crossovers[handle - 1] * MIN_GAP : SPECS.crossover.min;
-        const upper =
-            handle < p.crossovers.length - 1
-                ? p.crossovers[handle + 1] / MIN_GAP
-                : SPECS.crossover.max;
-        const frequency = Math.min(
-            upper,
-            Math.max(lower, xToFrequency(position(event), width.current)),
-        );
-        setParams({
-            crossovers: p.crossovers.map((value, index) =>
-                index === handle ? Math.round(frequency) : value,
-            ),
-        });
-    };
+    const curvePointer = useCanvasDrag(({ y, height }) => {
+        const set = (driveDb: number) =>
+            updateBand(bandIndex, { driveDb: specValue(SPECS.satDriveDb, driveDb) });
+        return {
+            cursor: 'ns-resize',
+            // Dragging up drives the curve harder: the full height spans the drive range.
+            drag: (to) => set(band.driveDb + ((y - to.y) / height) * SPECS.satDriveDb.max),
+            reset: () => set(SPECS.satDriveDb.default),
+            wheel: (direction, fine) =>
+                set(wheelStep(SPECS.satDriveDb, band.driveDb, direction, fine)),
+        };
+    });
 
     return (
         <div className="editor saturator-editor">
@@ -236,11 +237,8 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
                 <canvas
                     ref={ref}
                     className="display-canvas interactive"
-                    onPointerDown={onPointerDown}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={() => (drag.current = undefined)}
-                    onPointerCancel={() => (drag.current = undefined)}
-                    title="Drag crossover handles · click a band to edit it"
+                    {...pointer}
+                    title="Drag crossover handles · drag a band's node up for drive, sideways for tone · wheel for dynamics · click a band to edit it"
                 />
             </div>
             <div className="band-strip">
@@ -307,7 +305,8 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
                     <canvas
                         ref={curveRef}
                         className="saturator-curve"
-                        title="Curve of the selected band at its drive"
+                        title="Curve of the selected band at its drive · drag up or down to change the drive"
+                        {...curvePointer}
                     />
                     <ControlGroup title="Blend" className="subpanel saturator-blend">
                         <div className="saturator-pair">

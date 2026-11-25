@@ -1441,6 +1441,14 @@ button:disabled {
     touch-action: none;
 }
 
+/* Displays with draggable lines and points. */
+.history-canvas,
+.transfer-canvas,
+.stereo-canvas,
+.saturator-curve {
+    touch-action: none;
+}
+
 .display-overlay {
     position: absolute;
     display: flex;

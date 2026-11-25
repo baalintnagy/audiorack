@@ -106,8 +106,34 @@ loaded from the popup; factory presets and presets without pins clear them.
 - **Knobs:** drag vertically (Shift for fine), mouse wheel, arrow keys; double-click resets;
   click the value to type one (`2.5k`, `-6`, …).
 - **EQ display:** double-click to add a band, drag nodes for frequency/gain (Shift locks gain),
-  wheel for Q, right-click to delete, Alt-click to toggle.
-- **Multiband and Saturator displays:** drag crossover handles; click a band to edit it.
+  wheel for Q (shown as the ring around each node), right-click to delete, Alt-click to toggle.
+- **Nodes:** many displays have nodes that set three things at once: dragging moves two of them
+  and the mouse wheel turns the third, shown as the ring around the node. The ring fills a full
+  circle at the maximum; for settings that can go negative it turns half a circle each way from
+  the top, clockwise for positive and counterclockwise for negative values. Dotted guides run
+  from the node to where its settings read off the display. Shift drags and turns in fine
+  steps; double-click resets all three.
+    - Compressor (on the knee): sideways for the threshold, up or down for the ratio (down
+      compresses harder), wheel for the knee.
+    - Gate (on its transfer curve, where it opens): sideways for the threshold, down for more
+      range, wheel for the hysteresis.
+    - Multiband (one per band): up for the threshold, sideways for the ratio, wheel for the
+      makeup gain.
+    - Saturator (one per band): up for drive, sideways for tone (left darker, right brighter),
+      wheel for dynamics.
+    - Bass Booster: frequency and boost, wheel for the harmonics.
+    - De-esser: sideways for the frequency, down for more range, wheel for the threshold.
+    - Filter: cutoff and resonance, wheel for drive.
+- **Other displays:** lines and handles with a round grip drag the same way:
+    - Compressor, Gate and Limiter: the threshold or ceiling line of the level history; the
+      compressor's curve above the threshold for the ratio.
+    - Multiband and Saturator: the crossover handles; click a band to edit it. The saturator's
+      curve plot drags the drive.
+    - Denoiser: the dashed line for the largest reduction and the pass curve above the noise
+      floor for the threshold.
+    - Volume: one handle for pan (around the sound stage) and width (towards or away from the
+      center, up to 200%); the wheel sets the width.
+    - Loudness: the target line.
 
 ## How it works
 

@@ -4,7 +4,8 @@ import { SPECS } from '../../shared/effects';
 import { ControlGroup, Segmented } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { formatLoudness } from '../components/Meters';
-import { css, withAlpha } from '../graph';
+import { LINE_GRAB, specValue, useCanvasDrag, wheelStep } from '../canvasDrag';
+import { css, drawGrip, withAlpha } from '../graph';
 import { useTelemetry } from '../telemetry';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
@@ -43,11 +44,14 @@ function LoudnessHistory({
     target,
     color,
     latest,
+    onTarget,
 }: {
     history: { momentary: Float32Array; shortTerm: Float32Array; position: number };
     target: number;
     color: string;
     latest: () => Readings | undefined;
+    /** Makes the target line draggable. */
+    onTarget: (targetLufs: number) => void;
 }) {
     const ref = useCanvas(
         ({ ctx, width, height }) => {
@@ -80,7 +84,7 @@ function LoudnessHistory({
             ctx.setLineDash([]);
             ctx.fillStyle = color;
             ctx.textAlign = 'right';
-            ctx.fillText(`target ${target.toFixed(1)}`, width - 6, toY(target) - 4);
+            ctx.fillText(`target ${target.toFixed(1)}`, width - 26, toY(target) - 4);
             ctx.textAlign = 'start';
             const step = width / (HISTORY_LENGTH - 1);
             const at = (index: number) => (history.position + index) % HISTORY_LENGTH;
@@ -128,10 +132,31 @@ function LoudnessHistory({
             }
             ctx.fillStyle = css('--grid-label');
             ctx.fillText('short-term (bold), momentary · last minute', 30, height - 6);
+            drawGrip(ctx, width - 14, Math.round(toY(target)) + 0.5, color);
         },
         [color, target],
     );
-    return <canvas ref={ref} className="history-canvas" />;
+    const pointer = useCanvasDrag(({ y, height }) => {
+        const targetY = ((HISTORY_MAX - target) / (HISTORY_MAX - HISTORY_MIN)) * height;
+        if (Math.abs(y - targetY) > LINE_GRAB) {
+            return undefined;
+        }
+        const set = (value: number) => onTarget(specValue(SPECS.targetLufs, value));
+        return {
+            cursor: 'ns-resize',
+            drag: (to) => set(HISTORY_MAX - (to.y / height) * (HISTORY_MAX - HISTORY_MIN)),
+            reset: () => set(SPECS.targetLufs.default),
+            wheel: (direction, fine) => set(wheelStep(SPECS.targetLufs, target, direction, fine)),
+        };
+    });
+    return (
+        <canvas
+            ref={ref}
+            className="history-canvas"
+            title="Drag the target line to change the target"
+            {...pointer}
+        />
+    );
 }
 
 /** The numeric readings, with the integrated loudness largest. */
@@ -252,6 +277,7 @@ export function LoudnessEditor({ effect, setParams, color }: EditorProps<'loudne
                     target={p.targetLufs}
                     color={color}
                     latest={read}
+                    onTarget={(targetLufs) => setParams({ targetLufs })}
                 />
                 <LoudnessReadouts target={p.targetLufs} color={color} latest={read} />
             </div>

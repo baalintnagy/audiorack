@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from 'react';
+import { useRef, useState } from 'react';
 import {
     SPECS,
     defaultMultibandBand,
@@ -8,12 +8,13 @@ import {
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { formatFrequency } from '../format';
-import { css, drawGrid, drawSpectrum, frequencyToX, withAlpha, xToFrequency } from '../graph';
+import { useCanvasDrag } from '../canvasDrag';
+import { css, drawGrid, drawSpectrum, frequencyToX, withAlpha } from '../graph';
 import { useCanvas } from '../useCanvas';
+import { bandEdges, bandHandle, drawBandNodes, type BandNode } from './bandDisplay';
 import { BAND_COLORS, type EditorProps } from './types';
 
 const GR_RANGE = 18;
-const MIN_GAP = 1.25;
 
 function bandLabel(index: number, count: number) {
     if (count === 2) {
@@ -44,8 +45,6 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
     const p = effect.params;
     const [selected, setSelected] = useState(1);
     const shown = useRef<number[]>([]);
-    const drag = useRef<number | undefined>(undefined);
-    const width = useRef(1);
     const count = p.crossovers.length + 1;
     const band = p.bands[Math.min(selected, count - 1)];
     const bandIndex = Math.min(selected, count - 1);
@@ -55,12 +54,29 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
             bands: p.bands.map((item, i) => (i === index ? { ...item, ...patch } : item)),
         });
 
+    // Each band's node: up for the threshold, across the band for the ratio, the wheel for
+    // makeup gain.
+    const nodes: BandNode = {
+        specs: { x: SPECS.ratio, y: SPECS.thresholdDb, ring: SPECS.makeupDb },
+        values: p.bands.map((item) => ({
+            x: item.ratio,
+            y: item.thresholdDb,
+            ring: item.makeupDb,
+        })),
+        onChange: (index, { x, y, ring }) =>
+            updateBand(index, {
+                ...(x === undefined ? {} : { ratio: x }),
+                ...(y === undefined ? {} : { thresholdDb: y }),
+                ...(ring === undefined ? {} : { makeupDb: ring }),
+            }),
+        format: ({ x, y, ring }) =>
+            `${y.toFixed(1)} dB · ${x >= SPECS.ratio.max ? '∞' : x.toFixed(1)}:1 · makeup ${ring > 0 ? '+' : ''}${ring.toFixed(1)}`,
+    };
+    const tint = (index: number) => BAND_COLORS[(index + 4) % BAND_COLORS.length];
+
     const ref = useCanvas(
         ({ ctx, width: w, height, telemetry, live }) => {
-            width.current = w;
-            const edges = [20, ...p.crossovers, 20000].map((frequency) =>
-                frequencyToX(frequency, w),
-            );
+            const edges = bandEdges(p.crossovers, w);
             p.bands.forEach((_, index) => {
                 const tint = BAND_COLORS[(index + 4) % BAND_COLORS.length];
                 ctx.fillStyle = withAlpha(tint, index === bandIndex ? 0.16 : 0.06);
@@ -104,6 +120,7 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
                 ctx.fillText(bandLabel(index, count), x + bandWidth / 2, height - 18);
                 ctx.textAlign = 'start';
             });
+            drawBandNodes(ctx, nodes, edges, height, bandIndex, tint);
             p.crossovers.forEach((frequency, index) => {
                 const x = Math.round(frequencyToX(frequency, w)) + 0.5;
                 ctx.strokeStyle = color;
@@ -124,44 +141,15 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
         [p, bandIndex, color, count],
     );
 
-    const position = (event: PointerEvent<HTMLCanvasElement>) =>
-        event.clientX - event.currentTarget.getBoundingClientRect().left;
-
-    const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
-        const x = position(event);
-        const handle = p.crossovers.findIndex(
-            (frequency) => Math.abs(frequencyToX(frequency, width.current) - x) < 8,
-        );
-        if (handle >= 0) {
-            drag.current = handle;
-            event.currentTarget.setPointerCapture(event.pointerId);
-            return;
-        }
-        const frequency = xToFrequency(x, width.current);
-        const index = p.crossovers.filter((crossover) => crossover < frequency).length;
-        setSelected(index);
-    };
-
-    const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
-        const handle = drag.current;
-        if (handle === undefined) {
-            return;
-        }
-        const lower = handle > 0 ? p.crossovers[handle - 1] * MIN_GAP : SPECS.crossover.min;
-        const upper =
-            handle < p.crossovers.length - 1
-                ? p.crossovers[handle + 1] / MIN_GAP
-                : SPECS.crossover.max;
-        const frequency = Math.min(
-            upper,
-            Math.max(lower, xToFrequency(position(event), width.current)),
-        );
-        setParams({
-            crossovers: p.crossovers.map((value, index) =>
-                index === handle ? Math.round(frequency) : value,
-            ),
-        });
-    };
+    const pointer = useCanvasDrag((point) =>
+        bandHandle({
+            point,
+            crossovers: p.crossovers,
+            onCrossovers: (crossovers) => setParams({ crossovers }),
+            select: setSelected,
+            node: nodes,
+        }),
+    );
 
     const bandColor = BAND_COLORS[(bandIndex + 4) % BAND_COLORS.length];
     return (
@@ -170,11 +158,8 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
                 <canvas
                     ref={ref}
                     className="display-canvas interactive"
-                    onPointerDown={onPointerDown}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={() => (drag.current = undefined)}
-                    onPointerCancel={() => (drag.current = undefined)}
-                    title="Drag crossover handles · click a band to edit it"
+                    {...pointer}
+                    title="Drag crossover handles · drag a band's node up for the threshold, sideways for the ratio · wheel for makeup · click a band to edit it"
                 />
             </div>
             <div className="band-strip">

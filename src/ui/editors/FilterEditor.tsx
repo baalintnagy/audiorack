@@ -30,7 +30,7 @@ export function FilterEditor({ effect, setParams, color }: EditorProps<'filter'>
                     range={30}
                     sections={(sampleRate) => filterCoefficients(p, live.current, sampleRate)}
                     deps={[p]}
-                    title="Drag horizontally for cutoff, vertically for resonance"
+                    title="Drag the handle sideways for cutoff, up and down for resonance · wheel for drive"
                     overlay={({ ctx, width, height, telemetry }) => {
                         const modulated = telemetry?.meters.effects[effect.id]?.[0];
                         live.current = p.lfoDepth > 0 && modulated ? modulated : p.cutoff;
@@ -65,6 +65,18 @@ export function FilterEditor({ effect, setParams, color }: EditorProps<'filter'>
                                             ),
                                         ) * 100,
                                     ) / 100,
+                            }),
+                        guides: { frequency: true },
+                        ring: {
+                            spec: SPECS.driveDb,
+                            value: p.driveDb,
+                            onChange: (driveDb) => setParams({ driveDb }),
+                        },
+                        onReset: () =>
+                            setParams({
+                                cutoff: SPECS.cutoff.default,
+                                q: SPECS.filterQ.default,
+                                driveDb: SPECS.driveDb.default,
                             }),
                     }}
                 />

@@ -1,6 +1,8 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+import type { NumberSpec } from '../../shared/effects';
 import type { Telemetry } from '../../shared/messages';
-import { css } from '../graph';
+import { LINE_GRAB, specValue, useCanvasDrag, wheelStep } from '../canvasDrag';
+import { css, drawGrip } from '../graph';
 import { gainToDbValue } from '../format';
 import { useTelemetry } from '../telemetry';
 import { useCanvas } from '../useCanvas';
@@ -153,12 +155,15 @@ export function DynamicsHistory({
     thresholdDb,
     range = 48,
     level = (telemetry) => Math.max(...telemetry.meters.outputPeak),
+    threshold,
 }: {
     reduction: (telemetry: Telemetry) => number;
     color: string;
     thresholdDb?: number;
     range?: number;
     level?: (telemetry: Telemetry) => number;
+    /** Makes the threshold line draggable. */
+    threshold?: { spec: NumberSpec; onChange: (value: number) => void; label?: string };
 }) {
     const history = useRef({
         levels: new Float32Array(HISTORY_LENGTH).fill(-120),
@@ -172,9 +177,13 @@ export function DynamicsHistory({
         h.reductions[h.position] = reduction(telemetry);
         h.position = (h.position + 1) % HISTORY_LENGTH;
     });
+    // The scale may follow the threshold; it holds still while the line is dragged.
+    const [heldRange, setHeldRange] = useState<number>();
+    const scale = heldRange ?? range;
     const ref = useCanvas(
         ({ ctx, width, height }) => {
             const h = history.current;
+            const range = scale;
             const toY = (db: number) => (-Math.max(-range, Math.min(0, db)) / range) * height;
             ctx.strokeStyle = css('--grid');
             ctx.fillStyle = css('--grid-label');
@@ -235,11 +244,53 @@ export function DynamicsHistory({
                 ctx.lineTo(width, y);
                 ctx.stroke();
                 ctx.setLineDash([]);
+                if (threshold) {
+                    drawGrip(ctx, width - 14, y, color);
+                    ctx.fillStyle = css('--grid-label');
+                    ctx.textAlign = 'right';
+                    ctx.fillText(
+                        `${threshold.label ?? threshold.spec.label} ${thresholdDb.toFixed(1)}`,
+                        width - 26,
+                        y > 16 ? y - 4 : y + 12,
+                    );
+                    ctx.textAlign = 'start';
+                }
             }
         },
-        [color, thresholdDb, range],
+        [color, thresholdDb, scale, threshold !== undefined],
     );
-    return <canvas ref={ref} className="history-canvas" />;
+    const pointer = useCanvasDrag((point) => {
+        if (!threshold || thresholdDb === undefined) {
+            return undefined;
+        }
+        const toDb = (y: number) => -(y / point.height) * scale;
+        const lineY = (-Math.max(-scale, Math.min(0, thresholdDb)) / scale) * point.height;
+        if (Math.abs(point.y - lineY) > LINE_GRAB) {
+            return undefined;
+        }
+        const set = (value: number) => threshold.onChange(specValue(threshold.spec, value));
+        return {
+            cursor: 'ns-resize',
+            press: () => setHeldRange(scale),
+            drag: ({ y }) => set(toDb(y)),
+            release: () => setHeldRange(undefined),
+            reset: () => set(threshold.spec.default),
+            wheel: (direction, fine) =>
+                set(wheelStep(threshold.spec, thresholdDb, direction, fine)),
+        };
+    });
+    return (
+        <canvas
+            ref={ref}
+            className="history-canvas"
+            title={
+                threshold
+                    ? `Drag the dashed line to set the ${threshold.spec.label.toLowerCase()}`
+                    : undefined
+            }
+            {...(threshold ? pointer : {})}
+        />
+    );
 }
 
 const LOUDNESS_MIN = -48;

@@ -15,7 +15,7 @@ export function BassBoostEditor({ effect, setParams, color }: EditorProps<'bassb
                     color={color}
                     range={24}
                     deps={[p]}
-                    title="Drag to set frequency and boost"
+                    title="Drag the handle for frequency and boost · wheel for harmonics"
                     sections={(sampleRate) => bassShelfCoefficients(p, sampleRate)}
                     overlay={({ ctx, width, height }) => {
                         if (p.harmonics <= 0) {
@@ -49,6 +49,18 @@ export function BassBoostEditor({ effect, setParams, color }: EditorProps<'bassb
                                     Math.round(
                                         Math.min(SPECS.boostDb.max, Math.max(0, db * 2)) * 10,
                                     ) / 10,
+                            }),
+                        guides: { frequency: true },
+                        ring: {
+                            spec: SPECS.harmonics,
+                            value: p.harmonics,
+                            onChange: (harmonics) => setParams({ harmonics }),
+                        },
+                        onReset: () =>
+                            setParams({
+                                frequency: SPECS.bassFrequency.default,
+                                boostDb: SPECS.boostDb.default,
+                                harmonics: SPECS.harmonics.default,
                             }),
                     }}
                 />

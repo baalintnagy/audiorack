@@ -5,6 +5,7 @@ import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { DynamicsHistory, ReductionMeter } from '../components/Meters';
 import { ResponseGraph } from '../components/ResponseGraph';
+import { specValue } from '../canvasDrag';
 import { css, frequencyToX } from '../graph';
 import type { EditorProps } from './types';
 
@@ -18,7 +19,7 @@ export function DeesserEditor({ effect, setParams, color }: EditorProps<'deesser
                     color={color}
                     range={24}
                     deps={[p]}
-                    title="Drag to set the detection frequency"
+                    title="Drag the handle sideways for the frequency, down for the range · wheel for the threshold"
                     sections={(sampleRate) => [
                         biquadCoefficients('bandpass', p.frequency, 1.2, 0, sampleRate),
                     ]}
@@ -32,17 +33,27 @@ export function DeesserEditor({ effect, setParams, color }: EditorProps<'deesser
                             ctx.fillText('processed band', x + 6, 14);
                         }
                     }}
+                    // The handle sits as deep as the largest reduction: across for the detection
+                    // frequency, down for more range, the wheel for the threshold.
                     node={{
                         frequency: p.frequency,
-                        db: 0,
-                        onDrag: (frequency) =>
+                        db: -p.rangeDb,
+                        onDrag: (frequency, db) =>
                             setParams({
-                                frequency: Math.round(
-                                    Math.min(
-                                        SPECS.deessFrequency.max,
-                                        Math.max(SPECS.deessFrequency.min, frequency),
-                                    ),
-                                ),
+                                frequency: specValue(SPECS.deessFrequency, frequency),
+                                rangeDb: specValue(SPECS.rangeDb, -db),
+                            }),
+                        guides: { frequency: true, level: true },
+                        ring: {
+                            spec: SPECS.deessThresholdDb,
+                            value: p.thresholdDb,
+                            onChange: (thresholdDb) => setParams({ thresholdDb }),
+                        },
+                        onReset: () =>
+                            setParams({
+                                frequency: SPECS.deessFrequency.default,
+                                rangeDb: SPECS.rangeDb.default,
+                                thresholdDb: SPECS.deessThresholdDb.default,
                             }),
                     }}
                 />

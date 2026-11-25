@@ -9,6 +9,7 @@ import {
     EFFECT_INFO,
     PARALLEL_INFO,
     isParallelGroup,
+    itemColor,
     type ChainItem,
     type Effect,
     type ParallelGroup,
@@ -56,10 +57,10 @@ function SlotActivity({ effect }: { effect: Effect }) {
             ctx.fillStyle = css('--meter-bg');
             ctx.fillRect(0, 0, width, height);
             const fraction = Math.min(1, shown.current / 18);
-            ctx.fillStyle = EFFECT_INFO[effect.type].color;
+            ctx.fillStyle = itemColor(effect);
             ctx.fillRect(0, 0, width * fraction, height);
         },
-        [effect.id, effect.type],
+        [effect.id, effect.type, effect.color],
     );
     return <canvas ref={ref} className="slot-activity" />;
 }
@@ -144,7 +145,7 @@ function EffectSlot({
                 effect.bypass ? 'bypassed' : '',
                 drag.markers(position, last),
             ].join(' ')}
-            style={{ ['--slot-color' as string]: info.color }}
+            style={{ ['--slot-color' as string]: itemColor(effect) }}
             draggable
             onDragStart={(event) => drag.start(event, effect.id, false)}
             onDragEnd={drag.end}
@@ -274,7 +275,7 @@ function GroupBlock({
                 group.bypass ? 'bypassed' : '',
                 drag.markers({ index }, last),
             ].join(' ')}
-            style={{ ['--slot-color' as string]: PARALLEL_INFO.color }}
+            style={{ ['--slot-color' as string]: itemColor(group) }}
             draggable
             onDragStart={(event) => drag.start(event, group.id, true)}
             onDragEnd={drag.end}

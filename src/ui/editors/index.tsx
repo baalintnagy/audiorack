@@ -1,5 +1,5 @@
 import type { Effect, EffectParamsMap } from '../../shared/effects';
-import { EFFECT_INFO } from '../../shared/effects';
+import { itemColor } from '../../shared/effects';
 import { BassBoostEditor } from './BassBoostEditor';
 import { CompressorEditor } from './CompressorEditor';
 import { DeesserEditor } from './DeesserEditor';
@@ -23,7 +23,7 @@ export function EffectEditor({
     effect: Effect;
     setParams: (patch: Partial<EffectParamsMap[Effect['type']]>) => void;
 }) {
-    const color = EFFECT_INFO[effect.type].color;
+    const color = itemColor(effect);
     switch (effect.type) {
         case 'eq':
             return <EqEditor effect={effect} setParams={setParams} color={color} />;

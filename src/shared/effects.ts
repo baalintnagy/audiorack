@@ -266,6 +266,8 @@ export type EffectOf<T extends EffectType> = {
     id: string;
     type: T;
     bypass: boolean;
+    /** Accent color chosen by the user (`#rrggbb`); the type's own color when absent. */
+    color?: string;
     params: EffectParamsMap[T];
 };
 
@@ -291,6 +293,8 @@ export interface ParallelGroup {
     id: string;
     type: 'parallel';
     bypass: boolean;
+    /** Accent color chosen by the user (`#rrggbb`); the group's default when absent. */
+    color?: string;
     branches: ParallelBranch[];
 }
 
@@ -615,6 +619,29 @@ export const PARALLEL_INFO = {
 export function itemInfo(item: ChainItem): Omit<EffectInfo, 'category'> {
     return isParallelGroup(item) ? PARALLEL_INFO : EFFECT_INFO[item.type];
 }
+
+/** The accent color of an item: the user's choice, else the default of its type. */
+export function itemColor(item: ChainItem): string {
+    return item.color ?? itemInfo(item).color;
+}
+
+/** Colors offered in the accent color picker, chosen to read well on the dark theme. */
+export const ACCENT_SWATCHES = [
+    '#4fb3ff',
+    '#6f8cff',
+    '#b78bff',
+    '#ff6fd8',
+    '#ff5e7a',
+    '#ff7a59',
+    '#ffb347',
+    '#ffd84f',
+    '#9fe870',
+    '#62f08a',
+    '#3fe0c5',
+    '#8fe3ff',
+];
+
+export const ACCENT_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
 
 export function createId(): string {
     return Math.random().toString(36).slice(2, 10);

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
     defaultParams,
     isParallelGroup,
+    itemColor,
     itemInfo,
     type ChainItem,
     type Effect,
@@ -9,6 +10,7 @@ import {
 import { EffectEditor } from '../editors';
 import { ParallelEditor } from '../editors/ParallelEditor';
 import type { RackActions } from '../useRack';
+import { ColorPicker } from './ColorPicker';
 import { PinIcon, PopOutIcon, Toggle } from './Controls';
 
 /**
@@ -86,6 +88,11 @@ function PanelHeader({
     const info = itemInfo(item);
     return (
         <div className="panel-header">
+            <ColorPicker
+                color={item.color}
+                fallback={info.color}
+                onChange={(color) => actions.setColor(item.id, color)}
+            />
             <span className="panel-title">{info.label}</span>
             <span className="panel-description">{info.description}</span>
             {item.bypass && <span className="badge">Bypassed</span>}
@@ -149,7 +156,7 @@ export function ItemPanel({
         <section
             className={`panel ${item?.bypass ? 'effect-bypassed' : ''} ${selected ? 'selected' : ''}`}
             data-item-id={item?.id}
-            style={item ? { ['--effect-color' as string]: itemInfo(item).color } : undefined}
+            style={item ? { ['--effect-color' as string]: itemColor(item) } : undefined}
         >
             {!item && (
                 <div className="empty">

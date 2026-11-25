@@ -1,4 +1,5 @@
 import {
+    ACCENT_COLOR_PATTERN,
     ANALYZER_CHANNELS,
     EFFECT_TYPES,
     FFT_SIZES,
@@ -263,13 +264,28 @@ const normalizers: { [T in EffectType]: (raw: Loose) => EffectParamsMap[T] } = {
     }),
 };
 
+/** A valid `#rrggbb` color as an optional `color` field; anything else is dropped. */
+function accentColor(raw: unknown): { color?: string } {
+    if (typeof raw !== 'string') {
+        return {};
+    }
+    const color = raw.trim().toLowerCase();
+    return ACCENT_COLOR_PATTERN.test(color) ? { color } : {};
+}
+
 export function normalizeEffect(raw: unknown): Effect | undefined {
     if (!isObject(raw) || !EFFECT_TYPES.includes(raw.type as EffectType)) {
         return undefined;
     }
     const type = raw.type as EffectType;
     const params = normalizers[type](isObject(raw.params) ? raw.params : {});
-    return { id: id(raw.id), type, bypass: bool(raw.bypass, false), params } as Effect;
+    return {
+        id: id(raw.id),
+        type,
+        bypass: bool(raw.bypass, false),
+        ...accentColor(raw.color),
+        params,
+    } as Effect;
 }
 
 /** Maximum number of effects in the rack, counting those inside parallel branches. */
@@ -332,6 +348,7 @@ function normalizeGroup(raw: Loose, budget: Budget): ParallelGroup | undefined {
         id: id(raw.id),
         type: 'parallel',
         bypass: bool(raw.bypass, false),
+        ...accentColor(raw.color),
         branches: [...branches, ...padding],
     };
 }

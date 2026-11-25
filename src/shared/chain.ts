@@ -168,6 +168,15 @@ export function toggleBypass(chain: ChainItem[], id: string): ChainItem[] {
     return mapGroup(mapEffect(chain, id, flip), id, flip);
 }
 
+/** Sets the accent color of the effect or parallel group `id`; undefined restores the default. */
+export function setColor(chain: ChainItem[], id: string, color: string | undefined): ChainItem[] {
+    const paint = <T extends ChainItem>(item: T): T => {
+        const { color: _previous, ...rest } = item;
+        return (color === undefined ? rest : { ...rest, color }) as T;
+    };
+    return mapGroup(mapEffect(chain, id, paint), id, paint);
+}
+
 export function removeItem(chain: ChainItem[], id: string): ChainItem[] {
     return mapBranches(
         chain.filter((item) => item.id !== id),

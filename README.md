@@ -67,6 +67,13 @@ are removed when the tab closes. **All tabs** makes the tab follow the shared ra
 `chrome.storage.local`, and the starting point for new tabs) and discards its own rack. The switch
 is not shown in demo mode.
 
+### Accent colors
+
+Every effect and group has an accent color for its chain slot, panel and graphs. Click the color
+dot in front of its name to pick another one from the palette, the color picker or a hex code;
+**Default** restores the original. Colors belong to each item in the chain, so two equalizers
+can have different colors, and they are saved with the rack and in presets.
+
 ### Pop-out windows
 
 The pop-out button in an effect's or group's header opens it in a window of its own, so several

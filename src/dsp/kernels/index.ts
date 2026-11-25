@@ -11,6 +11,7 @@ import type { Kernel } from './kernel';
 import { LimiterKernel } from './limiter';
 import { LoudnessKernel } from './loudness';
 import { MultibandKernel } from './multiband';
+import { SaturatorKernel } from './saturator';
 import { VolumeKernel } from './volume';
 
 type KernelFactories = {
@@ -22,6 +23,7 @@ export const KERNELS: KernelFactories = {
     compressor: CompressorKernel,
     limiter: LimiterKernel,
     multiband: MultibandKernel,
+    saturator: SaturatorKernel,
     gate: GateKernel,
     filter: FilterKernel,
     deesser: DeesserKernel,

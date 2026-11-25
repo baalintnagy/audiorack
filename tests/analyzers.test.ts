@@ -99,4 +99,52 @@ describe('stereo analyzer', () => {
         const silence = new Float32Array(4800);
         expect(analyze(silence, silence).every(Number.isFinite)).toBe(true);
     });
+
+    /** Per-band readings after playing `left`/`right` with meters taken as the worklet does. */
+    function bandReadings(left: Float32Array, right: Float32Array) {
+        const kernel = new StereoKernel(SAMPLE_RATE);
+        let readings: number[] = [];
+        for (let start = 0; start < left.length; start += 1024) {
+            const end = Math.min(left.length, start + 1024);
+            kernel.process(left.slice(start, end), right.slice(start, end), end - start);
+            readings = kernel.takeMeters();
+        }
+        return Array.from({ length: STEREO_BANDS }, (_, band) => {
+            const start = STEREO_FIELDS.bands + band * STEREO_BAND_FIELDS.size;
+            return {
+                position: readings[start + STEREO_BAND_FIELDS.position],
+                width: readings[start + STEREO_BAND_FIELDS.width],
+                correlation: readings[start + STEREO_BAND_FIELDS.correlation],
+            };
+        });
+    }
+
+    it('images mono and anti-phase content correctly in every band', () => {
+        const signal = noise(1, 0.3);
+        bandReadings(signal, signal).forEach((band) => {
+            expect(band.correlation).toBeCloseTo(1, 3);
+            expect(band.width).toBeCloseTo(0, 2);
+            expect(band.position).toBeCloseTo(0, 3);
+        });
+        const inverted = signal.map((value) => -value);
+        bandReadings(signal, inverted).forEach((band) => {
+            expect(band.correlation).toBeCloseTo(-1, 3);
+            expect(band.width).toBe(10);
+        });
+    });
+
+    it('averages the low bands instead of reading noise from a single frame', () => {
+        // Shared noise plus a little independent noise per channel: the same correlation and
+        // S/M width in every band, centered.
+        const common = noise(2, 0.3, 5);
+        const left = noise(2, 0.3, 1).map((value, i) => common[i] + 0.45 * value);
+        const right = noise(2, 0.3, 2).map((value, i) => common[i] + 0.45 * value);
+        const correlation = 1 / (1 + 0.45 ** 2);
+        const width = Math.sqrt((2 * 0.45 ** 2) / (4 + 2 * 0.45 ** 2));
+        bandReadings(left, right).forEach((band) => {
+            expect(Math.abs(band.correlation - correlation)).toBeLessThan(0.15);
+            expect(Math.abs(band.width - width)).toBeLessThan(0.15);
+            expect(Math.abs(band.position)).toBeLessThan(0.2);
+        });
+    });
 });

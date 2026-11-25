@@ -17,12 +17,20 @@ import { MAX_CHAIN_LENGTH } from '../shared/normalize';
 import { createBackend, type Backend, type BackendStatus } from './backend';
 import { AddMenu, type AddKind } from './components/AddMenu';
 import { ChainStrip } from './components/ChainStrip';
-import { PopOutIcon, PowerIcon, Segmented, SidePanelIcon, Toggle } from './components/Controls';
+import {
+    BypassIcon,
+    PopOutIcon,
+    PowerIcon,
+    Segmented,
+    SidePanelIcon,
+    Toggle,
+} from './components/Controls';
 import { ItemPanel } from './components/ItemPanel';
 import { Knob } from './components/Knob';
 import { LevelMeter } from './components/Meters';
 import { PresetMenu } from './components/PresetMenu';
 import { ItemWindow } from './ItemWindow';
+import { shortTabTitle } from './format';
 import { pageParams } from './page';
 import { TelemetryContext } from './telemetry';
 import { useEngine } from './useEngine';
@@ -195,132 +203,138 @@ function RackWindow({ backend }: { backend: Backend }) {
         <TelemetryContext.Provider value={store}>
             <div className={`app ${rack.bypass ? 'rack-bypassed' : ''}`}>
                 <header className="header">
-                    <div className="brand">
-                        <Logo />
-                        <span className="brand-name">
-                            Audio<strong>Rack</strong>
-                        </span>
-                    </div>
-                    <button
-                        type="button"
-                        className={`capture ${status.active ? 'on' : ''}`}
-                        disabled={busy}
-                        onClick={() =>
-                            run(() => (status.active ? backend.stop() : backend.start()))
-                        }
-                        title={`${status.active ? 'Stop processing' : 'Process the audio of this tab'}${status.label ? `: ${status.label}` : ''}`}
-                    >
-                        <PowerIcon />
-                        <span className="capture-text">
-                            <span className="capture-state">
-                                {status.active
-                                    ? 'Processing'
-                                    : backend.kind === 'local'
-                                      ? 'Play demo'
-                                      : 'Process tab'}
+                    <div className="header-row">
+                        <div className="brand">
+                            <Logo />
+                            <span className="brand-name">
+                                Audio<strong>Rack</strong>
                             </span>
-                            <span className="capture-label">{status.label}</span>
-                        </span>
-                    </button>
-                    {backend.loadFile && (
-                        <>
+                        </div>
+                        <button
+                            type="button"
+                            className={`capture ${status.active ? 'on' : ''}`}
+                            disabled={busy}
+                            onClick={() =>
+                                run(() => (status.active ? backend.stop() : backend.start()))
+                            }
+                            title={`${status.active ? 'Stop processing' : 'Process the audio of this tab'}${status.label ? `: ${status.label}` : ''}`}
+                        >
+                            <PowerIcon />
+                            <span className="capture-text">
+                                <span className="capture-state">
+                                    {status.active
+                                        ? 'Processing'
+                                        : backend.kind === 'local'
+                                          ? 'Play demo'
+                                          : 'Process tab'}
+                                </span>
+                                <span className="capture-label">{shortTabTitle(status.label)}</span>
+                            </span>
+                        </button>
+                        {canScopeToTab && (
+                            <div className="scope-switch">
+                                <Segmented
+                                    value={scope}
+                                    options={[
+                                        {
+                                            value: 'tab',
+                                            label: 'This tab',
+                                            icon: <ThisTabIcon />,
+                                            title: 'This tab: a rack of its own, started from a copy of the All tabs rack',
+                                        },
+                                        {
+                                            value: 'shared',
+                                            label: 'All tabs',
+                                            icon: <AllTabsIcon />,
+                                            title: 'All tabs: follow the rack shared by every tab set to it',
+                                        },
+                                    ]}
+                                    onChange={(next) => void actions.setScope(next)}
+                                />
+                            </div>
+                        )}
+                        {backend.loadFile && (
+                            <>
+                                <button
+                                    type="button"
+                                    className="ghost header-load"
+                                    onClick={() => fileInput.current?.click()}
+                                >
+                                    Load audio…
+                                </button>
+                                <input
+                                    ref={fileInput}
+                                    type="file"
+                                    accept="audio/*"
+                                    hidden
+                                    onChange={(event) => {
+                                        const file = event.target.files?.[0];
+                                        if (file && backend.loadFile) {
+                                            void run(() => backend.loadFile!(file));
+                                        }
+                                        event.target.value = '';
+                                    }}
+                                />
+                            </>
+                        )}
+                        {status.error && (
+                            <span className="status-error" title={status.error}>
+                                {status.error}
+                            </span>
+                        )}
+                        <div className="header-spacer" />
+                        {!isSidePanel && backend.dockToSidePanel && (
                             <button
                                 type="button"
-                                className="ghost"
-                                onClick={() => fileInput.current?.click()}
+                                className="ghost icon header-window"
+                                onClick={() => backend.dockToSidePanel?.()}
+                                title="Dock in the side panel"
+                                aria-label="Dock in the side panel"
                             >
-                                Load audio…
+                                <SidePanelIcon />
                             </button>
-                            <input
-                                ref={fileInput}
-                                type="file"
-                                accept="audio/*"
-                                hidden
-                                onChange={(event) => {
-                                    const file = event.target.files?.[0];
-                                    if (file && backend.loadFile) {
-                                        void run(() => backend.loadFile!(file));
-                                    }
-                                    event.target.value = '';
-                                }}
-                            />
-                        </>
-                    )}
-                    {status.error && (
-                        <span className="status-error" title={status.error}>
-                            {status.error}
-                        </span>
-                    )}
-                    <div className="header-spacer" />
-                    <AddMenu
-                        variant="header"
-                        disabled={countEffects(rack.chain) >= MAX_CHAIN_LENGTH}
-                        disabledReason={`The rack holds up to ${MAX_CHAIN_LENGTH} effects`}
-                        onAdd={(kind) => add(kind)}
-                    />
-                    {canScopeToTab && (
-                        <div className="scope-switch">
-                            <Segmented
-                                value={scope}
-                                options={[
-                                    {
-                                        value: 'tab',
-                                        label: 'This tab',
-                                        icon: <ThisTabIcon />,
-                                        title: 'This tab: a rack of its own, started from a copy of the All tabs rack',
-                                    },
-                                    {
-                                        value: 'shared',
-                                        label: 'All tabs',
-                                        icon: <AllTabsIcon />,
-                                        title: 'All tabs: follow the rack shared by every tab set to it',
-                                    },
-                                ]}
-                                onChange={(next) => void actions.setScope(next)}
-                            />
-                        </div>
-                    )}
-                    <PresetMenu
-                        rack={rack}
-                        pins={pins}
-                        onLoad={(next, nextPins) => {
-                            actions.setRack(next);
-                            replacePins(nextPins);
-                        }}
-                    />
-                    <Toggle
-                        className="bypass-all"
-                        active={rack.bypass}
-                        onChange={(bypass) =>
-                            actions.update((previous) => ({ ...previous, bypass }))
-                        }
-                        color="#ff5e7a"
-                        title="Compare with the unprocessed signal"
-                    >
-                        Bypass
-                    </Toggle>
-                    {!isSidePanel && backend.dockToSidePanel && (
-                        <button
-                            type="button"
-                            className="ghost icon"
-                            onClick={() => backend.dockToSidePanel?.()}
-                            title="Dock in the side panel"
-                            aria-label="Dock in the side panel"
+                        )}
+                        {(isPopup || isSidePanel) && backend.popOut && (
+                            <button
+                                type="button"
+                                className="ghost icon header-window"
+                                onClick={() => backend.popOut?.()}
+                                title="Open in a larger window"
+                                aria-label="Open in a larger window"
+                            >
+                                <PopOutIcon />
+                            </button>
+                        )}
+                    </div>
+                    <div className="header-row">
+                        <PresetMenu
+                            rack={rack}
+                            pins={pins}
+                            onLoad={(next, nextPins) => {
+                                actions.setRack(next);
+                                replacePins(nextPins);
+                            }}
+                        />
+                        <div className="header-separator" aria-hidden="true" />
+                        <AddMenu
+                            variant="header"
+                            disabled={countEffects(rack.chain) >= MAX_CHAIN_LENGTH}
+                            disabledReason={`The rack holds up to ${MAX_CHAIN_LENGTH} effects`}
+                            onAdd={(kind) => add(kind)}
+                        />
+                        <div className="header-spacer" />
+                        <Toggle
+                            className="bypass-all"
+                            active={rack.bypass}
+                            onChange={(bypass) =>
+                                actions.update((previous) => ({ ...previous, bypass }))
+                            }
+                            color="#ff5e7a"
+                            title="Bypass the whole rack to compare with the unprocessed signal"
                         >
-                            <SidePanelIcon />
-                        </button>
-                    )}
-                    {(isPopup || isSidePanel) && backend.popOut && (
-                        <button
-                            type="button"
-                            className="ghost icon"
-                            onClick={() => backend.popOut?.()}
-                            title="Open in a larger window"
-                            aria-label="Open in a larger window"
-                        >
-                            <PopOutIcon />
-                        </button>
-                    )}
+                            <BypassIcon />
+                        </Toggle>
+                    </div>
                 </header>
                 <div className="body">
                     <main className={`main ${stacked ? 'stacked' : ''}`}>

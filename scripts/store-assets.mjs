@@ -55,6 +55,12 @@ const SITE_SHOTS = [
     { file: 'denoiser.jpg', slot: 'DN', enable: true, noisy: true, settle: 8000 },
 ].map(({ file, ...shot }) => ({ path: join(SITE_IMAGE_DIR, file), ...shot, ...SITE }));
 
+// The site rack is full, so the saturator is pictured from a small rack of its own.
+const SATURATOR_RACK = readFileSync(join(ROOT, 'site', 'saturator-rack.json'), 'utf8');
+const SATURATOR_SHOTS = [
+    { path: join(SITE_IMAGE_DIR, 'saturator.jpg'), slot: 'SAT', settle: 6000, ...SITE },
+];
+
 // Renders the demo track with white hiss and a 50 Hz hum into a WAV file and loads it with
 // "Load audio…". Runs in the page, where Vite serves the module that renders the track.
 const LOAD_NOISY_DEMO = `(async () => {
@@ -289,7 +295,7 @@ function dressAsExtension(doc) {
         const style = document.createElement('style');
         style.id = 'store-dress';
         style.textContent =
-            '.header > .ghost { display: none !important; }' +
+            '.header-load { display: none !important; }' +
             '.capture-label { font-size: 0 !important; }' +
             '.capture-label::after { content: ' + ${title} + '; font-size: ' + size + '; }';
         document.head.append(style);
@@ -404,6 +410,7 @@ async function captureScreenshots(page, origin) {
         await captureSidePanel(page, origin, shot);
     }
     await captureRack(page, origin, SITE_RACK, SITE_SHOTS);
+    await captureRack(page, origin, SATURATOR_RACK, SATURATOR_SHOTS);
 }
 
 async function captureTiles(page, origin) {

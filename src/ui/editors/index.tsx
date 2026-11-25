@@ -10,6 +10,7 @@ import { GateEditor } from './GateEditor';
 import { LimiterEditor } from './LimiterEditor';
 import { LoudnessEditor } from './LoudnessEditor';
 import { MultibandEditor } from './MultibandEditor';
+import { SaturatorEditor } from './SaturatorEditor';
 import { SpectrogramEditor } from './SpectrogramEditor';
 import { SpectrumEditor } from './SpectrumEditor';
 import { StereoEditor } from './StereoEditor';
@@ -32,6 +33,8 @@ export function EffectEditor({
             return <LimiterEditor effect={effect} setParams={setParams} color={color} />;
         case 'multiband':
             return <MultibandEditor effect={effect} setParams={setParams} color={color} />;
+        case 'saturator':
+            return <SaturatorEditor effect={effect} setParams={setParams} color={color} />;
         case 'gate':
             return <GateEditor effect={effect} setParams={setParams} color={color} />;
         case 'denoiser':

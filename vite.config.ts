@@ -8,8 +8,8 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 
 // The Chrome Web Store shows this as the listing summary; it must stay within 132 characters.
 const DESCRIPTION =
-    'Studio effects for any browser tab: EQ, compressors, limiter, gate, denoiser, de-esser, ' +
-    'bass boost, a loudness meter and analyzers.';
+    'Studio effects for any tab: EQ, compressors, saturator, limiter, gate, denoiser, de-esser, ' +
+    'bass boost, loudness meter and analyzers.';
 
 const ICON_SIZES = [16, 32, 48, 128];
 

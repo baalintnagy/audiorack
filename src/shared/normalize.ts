@@ -7,8 +7,11 @@ import {
     FILTER_MODES,
     MAX_BRANCHES,
     MAX_EQ_BANDS,
+    MAX_SATURATOR_BANDS,
     MIN_BRANCHES,
     NOISE_PROFILE_BANDS,
+    OVERSAMPLING_FACTORS,
+    SATURATION_STYLES,
     SLOPES,
     SPECS,
     createBranch,
@@ -17,6 +20,7 @@ import {
     defaultMultibandBand,
     defaultParams,
     defaultRack,
+    defaultSaturatorBand,
     isParallelGroup,
     type ChainItem,
     type Effect,
@@ -27,6 +31,7 @@ import {
     type ParallelBranch,
     type ParallelGroup,
     type RackState,
+    type SaturatorBand,
     type SpecKey,
 } from './effects';
 
@@ -85,6 +90,22 @@ function normalizeMultibandBand(raw: unknown): MultibandBand {
     };
 }
 
+function normalizeSaturatorBand(raw: unknown): SaturatorBand {
+    const band = isObject(raw) ? raw : {};
+    const base = defaultSaturatorBand();
+    return {
+        style: oneOf(band.style, SATURATION_STYLES, base.style),
+        driveDb: num(band.driveDb, 'satDriveDb'),
+        dynamics: num(band.dynamics, 'satDynamics'),
+        tone: num(band.tone, 'satTone'),
+        mix: num(band.mix, 'mix'),
+        levelDb: num(band.levelDb, 'outputDb'),
+        solo: bool(band.solo, false),
+        mute: bool(band.mute, false),
+        bypass: bool(band.bypass, false),
+    };
+}
+
 /** A learned noise profile: exactly one finite level per band, or none at all. */
 function noiseProfile(raw: unknown): number[] {
     if (
@@ -139,6 +160,22 @@ const normalizers: { [T in EffectType]: (raw: Loose) => EffectParamsMap[T] } = {
                 normalizeMultibandBand(rawBands[index]),
             ),
             kneeDb: num(raw.kneeDb, 'kneeDb', base.kneeDb),
+            outputDb: num(raw.outputDb, 'outputDb'),
+        };
+    },
+    saturator: (raw) => {
+        const crossovers = (Array.isArray(raw.crossovers) ? raw.crossovers : [])
+            .slice(0, MAX_SATURATOR_BANDS - 1)
+            .map((value) => num(value, 'crossover'))
+            .sort((a, b) => a - b);
+        const rawBands = Array.isArray(raw.bands) ? raw.bands : [];
+        return {
+            crossovers,
+            bands: Array.from({ length: crossovers.length + 1 }, (_, index) =>
+                normalizeSaturatorBand(rawBands[index]),
+            ),
+            oversampling: oneOf(raw.oversampling, OVERSAMPLING_FACTORS, 2),
+            mix: num(raw.mix, 'mix'),
             outputDb: num(raw.outputDb, 'outputDb'),
         };
     },

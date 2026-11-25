@@ -141,6 +141,13 @@ export const STEREO_BANDS = 48;
 /** Readings per band: level (dB), position (-1 left .. 1 right), width (S/M), correlation. */
 export const STEREO_BAND_FIELDS = { level: 0, position: 1, width: 2, correlation: 3, size: 4 };
 const STEREO_FFT = 4096;
+/** Bins per band at least, so the lowest bands do not rest on a single bin. */
+const STEREO_MIN_BINS = 3;
+/**
+ * Time constant of the per-band averages. One FFT frame holds only a few bins in the low bands,
+ * far too few to estimate correlation, so the band energies are averaged over several frames.
+ */
+const STEREO_AVERAGE_SECONDS = 0.4;
 
 function round(value: number) {
     return Math.round(value * 10000) / 10000;
@@ -160,8 +167,14 @@ export class StereoKernel implements Kernel<StereoParams> {
     /** FFT bin range of each band, inclusive. */
     private readonly bandBins: [number, number][];
     private readonly levelOffset: number;
+    /** Running averages of the left, right and cross energies, three per band. */
+    private readonly averages = new Float64Array(STEREO_BANDS * 3);
+    /** Samples written since the last reading, which sets how far the averages move. */
+    private pending = 0;
+    private readonly averageSamples: number;
 
     constructor(sampleRate: number) {
+        this.averageSamples = STEREO_AVERAGE_SECONDS * sampleRate;
         const frequencies = logFrequencies(STEREO_BANDS);
         const binWidth = sampleRate / STEREO_FFT;
         const last = STEREO_FFT / 2 - 1;
@@ -173,7 +186,15 @@ export class StereoKernel implements Kernel<StereoParams> {
                     : frequency;
             const from = Math.min(last, Math.max(1, Math.round(lower / binWidth)));
             const to = Math.min(last, Math.max(from, Math.round(upper / binWidth) - 1));
-            return [from, to];
+            if (to - from + 1 >= STEREO_MIN_BINS) {
+                return [from, to];
+            }
+            // Too narrow: widen around the band's own bin.
+            const start = Math.min(
+                last - STEREO_MIN_BINS + 1,
+                Math.max(1, Math.round(frequency / binWidth) - (STEREO_MIN_BINS >> 1)),
+            );
+            return [start, start + STEREO_MIN_BINS - 1];
         });
         // A full-scale sine in both channels reads about 0 dB.
         const windowSum = this.window.reduce((total, value) => total + value, 0);
@@ -184,10 +205,13 @@ export class StereoKernel implements Kernel<StereoParams> {
 
     process(left: Float32Array, right: Float32Array, frames: number) {
         this.tap.write(left, right, frames);
+        this.pending += frames;
     }
 
     reset() {
         this.tap.reset();
+        this.averages.fill(0);
+        this.pending = 0;
     }
 
     takeMeters(): number[] {
@@ -240,7 +264,10 @@ export class StereoKernel implements Kernel<StereoParams> {
             this.im[i] = right[index] * this.window[i];
         }
         this.fft.forward(this.re, this.im);
-        return this.bandBins.flatMap(([from, to]) => {
+        const weight = 1 - Math.exp(-this.pending / this.averageSamples);
+        this.pending = 0;
+        const averages = this.averages;
+        return this.bandBins.flatMap(([from, to], band) => {
             let ll = 0;
             let rr = 0;
             let lr = 0;
@@ -260,19 +287,30 @@ export class StereoKernel implements Kernel<StereoParams> {
                 lr += lRe * rRe + lIm * rIm;
             }
             const count = to - from + 1;
+            const slot = band * 3;
+            averages[slot] += (ll - averages[slot]) * weight;
+            averages[slot + 1] += (rr - averages[slot + 1]) * weight;
+            averages[slot + 2] += (lr - averages[slot + 2]) * weight;
+            // The level follows the current frame; the image uses the averages.
             const total = ll + rr;
-            if (total / count < 1e-14) {
+            const averageL = averages[slot];
+            const averageR = averages[slot + 1];
+            const averageLr = averages[slot + 2];
+            const averageTotal = averageL + averageR;
+            if (total / count < 1e-14 || averageTotal / count < 1e-14) {
                 return [-140, 0, 0, 0];
             }
-            const mid = total + 2 * lr;
-            const side = total - 2 * lr;
+            // Rounding can push either one just below zero for mono or anti-phase content.
+            const mid = Math.max(0, averageTotal + 2 * averageLr);
+            const side = Math.max(0, averageTotal - 2 * averageLr);
+            const correlation = averageLr / Math.sqrt(Math.max(averageL * averageR, 1e-30));
             return [
                 Math.round(
                     Math.max(-140, 10 * Math.log10(total / 2 / count) + this.levelOffset) * 10,
                 ) / 10,
-                round((rr - ll) / total),
+                round((averageR - averageL) / averageTotal),
                 round(Math.min(10, Math.sqrt(side / Math.max(mid, 1e-20)))),
-                round(Math.max(-1, Math.min(1, lr / Math.sqrt(Math.max(ll * rr, 1e-30))))),
+                round(Math.max(-1, Math.min(1, correlation))),
             ];
         });
     }

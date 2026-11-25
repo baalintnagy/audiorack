@@ -54,8 +54,8 @@ change.
 **Single purpose description**
 
 > AudioRack processes the audio of a browser tab that the user chooses through a configurable
-> chain of audio effects (equalizer, compressors, limiter, gate, filter, de-esser, denoiser,
-> volume and bass booster) and shows audio analyzers and a loudness meter for that sound.
+> chain of audio effects (equalizer, compressors, saturator, limiter, gate, filter, de-esser,
+> denoiser, volume and bass booster) and shows audio analyzers and a loudness meter for that sound.
 
 **Permission justifications**
 
@@ -94,7 +94,8 @@ user activity or website content data. Tick all three certifications:
 
 > No account or setup is needed. Open any tab that plays audio (for example a video), click the
 > AudioRack toolbar icon and press “Process tab”. The audio now runs through the rack: drag the EQ
-> points, change the compressor threshold or press “Bypass” to hear the difference. Press the
+> points, change the compressor threshold or press the bypass button (the arc icon at the right end
+> of the second header row) to hear the difference. Press the
 > button again to stop. The same interface also runs as a web demo at
 > https://baalintnagy.github.io/audiorack/demo/rack.html.
 
@@ -115,7 +116,8 @@ through [`site/screenshot-rack.json`](../site/screenshot-rack.json), which holds
 analyzer and a parallel group, and saves one 800×600 picture of each module to `site/images/`,
 undressed, as the demo looks on the site. The gate, filter, de-esser and denoiser are bypassed in
 that rack and switched on for their own pictures; for the denoiser the page plays the demo track
-with added hiss and hum. The side panel screenshot is staged by
+with added hiss and hum. That rack is full, so the saturator's picture comes from a small
+rack of its own, [`site/saturator-rack.json`](../site/saturator-rack.json), played last. The side panel screenshot is staged by
 [`promo/side-panel.html`](promo/side-panel.html): a sample video page with the rack docked in a
 600 px panel next to it, three effects pinned and the equalizer picked. The same scene is also
 saved at 800×600 as the website's `site/images/side-panel.jpg`. The promo tiles are rendered from

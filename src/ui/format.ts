@@ -75,3 +75,13 @@ export function gainToDbValue(gain: number): number {
 export function branchName(index: number): string {
     return String.fromCharCode(65 + index);
 }
+
+/**
+ * A tab title cut down for the capture button: no unread count such as "(3) ", and no trailing
+ * site name such as " - YouTube" or " | Spotify" when something is left before it.
+ */
+export function shortTabTitle(title: string): string {
+    const withoutCount = title.replace(/^\(\d+\+?\)\s*/, '').trim();
+    const [first] = withoutCount.split(/\s+[-–—|·•]\s+/);
+    return first.length >= 3 ? first : withoutCount;
+}

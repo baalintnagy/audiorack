@@ -6,7 +6,7 @@
         <title>AudioRack — an effect rack for your browser tabs</title>
         <meta
             name="description"
-            content="AudioRack is a Chrome extension that routes any tab's audio through a configurable chain of EQ, compressors, limiter, filter, de-esser, bass booster and analyzers, in series or in parallel, with a separate rack per tab if you like."
+            content="AudioRack is a Chrome extension that routes any tab's audio through a configurable chain of EQ, compressors, saturator, limiter, gate, denoiser, filter, de-esser, bass booster and analyzers, in series or in parallel, with a separate rack per tab if you like."
         />
         <meta name="theme-color" content="#0e1014" />
         <meta property="og:type" content="website" />
@@ -48,9 +48,9 @@
                     <h1>An effect rack for <span class="gradient">every tab</span>.</h1>
                     <p class="lead">
                         Route the sound of any browser tab through a chain of EQ, compressors, a
-                        limiter, gate, denoiser, filter, de-esser and bass booster, and see it on
-                        live analyzers and a loudness meter. Tame loud videos, clarify podcasts or
-                        make laptop speakers sound bigger.
+                        saturator, limiter, gate, denoiser, filter, de-esser and bass booster, and
+                        see it on live analyzers and a loudness meter. Tame loud videos, clarify
+                        podcasts or make laptop speakers sound bigger.
                     </p>
                     <div class="actions">
                         <a class="button primary" href="demo/rack.html">Try the live demo</a>
@@ -72,7 +72,7 @@
             </section>
 
             <section id="effects" class="section">
-                <h2>Ten effects, any order</h2>
+                <h2>Eleven effects, any order</h2>
                 <p class="section-lead">
                     Add effects, drag them into the order you want, or side by side in parallel
                     branches, and bypass any of them with a click. Bypassing crossfades, so there
@@ -142,6 +142,23 @@
                             compresses each one on its own, so a booming bass no longer pushes down
                             the voice. Drag the crossovers in the display; solo, mute or bypass any
                             band.
+                        </p>
+                    </article>
+                    <article class="module" style="--tint: #ff7a59">
+                        <img
+                            src="images/saturator.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Saturator with three bands, the heat of each band and the curve of the selected one"
+                        />
+                        <h3>Saturator</h3>
+                        <p>
+                            Adds warmth, grit or edge, across the whole signal or in up to four
+                            bands. Each band has its own curve (tube, tape, soft or hard clipping,
+                            wavefolding or a rectifier), drive, tone, mix and level, and dynamics
+                            that let the drive follow how loud the band plays. Up to 4× oversampling
+                            keeps the added harmonics free of aliasing.
                         </p>
                     </article>
                     <article class="module" style="--tint: #62f08a">

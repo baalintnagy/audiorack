@@ -85,15 +85,51 @@ html.side-panel body {
     min-width: 0;
 }
 
-html.side-panel .app {
-    grid-template-rows: auto minmax(0, 1fr);
+/* The header rows wrap instead of widening the panel. */
+html.side-panel .header {
+    padding: 8px 10px;
 }
 
-/* The header wraps onto more rows instead of widening the panel. */
-html.side-panel .header {
+html.side-panel .header-row {
     flex-wrap: wrap;
     row-gap: 8px;
-    padding: 8px 10px;
+}
+
+/* Only the logo in the narrowest panels, so the first row still fits. */
+@media (max-width: 420px) {
+    html.side-panel .brand-name {
+        display: none;
+    }
+
+    /* A wrapping row moves items down before it shrinks them, so cap the button instead. */
+    html.side-panel .header-row > .capture {
+        max-width: calc(100vw - 186px);
+    }
+
+    /* Room for the preset buttons: no caption on the dropdown and only + on Add. */
+    html.side-panel .preset-caption,
+    html.side-panel .add-button > :not(.add-plus) {
+        display: none;
+    }
+
+    html.side-panel .header-row > .preset-menu {
+        min-width: 150px;
+    }
+
+    html.side-panel .preset-button {
+        grid-template-columns: 1fr auto;
+    }
+
+    html.side-panel .add-button {
+        padding: 0 9px;
+    }
+}
+
+/* Leaves room on the first row for the logo, the tab switch and the pop-out button. */
+@media (min-width: 421px) and (max-width: 620px) {
+    html.side-panel .header-row > .capture {
+        max-width: calc(100vw - 272px);
+    }
 }
 
 html.side-panel .main {
@@ -244,23 +280,31 @@ button:disabled {
 
 .app {
     display: grid;
-    grid-template-rows: 52px 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
     grid-template-columns: minmax(0, 1fr);
     background:
         radial-gradient(circle at 15% -20%, rgb(255 157 77 / 8%), transparent 45%),
         radial-gradient(circle at 90% 120%, rgb(79 179 255 / 7%), transparent 50%), var(--bg);
 }
 
+/* Two rows: the logo, capture and window controls, then the rack controls. */
 .header {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 10px;
-    padding: 0 12px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--border);
     background: linear-gradient(180deg, #1d2129, #15181e);
     box-shadow: 0 1px 0 rgb(255 255 255 / 4%) inset;
     position: relative;
     z-index: 5;
+}
+
+.header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
 }
 
 .header-spacer {
@@ -315,7 +359,7 @@ button:disabled {
     display: flex;
     align-items: center;
     gap: 8px;
-    max-width: 260px;
+    max-width: 320px;
     height: 34px;
     padding: 0 12px 0 10px;
     border: 1px solid var(--border-strong);
@@ -364,7 +408,7 @@ button:disabled {
 .capture-label {
     font-size: 10px;
     color: var(--text-faint);
-    max-width: 100%;
+    max-width: min(240px, 100%);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -444,7 +488,12 @@ button:disabled {
 }
 
 .bypass-all {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    min-width: 0;
     height: 28px;
+    padding: 0;
 }
 
 .segmented {
@@ -500,19 +549,28 @@ button:disabled {
     white-space: nowrap;
 }
 
-.header > * {
+.header-row > * {
     flex-shrink: 0;
 }
 
-.header > .capture,
-.header > .header-spacer {
+.header-row > .capture,
+.header-row > .header-spacer {
     flex-shrink: 1;
     min-width: 0;
 }
 
-.header > .preset-menu {
-    flex-shrink: 1;
-    min-width: 130px;
+/* Sized from zero, so a narrow row shrinks it rather than wrapping. */
+.header-row > .preset-menu {
+    /* Takes most of the spare room; the spacer only pushes Bypass to the end. */
+    flex: 6 1 0;
+    min-width: 200px;
+    max-width: 340px;
+}
+
+.header-separator {
+    width: 1px;
+    height: 22px;
+    background: var(--border-strong);
 }
 
 .segmented.vertical .segmented-options {
@@ -566,13 +624,32 @@ button:disabled {
     position: relative;
 }
 
+/* The dropdown with its save, export and import buttons beside it. */
+.preset-menu {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.preset-button {
+    flex: 1;
+    min-width: 0;
+}
+
+.preset-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.preset-actions .ghost.icon {
+    height: 30px;
+}
+
 .preset-button {
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 8px;
-    width: 210px;
-    max-width: 100%;
     height: 30px;
     padding: 0 10px;
     border: 1px solid var(--border);
@@ -606,7 +683,7 @@ button:disabled {
 .preset-error {
     position: absolute;
     top: 34px;
-    right: 0;
+    left: 0;
     color: #ff8090;
     font-size: 11px;
     white-space: nowrap;
@@ -627,7 +704,7 @@ button:disabled {
 
 .preset-list {
     top: 36px;
-    right: 0;
+    left: 0;
 }
 
 .add-menu-list {
@@ -682,7 +759,6 @@ button:disabled {
     box-shadow: 0 0 8px currentColor;
 }
 
-.menu-actions,
 .menu-save {
     display: flex;
     gap: 6px;
@@ -1388,6 +1464,15 @@ button:disabled {
     background: rgb(0 0 0 / 18%);
 }
 
+/* A group nested inside another one, set off from the controls next to it. */
+.control-group.subpanel {
+    align-self: stretch;
+    justify-content: center;
+    padding: 6px;
+    border-color: #2c333e;
+    background: rgb(255 255 255 / 2.5%);
+}
+
 .control-group-body {
     display: flex;
     align-items: flex-start;
@@ -1645,6 +1730,56 @@ button:disabled {
     flex: none;
     width: 100%;
     height: 64px;
+}
+
+/* Saturator */
+
+/* Curve buttons in two columns of three. */
+.saturator-styles .segmented-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.saturator-styles .segmented-options button:nth-child(2n) {
+    border-right: 0;
+}
+
+.saturator-styles .segmented-options button:nth-child(-n + 4) {
+    border-bottom: 1px solid var(--border);
+}
+
+/* Blend and Global stack their controls so the panel fits an 800 px popup. */
+.saturator-blend .control-group-body,
+.saturator-global .control-group-body {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.saturator-pair {
+    display: flex;
+    gap: 4px;
+}
+
+.saturator-toggles {
+    display: flex;
+    gap: 4px;
+}
+
+.saturator-toggles .toggle {
+    min-width: 0;
+    padding: 0 5px;
+}
+
+.saturator-curve {
+    display: block;
+    flex: none;
+    width: 64px;
+    height: 64px;
+    align-self: center;
+    border: 1px solid #222832;
+    border-radius: 4px;
+    background: var(--display);
 }
 
 /* Denoiser */

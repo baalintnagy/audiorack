@@ -1,6 +1,6 @@
-AudioRack puts a studio effect rack on any browser tab. Run the sound of a video, stream, podcast, call or music player through a chain of EQ, compressors, a limiter, gate, denoiser, de-esser and bass booster, and watch the result on live analyzers and a loudness meter.
+AudioRack puts a studio effect rack on any browser tab. Run the sound of a video, stream, podcast, call or music player through a chain of EQ, compressors, a saturator, limiter, gate, denoiser, de-esser and bass booster, and watch the result on live analyzers and a loudness meter.
 
-Turn down videos that are too loud, bring up quiet dialogue, clean hiss and hum out of a recording, soften a harsh voice, or give small laptop speakers more bass. Everything runs on your device, with no account and no uploads.
+Turn down videos that are too loud, bring up quiet dialogue, clean hiss and hum out of a recording, soften a harsh voice, warm up a thin-sounding mix, or give small laptop speakers more bass. Everything runs on your device, with no account and no uploads.
 
 ★ BUILD YOUR OWN CHAIN
 • Up to 16 effects and analyzers, in any order.
@@ -10,11 +10,12 @@ Turn down videos that are too loud, bring up quiet dialogue, clean hiss and hum 
 • Side panel: dock the rack next to the page you are listening to and pin the effects you want in view. Pinned effects stack in chain order.
 • Global bypass for instant before/after comparison, plus input and output gain with level meters.
 
-★ TEN EFFECTS
+★ ELEVEN EFFECTS
 • Equalizer: up to 12 bands (bell, shelves, notch, band pass and 12–48 dB/oct cuts), dragged right on top of a live spectrum.
 • Compressor: soft knee, peak or RMS detection, sidechain high-pass, auto makeup and a parallel mix knob, with a transfer curve and gain-reduction history.
 • Limiter: a lookahead brickwall that keeps the output under the ceiling you set.
 • Multiband compressor: two to four bands on phase-aligned crossovers, each with its own settings, solo, mute and bypass.
+• Saturator: adds warmth, grit or edge in up to four bands, each with its own curve (tube, tape, soft or hard clipping, wavefolding or a rectifier), drive, dynamics, tone, mix and level. Oversampling keeps the added harmonics free of aliasing.
 • Gate: silences hum and hiss between phrases or tightens drums, with hold, hysteresis and a sidechain filter.
 • Filter: resonant low pass, high pass, band pass or notch, with drive and a sweeping LFO.
 • De-esser: softens harsh “s” sounds in speech and vocals, with a listen mode.

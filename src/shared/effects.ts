@@ -3,6 +3,7 @@ export type EffectType =
     | 'compressor'
     | 'limiter'
     | 'multiband'
+    | 'saturator'
     | 'gate'
     | 'filter'
     | 'deesser'
@@ -87,6 +88,46 @@ export interface MultibandParams {
     crossovers: number[];
     bands: MultibandBand[];
     kneeDb: number;
+    outputDb: number;
+}
+
+export type SaturationStyle = 'tube' | 'tape' | 'soft' | 'hard' | 'fold' | 'rectify';
+
+export const SATURATION_STYLES: SaturationStyle[] = [
+    'tube',
+    'tape',
+    'soft',
+    'hard',
+    'fold',
+    'rectify',
+];
+
+export const OVERSAMPLING_FACTORS = [1, 2, 4] as const;
+
+export type OversamplingFactor = (typeof OVERSAMPLING_FACTORS)[number];
+
+export const MAX_SATURATOR_BANDS = 4;
+
+export interface SaturatorBand {
+    style: SaturationStyle;
+    driveDb: number;
+    /** -100 to 100: how far the drive follows the band's level (negative: falls with it). */
+    dynamics: number;
+    /** Tilt of the saturated band in dB, positive brightens. */
+    tone: number;
+    mix: number;
+    levelDb: number;
+    solo: boolean;
+    mute: boolean;
+    bypass: boolean;
+}
+
+export interface SaturatorParams {
+    /** Zero to three ascending crossover frequencies, for one to four bands. */
+    crossovers: number[];
+    bands: SaturatorBand[];
+    oversampling: OversamplingFactor;
+    mix: number;
     outputDb: number;
 }
 
@@ -208,6 +249,7 @@ export interface EffectParamsMap {
     compressor: CompressorParams;
     limiter: LimiterParams;
     multiband: MultibandParams;
+    saturator: SaturatorParams;
     gate: GateParams;
     filter: FilterParams;
     deesser: DeesserParams;
@@ -429,6 +471,9 @@ export const SPECS = {
         decimals: 1,
     },
     denoiseSmoothing: { label: 'Smoothing', min: 0, max: 100, default: 50, unit: '%' },
+    satDriveDb: { label: 'Drive', min: 0, max: 36, default: 6, unit: 'dB', decimals: 1 },
+    satDynamics: { label: 'Dynamics', min: -100, max: 100, default: 0, unit: '%' },
+    satTone: { label: 'Tone', min: -12, max: 12, default: 0, unit: 'dB', decimals: 1 },
     targetLufs: { label: 'Target', min: -36, max: -6, default: -14, unit: 'LUFS', decimals: 1 },
     resets: { label: 'Resets', min: 0, max: 1e9, default: 0, unit: '' },
 } satisfies Record<string, NumberSpec>;
@@ -471,6 +516,13 @@ export const EFFECT_INFO: Record<EffectType, EffectInfo> = {
         short: 'MB',
         description: 'Up to four-band compressor with Linkwitz-Riley crossovers',
         color: '#b78bff',
+        category: 'effect',
+    },
+    saturator: {
+        label: 'Saturator',
+        short: 'SAT',
+        description: 'Up to four-band saturation with six curves, dynamics and oversampling',
+        color: '#ff7a59',
         category: 'effect',
     },
     filter: {
@@ -595,6 +647,21 @@ export function defaultMultibandBand(partial: Partial<MultibandBand> = {}): Mult
     };
 }
 
+export function defaultSaturatorBand(partial: Partial<SaturatorBand> = {}): SaturatorBand {
+    return {
+        style: 'tube',
+        driveDb: 6,
+        dynamics: 0,
+        tone: 0,
+        mix: 100,
+        levelDb: 0,
+        solo: false,
+        mute: false,
+        bypass: false,
+        ...partial,
+    };
+}
+
 export function defaultParams<T extends EffectType>(type: T): EffectParamsMap[T] {
     const defaults: EffectParamsMap = {
         eq: {
@@ -628,6 +695,13 @@ export function defaultParams<T extends EffectType>(type: T): EffectParamsMap[T]
                 defaultMultibandBand({ attackMs: 3, releaseMs: 60 }),
             ],
             kneeDb: 6,
+            outputDb: 0,
+        },
+        saturator: {
+            crossovers: [],
+            bands: [defaultSaturatorBand()],
+            oversampling: 2,
+            mix: 100,
             outputDb: 0,
         },
         gate: {

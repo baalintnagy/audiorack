@@ -7,18 +7,19 @@ effects, with a dark, analyzer-driven interface inspired by modern plug-in suite
 
 ## Effects
 
-| Effect       | What it does                                                                                                         |
-| ------------ | -------------------------------------------------------------------------------------------------------------------- |
-| Equalizer    | Up to 12 bands (bell, shelves, 12–48 dB/oct cuts, notch, band pass) edited directly on the live pre/post spectrum.   |
-| Compressor   | Feed-forward soft-knee compressor with peak/RMS detection, sidechain high-pass, auto makeup and parallel mix.        |
-| Limiter      | Lookahead brickwall limiter; the output never exceeds the ceiling.                                                   |
-| Multiband    | 2–4 band compressor on phase-compensated Linkwitz-Riley crossovers, with solo/mute/bypass per band.                  |
-| Gate         | Noise gate with range, attack, hold, release, hysteresis and a sidechain high-pass.                                  |
-| Filter       | Resonant LP/HP/BP/notch filter with drive and a sine/triangle LFO on the cutoff.                                     |
-| De-esser     | Band-pass sidechain detector, split-band or wideband reduction, and a listen mode.                                   |
-| Denoiser     | Spectral noise reduction (STFT) on an adaptive noise floor or a learned noise profile, with listen; ~32 ms latency.  |
-| Volume       | Gain, constant-power pan, stereo width, per-channel polarity and a momentary/short-term loudness bar.                |
-| Bass Booster | Low shelf boost plus a harmonic enhancer that suggests bass on small speakers, optional rumble filter and mono bass. |
+| Effect       | What it does                                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Equalizer    | Up to 12 bands (bell, shelves, 12–48 dB/oct cuts, notch, band pass) edited directly on the live pre/post spectrum.                     |
+| Compressor   | Feed-forward soft-knee compressor with peak/RMS detection, sidechain high-pass, auto makeup and parallel mix.                          |
+| Limiter      | Lookahead brickwall limiter; the output never exceeds the ceiling.                                                                     |
+| Multiband    | 2–4 band compressor on phase-compensated Linkwitz-Riley crossovers, with solo/mute/bypass per band.                                    |
+| Saturator    | 1–4 band saturation (tube, tape, soft, hard, fold, rectify) with drive, dynamics, tone, mix and level per band; 1×/2×/4× oversampling. |
+| Gate         | Noise gate with range, attack, hold, release, hysteresis and a sidechain high-pass.                                                    |
+| Filter       | Resonant LP/HP/BP/notch filter with drive and a sine/triangle LFO on the cutoff.                                                       |
+| De-esser     | Band-pass sidechain detector, split-band or wideband reduction, and a listen mode.                                                     |
+| Denoiser     | Spectral noise reduction (STFT) on an adaptive noise floor or a learned noise profile, with listen; ~32 ms latency.                    |
+| Volume       | Gain, constant-power pan, stereo width, per-channel polarity and a momentary/short-term loudness bar.                                  |
+| Bass Booster | Low shelf boost plus a harmonic enhancer that suggests bass on small speakers, optional rumble filter and mono bass.                   |
 
 ### Analyzers
 
@@ -40,6 +41,11 @@ history shows the last minute against a target (−14, −16, −23 or −24 LUF
 The chain can be reordered by dragging slots, each effect can be bypassed (with a short
 crossfade), and the whole rack can be bypassed for comparison. Factory presets are included;
 your own presets can be saved, exported and imported as JSON.
+
+The header has two rows. The first holds the **Process tab** button with the tab's title, the
+**This tab / All tabs** switch and the window buttons (dock in the side panel, open in a larger
+window). The second holds the preset menu with its save, export and import buttons, **Add**, and
+the bypass button for the whole rack at the end.
 
 ### Parallel groups
 
@@ -73,8 +79,8 @@ focuses the open window. Pop-out windows exist only in the extension, not in dem
 
 The side panel button in the rack header docks the tab's rack in Chrome's side panel, next to the
 page. The panel belongs to that tab: it hides when you switch to another tab and comes back when
-you return. In a narrow panel the header and controls wrap and the master meters move below the
-rack. The pop-out button in the panel moves the rack to a window and closes the panel.
+you return. In a narrow panel the header keeps its two rows (with only the logo and a **+** for
+Add), controls wrap and the master meters move below the rack. The pop-out button in the panel moves the rack to a window and closes the panel.
 
 The pin button in an effect's or group's header keeps it open in the panel. Open panels follow
 the chain strip: left to right, and a parallel group before the effects of its branches, top to
@@ -94,7 +100,7 @@ loaded from the popup; factory presets and presets without pins clear them.
   click the value to type one (`2.5k`, `-6`, …).
 - **EQ display:** double-click to add a band, drag nodes for frequency/gain (Shift locks gain),
   wheel for Q, right-click to delete, Alt-click to toggle.
-- **Multiband display:** drag crossover handles; click a band to edit it.
+- **Multiband and Saturator displays:** drag crossover handles; click a band to edit it.
 
 ## How it works
 

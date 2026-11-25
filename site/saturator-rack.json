@@ -1,0 +1,47 @@
+{
+    "version": 2,
+    "bypass": false,
+    "inputDb": 0,
+    "outputDb": 0,
+    "chain": [
+        {
+            "type": "saturator",
+            "params": {
+                "crossovers": [180, 2800],
+                "bands": [
+                    {
+                        "style": "tape",
+                        "driveDb": 9,
+                        "dynamics": 0,
+                        "tone": 0,
+                        "mix": 100,
+                        "levelDb": 0
+                    },
+                    {
+                        "style": "tube",
+                        "driveDb": 14,
+                        "dynamics": 35,
+                        "tone": -2,
+                        "mix": 80,
+                        "levelDb": -2
+                    },
+                    {
+                        "style": "soft",
+                        "driveDb": 6,
+                        "dynamics": -20,
+                        "tone": 3,
+                        "mix": 60,
+                        "levelDb": 0
+                    }
+                ],
+                "oversampling": 4,
+                "mix": 100,
+                "outputDb": -3
+            }
+        },
+        {
+            "type": "limiter",
+            "params": { "inputDb": 0, "ceilingDb": -1, "releaseMs": 80, "lookaheadMs": 3 }
+        }
+    ]
+}

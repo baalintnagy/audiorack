@@ -9,6 +9,7 @@ import {
     saveUserPresets,
     type UserPreset,
 } from '../../shared/storage';
+import { FileArrowIcon, SaveIcon } from './Controls';
 
 /** A rack as exported to a file, with the side panel pins when there are any. */
 type RackFile = RackState & { pins?: string[] };
@@ -88,6 +89,16 @@ export function PresetMenu({
         setOpen(false);
     };
 
+    const startSaving = () => {
+        setNaming(
+            nextPresetName(current === 'Custom' ? undefined : current, [
+                ...FACTORY_PRESETS.map((preset) => preset.name),
+                ...userPresets.map((preset) => preset.name),
+            ]),
+        );
+        setOpen(true);
+    };
+
     const exportRack = () => {
         const file: RackFile = currentPins.length > 0 ? { ...rack, pins: currentPins } : rack;
         const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
@@ -128,6 +139,35 @@ export function PresetMenu({
                 <span className="preset-name">{current}</span>
                 <span className="caret">▾</span>
             </button>
+            <div className="preset-actions">
+                <button
+                    type="button"
+                    className="ghost icon"
+                    onClick={startSaving}
+                    title="Save as a preset"
+                    aria-label="Save as a preset"
+                >
+                    <SaveIcon />
+                </button>
+                <button
+                    type="button"
+                    className="ghost icon"
+                    onClick={exportRack}
+                    title="Export the rack to a file"
+                    aria-label="Export the rack to a file"
+                >
+                    <FileArrowIcon />
+                </button>
+                <button
+                    type="button"
+                    className="ghost icon"
+                    onClick={() => fileInput.current?.click()}
+                    title="Import a rack from a file"
+                    aria-label="Import a rack from a file"
+                >
+                    <FileArrowIcon up />
+                </button>
+            </div>
             {error && <span className="preset-error">{error}</span>}
             {open && (
                 <div className="menu preset-list" role="menu">
@@ -195,32 +235,6 @@ export function PresetMenu({
                             </button>
                         </form>
                     )}
-                    <div className="menu-actions">
-                        <button
-                            type="button"
-                            className="ghost"
-                            onClick={() =>
-                                setNaming(
-                                    nextPresetName(current === 'Custom' ? undefined : current, [
-                                        ...FACTORY_PRESETS.map((preset) => preset.name),
-                                        ...userPresets.map((preset) => preset.name),
-                                    ]),
-                                )
-                            }
-                        >
-                            Save as…
-                        </button>
-                        <button type="button" className="ghost" onClick={exportRack}>
-                            Export
-                        </button>
-                        <button
-                            type="button"
-                            className="ghost"
-                            onClick={() => fileInput.current?.click()}
-                        >
-                            Import
-                        </button>
-                    </div>
                 </div>
             )}
             <input

@@ -104,6 +104,58 @@ export function ChevronIcon({ right = false }: { right?: boolean }) {
 }
 
 /** A box with an arrow leaving it, for opening something in a window of its own. */
+/** A floppy disk, for saving a preset. */
+export function SaveIcon() {
+    return (
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path
+                d="M2.5 2.5h8.5l2.5 2.5v8.5h-11zM5 2.5v3.5h5.5V2.5M5 13.5V9.5h6v4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+/** An arrow into a tray, for exporting to a file; `up` points it out of the tray, for importing. */
+export function FileArrowIcon({ up = false }: { up?: boolean }) {
+    return (
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path
+                d={
+                    up
+                        ? 'M8 10.5V2M4.8 5.2 8 2l3.2 3.2M2.5 10v3.5h11V10'
+                        : 'M8 2v8.5M4.8 7.3 8 10.5l3.2-3.2M2.5 10v3.5h11V10'
+                }
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+/** The signal path detouring around an effect. */
+export function BypassIcon() {
+    return (
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            <rect x="5.5" y="9" width="5" height="5" rx="1" fill="currentColor" opacity="0.5" />
+            <path
+                d="M1 11.5h2.5C3.5 3.5 12.5 3.5 12.5 11.5H15"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            />
+        </svg>
+    );
+}
+
 export function PopOutIcon() {
     return (
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
@@ -157,9 +209,18 @@ export function ControlRow({ children }: { children: ReactNode }) {
     return <div className="control-row">{children}</div>;
 }
 
-export function ControlGroup({ title, children }: { title?: string; children: ReactNode }) {
+export function ControlGroup({
+    title,
+    className,
+    children,
+}: {
+    title?: string;
+    /** `subpanel` nests the group inside another one. */
+    className?: string;
+    children: ReactNode;
+}) {
     return (
-        <div className="control-group">
+        <div className={className ? `control-group ${className}` : 'control-group'}>
             {title && <div className="control-group-title">{title}</div>}
             <div className="control-group-body">{children}</div>
         </div>

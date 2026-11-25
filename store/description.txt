@@ -8,15 +8,17 @@ Turn down videos that are too loud, bring up quiet dialogue, clean hiss and hum 
 • Parallel groups: split the signal into up to four branches with their own effects, and mix them on a small mixer with faders, meters, pan, mute, solo and polarity. Branches are delay-compensated, which makes parallel compression easy.
 • A rack per tab: each tab starts from your shared rack and keeps its own changes, so a podcast can get a voice chain while music gets a bass-heavy one. Or switch a tab to follow the shared rack.
 • Side panel: dock the rack next to the page you are listening to and pin the effects you want in view. Pinned effects stack in chain order.
+• Hands-on displays: drag curves, lines and nodes right on the displays. A node sets two settings as you move it and a third with its ring, like the threshold, ratio and knee of the compressor.
+• Your colors: give every effect in the chain an accent color of its own.
 • Global bypass for instant before/after comparison, plus input and output gain with level meters.
 
 ★ ELEVEN EFFECTS
-• Equalizer: up to 12 bands (bell, shelves, notch, band pass and 12–48 dB/oct cuts), dragged right on top of a live spectrum.
+• Equalizer: up to 12 bands (bell, shelves, notch, band pass and 12–48 dB/oct cuts), dragged right on top of a live spectrum, with a ring on each point for its width.
 • Compressor: soft knee, peak or RMS detection, sidechain high-pass, auto makeup and a parallel mix knob, with a transfer curve and gain-reduction history.
 • Limiter: a lookahead brickwall that keeps the output under the ceiling you set.
 • Multiband compressor: two to four bands on phase-aligned crossovers, each with its own settings, solo, mute and bypass.
 • Saturator: adds warmth, grit or edge in up to four bands, each with its own curve (tube, tape, soft or hard clipping, wavefolding or a rectifier), drive, dynamics, tone, mix and level. Oversampling keeps the added harmonics free of aliasing.
-• Gate: silences hum and hiss between phrases or tightens drums, with hold, hysteresis and a sidechain filter.
+• Gate: silences hum and hiss between phrases or tightens drums, with hold, hysteresis, a sidechain filter and a transfer curve that shows where it opens and closes.
 • Filter: resonant low pass, high pass, band pass or notch, with drive and a sweeping LFO.
 • De-esser: softens harsh “s” sounds in speech and vocals, with a listen mode.
 • Denoiser: reduces steady noise such as hiss, hum and fans. Let it follow the noise floor by itself, or play a few seconds of noise alone, press “Learn noise” and it removes exactly that profile. Listen mode lets you hear what it takes out.

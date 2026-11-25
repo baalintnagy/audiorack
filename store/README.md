@@ -43,8 +43,8 @@ Screenshots, in order:
 3. `3-spectrogram.jpg`: spectrogram of the demo track
 4. `4-stereo-image.jpg`: stereo scope next to the image by frequency, with correlation, balance
    and width
-5. `5-side-panel.jpg`: the rack docked in the side panel next to a video page, with pinned
-   effects stacked in chain order
+5. `5-side-panel.jpg`: the rack docked in the side panel next to a video page, with the pinned
+   equalizer and spectrogram stacked in chain order
 
 The store accepts at most five screenshots; replace the uploaded set in the dashboard when they
 change.
@@ -119,6 +119,9 @@ that rack and switched on for their own pictures; for the denoiser the page play
 with added hiss and hum. That rack is full, so the saturator's picture comes from a small
 rack of its own, [`site/saturator-rack.json`](../site/saturator-rack.json), played last. The side panel screenshot is staged by
 [`promo/side-panel.html`](promo/side-panel.html): a sample video page with the rack docked in a
-600 px panel next to it, three effects pinned and the equalizer picked. The same scene is also
-saved at 800×600 as the website's `site/images/side-panel.jpg`. The promo tiles are rendered from
+panel next to it, the equalizer and the spectrogram pinned and the equalizer picked. The panel is
+820 px wide, so the equalizer's controls fit on one row, and the scene is laid out larger than it
+is captured (at 75%) so both panels fit; it is saved again at 800×600 (60%)
+as the website's `site/images/side-panel.jpg`. `npm run store:assets -- --side-panel` captures
+only this scene, and `-- --tiles` only the promo tiles. The promo tiles are rendered from
 the HTML pages in [`promo/`](promo), and the marquee embeds the first screenshot.

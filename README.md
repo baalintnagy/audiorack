@@ -14,7 +14,7 @@ effects, with a dark, analyzer-driven interface inspired by modern plug-in suite
 | Limiter      | Lookahead brickwall limiter; the output never exceeds the ceiling.                                                                     |
 | Multiband    | 2–4 band compressor on phase-compensated Linkwitz-Riley crossovers, with solo/mute/bypass per band.                                    |
 | Saturator    | 1–4 band saturation (tube, tape, soft, hard, fold, rectify) with drive, dynamics, tone, mix and level per band; 1×/2×/4× oversampling. |
-| Gate         | Noise gate with range, attack, hold, release, hysteresis and a sidechain high-pass.                                                    |
+| Gate         | Noise gate with range, attack, hold, release, hysteresis and a sidechain high-pass; a transfer curve shows the hysteresis loop.        |
 | Filter       | Resonant LP/HP/BP/notch filter with drive and a sine/triangle LFO on the cutoff.                                                       |
 | De-esser     | Band-pass sidechain detector, split-band or wideband reduction, and a listen mode.                                                     |
 | Denoiser     | Spectral noise reduction (STFT) on an adaptive noise floor or a learned noise profile, with listen; ~32 ms latency.                    |

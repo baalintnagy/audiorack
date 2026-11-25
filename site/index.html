@@ -76,7 +76,9 @@
                 <p class="section-lead">
                     Add effects, drag them into the order you want, or side by side in parallel
                     branches, and bypass any of them with a click. Bypassing crossfades, so there
-                    are no clicks or pops.
+                    are no clicks or pops. The displays are controls too: drag a node to set two
+                    settings at once and its ring for a third, or drag a threshold line, and give
+                    each effect an accent color of your own.
                 </p>
                 <div class="modules">
                     <article class="module" style="--tint: #4fb3ff">
@@ -91,8 +93,8 @@
                         <p>
                             Up to 12 bands (bells, shelves, notch, band pass and 12–48 dB/oct cuts)
                             drawn right on the live spectrum before and after the EQ. Double-click
-                            to add a band, drag it to set its frequency and gain, and use the mouse
-                            wheel for its width.
+                            to add a band, drag its point to set the frequency and gain, and its
+                            ring for the width.
                         </p>
                     </article>
                     <article class="module" style="--tint: #ffb347">
@@ -109,7 +111,8 @@
                             by the ratio. The transfer curve shows the setting and the history shows
                             the level and the gain reduction as they happen. Peak or RMS detection,
                             a sidechain filter that ignores the bass, auto makeup gain and a mix
-                            knob for parallel compression.
+                            knob for parallel compression. Drag the knee for the threshold and
+                            ratio, and its ring for a softer knee.
                         </p>
                     </article>
                     <article class="module" style="--tint: #ff5e7a">
@@ -125,7 +128,7 @@
                             A brickwall for the end of the chain: the output never goes above the
                             ceiling. It looks a few milliseconds ahead, so peaks are caught smoothly
                             instead of clipped, and the drive pushes the level into it for a louder
-                            sound.
+                            sound. Drag the ceiling line to set it.
                         </p>
                     </article>
                     <article class="module" style="--tint: #b78bff">
@@ -140,8 +143,9 @@
                         <p>
                             Splits the sound into two to four bands on phase-aligned crossovers and
                             compresses each one on its own, so a booming bass no longer pushes down
-                            the voice. Drag the crossovers in the display; solo, mute or bypass any
-                            band.
+                            the voice. Drag the crossovers in the display, and each band's node up
+                            for its threshold, sideways for its ratio and its ring for makeup gain;
+                            solo, mute or bypass any band.
                         </p>
                     </article>
                     <article class="module" style="--tint: #ff7a59">
@@ -157,8 +161,9 @@
                             Adds warmth, grit or edge, across the whole signal or in up to four
                             bands. Each band has its own curve (tube, tape, soft or hard clipping,
                             wavefolding or a rectifier), drive, tone, mix and level, and dynamics
-                            that let the drive follow how loud the band plays. Up to 4× oversampling
-                            keeps the added harmonics free of aliasing.
+                            that let the drive follow how loud the band plays: drag a band's node up
+                            for drive, sideways for tone and its ring for dynamics. Up to 4×
+                            oversampling keeps the added harmonics free of aliasing.
                         </p>
                     </article>
                     <article class="module" style="--tint: #62f08a">
@@ -167,14 +172,15 @@
                             width="800"
                             height="600"
                             loading="lazy"
-                            alt="Gate closing between drum hits: level history with threshold line and gate gain"
+                            alt="Gate with its transfer curve and hysteresis loop, the level history with its threshold line and the gate gain"
                         />
                         <h3>Gate</h3>
                         <p>
                             Turns the sound down while it stays below the threshold, to silence hum
                             and hiss between phrases or to tighten drums. Hold and hysteresis keep
                             it from chattering, and the sidechain filter keeps rumble from opening
-                            it.
+                            it. Its transfer curve shows where it opens and closes: drag the node
+                            for the threshold and range, its ring for the hysteresis.
                         </p>
                     </article>
                     <article class="module" style="--tint: #3fe0c5">
@@ -188,8 +194,9 @@
                         <h3>Filter</h3>
                         <p>
                             A resonant low pass, high pass, band pass or notch with 12–48 dB/oct
-                            slopes and drive. The LFO sweeps the cutoff for slowly moving filter
-                            effects, and the mix knob blends in the dry sound.
+                            slopes and drive. Drag the handle for cutoff and resonance and its ring
+                            for drive. The LFO sweeps the cutoff for slowly moving filter effects,
+                            and the mix knob blends in the dry sound.
                         </p>
                     </article>
                     <article class="module" style="--tint: #ffd84f">
@@ -204,8 +211,9 @@
                         <p>
                             Softens harsh “s” and “sh” sounds in speech and vocals. It listens to a
                             narrow band around the sibilance and turns down only that band, or the
-                            whole signal in wideband mode. Listen mode lets you hear exactly what it
-                            catches.
+                            whole signal in wideband mode. Drag the handle for the frequency and
+                            range, its ring for the threshold. Listen mode lets you hear exactly
+                            what it catches.
                         </p>
                     </article>
                     <article class="module" style="--tint: #7fd1b9">
@@ -221,8 +229,9 @@
                             Reduces steady background noise such as hiss, hum and fan noise. It
                             follows the noise floor of each frequency by itself, or press Learn
                             noise while only the noise plays and it removes that profile, which
-                            spares steady tones the adaptive mode could mistake for noise. Listen
-                            mode lets you hear what it takes out.
+                            spares steady tones the adaptive mode could mistake for noise. Drag the
+                            reduction limit and the threshold right on the display; listen mode lets
+                            you hear what it takes out.
                         </p>
                     </article>
                     <article class="module" style="--tint: #9fe870">
@@ -237,7 +246,8 @@
                         <p>
                             Gain, pan, stereo width from mono to extra wide and a polarity flip for
                             each channel, with a loudness bar that shows the momentary and
-                            short-term loudness of its output in LUFS.
+                            short-term loudness of its output in LUFS. Drag the handle on the sound
+                            stage to pan and widen the image.
                         </p>
                     </article>
                     <article class="module" style="--tint: #ff8a3d">
@@ -251,7 +261,8 @@
                         <h3>Bass Booster</h3>
                         <p>
                             A low shelf boost plus generated harmonics that make the bass audible
-                            even on laptop and phone speakers. A rumble filter keeps the boost
+                            even on laptop and phone speakers. Drag the handle for frequency and
+                            boost, its ring for the harmonics. A rumble filter keeps the boost
                             clean, and mono bass centers the low end.
                         </p>
                     </article>
@@ -309,10 +320,10 @@
                         width="800"
                         height="600"
                         loading="lazy"
-                        alt="The rack docked in the browser's side panel next to a video page, with the equalizer and a pinned compressor stacked below the chain"
+                        alt="The rack docked in the browser's side panel next to a video page, with the pinned equalizer and spectrogram stacked below the chain"
                     />
                     <figcaption>
-                        Equalizer picked between pinned effects, next to the page that plays.
+                        The equalizer and the spectrogram pinned, next to the page that plays.
                     </figcaption>
                 </figure>
                 <div class="feature-text">
@@ -401,7 +412,7 @@
                             An EBU R128 loudness meter: momentary, short-term and gated integrated
                             loudness, loudness range and 4× oversampled true peak. Measure a whole
                             show against a target such as −14 LUFS for streaming or −23 LUFS for
-                            broadcast.
+                            broadcast, and drag the target line to set your own.
                         </p>
                     </article>
                 </div>

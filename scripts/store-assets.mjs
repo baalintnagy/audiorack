@@ -107,13 +107,17 @@ const LOAD_NOISY_DEMO = `(async () => {
     return true;
 })()`;
 
-// The side panel scene: a sample video page with the rack docked next to it, the equalizer picked
-// among pinned effects and the panel scrolled to where the equalizer meets the compressor below.
-const SIDE_PANEL = { pins: ['EQ', 'COMP', 'IMAGE'], slot: 'EQ', scrollTop: 330, settle: 8000 };
+// The side panel scene: a sample video page with the rack docked next to it, the equalizer and the
+// spectrogram pinned, the equalizer picked, and the panel scrolled to the top of the equalizer, with
+// the spectrogram below it. The settle time fills the spectrogram.
+const SIDE_PANEL = { pins: ['EQ', 'SGRAM'], slot: 'EQ', top: 'EQ', settle: 20000 };
+/** Panel titles of the slots the side panel scene refers to. */
+const SIDE_PANEL_TITLES = { EQ: 'Equalizer' };
+// Laid out larger than they are captured, so both panels fit: 1280×800 for the store from a
+// 1707×1067 layout, and 800×600 like the other pictures of the website from 1333×1000.
 const SIDE_PANEL_SHOTS = [
-    { path: join(SCREENSHOT_DIR, '5-side-panel.jpg'), width: 1280, height: 800, scale: 1 },
-    // 800×600 like the other pictures of the website, laid out at 1067×800.
-    { path: join(SITE_IMAGE_DIR, 'side-panel.jpg'), width: 1067, height: 800, scale: 0.75 },
+    { path: join(SCREENSHOT_DIR, '5-side-panel.jpg'), width: 1707, height: 1067, scale: 0.75 },
+    { path: join(SITE_IMAGE_DIR, 'side-panel.jpg'), width: 1333, height: 1000, scale: 0.6 },
 ];
 
 const TILES = [
@@ -355,7 +359,16 @@ async function captureSidePanel(page, origin, { path, width, height, scale }) {
         document.querySelectorAll('.chain-frame *').forEach((element) => {
             element.scrollLeft = 0;
         });
-        document.querySelector('.main').scrollTop = ${SIDE_PANEL.scrollTop};
+        const main = document.querySelector('.main');
+        const first = [...document.querySelectorAll('.panel')].find((panel) =>
+            panel.querySelector('.panel-title')?.textContent ===
+                ${JSON.stringify(SIDE_PANEL_TITLES[SIDE_PANEL.top])},
+        );
+        // The chain strip stays on top while the panels scroll under it.
+        const strip = document.querySelector('.chain-frame')?.getBoundingClientRect().bottom ?? 0;
+        if (first) {
+            main.scrollTop += first.getBoundingClientRect().top - strip - 8;
+        }
         return true;
     })(${PANEL_DOCUMENT})`);
     await page.evaluate(dressAsExtension(PANEL_DOCUMENT));
@@ -432,11 +445,23 @@ const origin = server.resolvedUrls.local[0].replace(/\/$/, '');
 const browser = await launchBrowser();
 try {
     const page = await Page.open(browser.port);
-    // `--tiles` renders only the promo tiles and keeps the screenshots they embed.
-    if (!process.argv.includes('--tiles')) {
-        await captureScreenshots(page, origin);
+    // `--tiles` renders only the promo tiles and keeps the screenshots they embed;
+    // `--side-panel` only the side panel scene, from the store rack.
+    if (process.argv.includes('--side-panel')) {
+        // The scene loads whichever rack the page stored last.
+        await page.goto(`${origin}/rack.html`, 1280, 800);
+        await page.evaluate(
+            `localStorage.setItem('audiorack:rack', ${JSON.stringify(RACK)}); true`,
+        );
+        for (const shot of SIDE_PANEL_SHOTS) {
+            await captureSidePanel(page, origin, shot);
+        }
+    } else {
+        if (!process.argv.includes('--tiles')) {
+            await captureScreenshots(page, origin);
+        }
+        await captureTiles(page, origin);
     }
-    await captureTiles(page, origin);
     page.close();
 } finally {
     browser.close();

@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { countEffects } from '../../shared/chain';
 import type { RackState } from '../../shared/effects';
 import { normalizeRack } from '../../shared/normalize';
-import { FACTORY_PRESETS, MAX_PRESET_NAME, nextPresetName } from '../../shared/presets';
+import {
+    FACTORY_PRESETS,
+    MAX_PRESET_NAME,
+    moveListItem,
+    nextPresetName,
+    upsertPreset,
+} from '../../shared/presets';
 import {
     loadUserPresets,
     presetPins,
     saveUserPresets,
     type UserPreset,
 } from '../../shared/storage';
-import { FileArrowIcon, SaveIcon } from './Controls';
+import { FileArrowIcon, GripIcon, SaveIcon } from './Controls';
 
 /** A rack as exported to a file, with the side panel pins when there are any. */
 type RackFile = RackState & { pins?: string[] };
@@ -18,6 +24,14 @@ type RackFile = RackState & { pins?: string[] };
  * Factory presets, user presets and files. User presets and files also keep the items pinned in
  * the side panel; loading one replaces the pins, and a preset without pins clears them.
  */
+/** Drag data type of a preset being reordered in the menu. */
+const PRESET_DRAG_TYPE = 'application/x-audiorack-preset';
+
+/** Height limits of the open menu, and the room it leaves below it in the window. */
+const MENU_MAX_HEIGHT = 430;
+const MENU_MIN_HEIGHT = 160;
+const MENU_MARGIN = 8;
+
 export function PresetMenu({
     rack,
     pins,
@@ -33,33 +47,68 @@ export function PresetMenu({
     const [error, setError] = useState<string>();
     const [naming, setNaming] = useState<string | undefined>(undefined);
     const ref = useRef<HTMLDivElement>(null);
+    const menu = useRef<HTMLDivElement>(null);
+    // Reordering your presets: the one being dragged, and where it would land (an insertion
+    // point in the list).
+    const dragFrom = useRef<number | undefined>(undefined);
+    const [dropAt, setDropAt] = useState<number>();
+    // The preset moved with the keyboard, to give it focus again in its new place.
+    const refocus = useRef<string | undefined>(undefined);
     const fileInput = useRef<HTMLInputElement>(null);
     const nameInput = useRef<HTMLInputElement>(null);
     const nameShown = naming !== undefined;
 
-    // Select the suggested name so typing replaces it.
-    useEffect(() => {
-        if (nameShown) {
-            nameInput.current?.focus();
-            nameInput.current?.select();
+    // Keep the menu within the window: in a short popup or side panel it scrolls instead of
+    // running past the bottom edge, where the name field would be out of reach.
+    useLayoutEffect(() => {
+        const element = menu.current;
+        if (!open || !element) {
+            return;
         }
-    }, [nameShown]);
+        const fit = () => {
+            const room = window.innerHeight - element.getBoundingClientRect().top - MENU_MARGIN;
+            element.style.maxHeight = `${Math.max(MENU_MIN_HEIGHT, Math.min(MENU_MAX_HEIGHT, room))}px`;
+        };
+        fit();
+        window.addEventListener('resize', fit);
+        return () => window.removeEventListener('resize', fit);
+    }, [open]);
+
+    // Select the suggested name so typing replaces it. The field stays at the bottom of the menu;
+    // focusing it must not scroll the page, which would slide the header out of view.
+    useEffect(() => {
+        if (nameShown && open) {
+            nameInput.current?.focus({ preventScroll: true });
+            nameInput.current?.select();
+            nameInput.current?.scrollIntoView({ block: 'nearest' });
+        }
+    }, [nameShown, open]);
 
     useEffect(() => {
         void loadUserPresets().then(setUserPresets);
     }, []);
 
     useEffect(() => {
+        const name = refocus.current;
+        refocus.current = undefined;
+        if (name !== undefined) {
+            menu.current
+                ?.querySelector<HTMLButtonElement>(`[data-preset="${CSS.escape(name)}"]`)
+                ?.focus();
+        }
+    }, [userPresets]);
+
+    useEffect(() => {
         if (!open) {
             return;
         }
-        const close = (event: MouseEvent) => {
+        const outside = (event: MouseEvent) => {
             if (!ref.current?.contains(event.target as Node)) {
-                setOpen(false);
+                close();
             }
         };
-        window.addEventListener('mousedown', close);
-        return () => window.removeEventListener('mousedown', close);
+        window.addEventListener('mousedown', outside);
+        return () => window.removeEventListener('mousedown', outside);
     }, [open]);
 
     const persist = (presets: UserPreset[]) => {
@@ -70,10 +119,16 @@ export function PresetMenu({
     // Pins of items that are no longer in the rack are left out.
     const currentPins = presetPins(rack, pins);
 
+    /** Closes the menu and drops an unfinished preset name, so saving starts afresh next time. */
+    const close = () => {
+        setOpen(false);
+        setNaming(undefined);
+    };
+
     const load = (next: RackState, nextPins: string[], name: string) => {
         onLoad(next, nextPins, name);
         setCurrent(name);
-        setOpen(false);
+        close();
     };
 
     const saveAs = (raw: string) => {
@@ -84,9 +139,22 @@ export function PresetMenu({
         }
         const preset: UserPreset =
             currentPins.length > 0 ? { name, rack, pins: currentPins } : { name, rack };
-        persist([...userPresets.filter((item) => item.name !== name), preset]);
+        persist(upsertPreset(userPresets, preset));
         setCurrent(name);
-        setOpen(false);
+        close();
+    };
+
+    /** Moves your preset at `from` to the insertion point `to`, and saves the new order. */
+    const reorder = (from: number, to: number) => {
+        const next = moveListItem(userPresets, from, to);
+        if (next !== userPresets) {
+            persist(next);
+        }
+    };
+
+    const endDrag = () => {
+        dragFrom.current = undefined;
+        setDropAt(undefined);
     };
 
     const startSaving = () => {
@@ -108,7 +176,7 @@ export function PresetMenu({
         link.download = `${current.replace(/[^\w-]+/g, '_') || 'audiorack'}.audiorack.json`;
         link.click();
         URL.revokeObjectURL(url);
-        setOpen(false);
+        close();
     };
 
     const importRack = async (file: File) => {
@@ -133,7 +201,7 @@ export function PresetMenu({
                 className="preset-button"
                 aria-haspopup="menu"
                 aria-expanded={open}
-                onClick={() => setOpen(!open)}
+                onClick={() => (open ? close() : setOpen(true))}
             >
                 <span className="preset-caption">Preset</span>
                 <span className="preset-name">{current}</span>
@@ -170,7 +238,7 @@ export function PresetMenu({
             </div>
             {error && <span className="preset-error">{error}</span>}
             {open && (
-                <div className="menu preset-list" role="menu">
+                <div className="menu preset-list" role="menu" ref={menu}>
                     <div className="menu-heading">Factory</div>
                     {FACTORY_PRESETS.map((preset) => (
                         <button
@@ -187,13 +255,68 @@ export function PresetMenu({
                         </button>
                     ))}
                     {userPresets.length > 0 && <div className="menu-heading">Yours</div>}
-                    {userPresets.map((preset) => (
-                        <div className="menu-item-row" key={preset.name}>
+                    {userPresets.map((preset, index) => (
+                        <div
+                            className={[
+                                'menu-item-row',
+                                'reorderable',
+                                dropAt === index ? 'drop-before' : '',
+                                dropAt === userPresets.length && index === userPresets.length - 1
+                                    ? 'drop-after'
+                                    : '',
+                            ].join(' ')}
+                            key={preset.name}
+                            draggable
+                            title="Drag to reorder · Alt+↑/↓ to move"
+                            onDragStart={(event) => {
+                                dragFrom.current = index;
+                                event.dataTransfer.effectAllowed = 'move';
+                                event.dataTransfer.setData(PRESET_DRAG_TYPE, preset.name);
+                            }}
+                            onDragOver={(event) => {
+                                if (dragFrom.current === undefined) {
+                                    return;
+                                }
+                                event.preventDefault();
+                                event.dataTransfer.dropEffect = 'move';
+                                const box = event.currentTarget.getBoundingClientRect();
+                                const at =
+                                    event.clientY < box.top + box.height / 2 ? index : index + 1;
+                                if (at !== dropAt) {
+                                    setDropAt(at);
+                                }
+                            }}
+                            onDrop={(event) => {
+                                event.preventDefault();
+                                if (dragFrom.current !== undefined && dropAt !== undefined) {
+                                    reorder(dragFrom.current, dropAt);
+                                }
+                                endDrag();
+                            }}
+                            onDragEnd={endDrag}
+                        >
+                            <span className="drag-grip">
+                                <GripIcon />
+                            </span>
                             <button
                                 type="button"
                                 role="menuitem"
                                 className="menu-item"
+                                data-preset={preset.name}
                                 onClick={() => load(preset.rack, preset.pins ?? [], preset.name)}
+                                onKeyDown={(event) => {
+                                    const step =
+                                        event.altKey && event.key === 'ArrowUp'
+                                            ? -1
+                                            : event.altKey && event.key === 'ArrowDown'
+                                              ? 2
+                                              : 0;
+                                    if (step !== 0) {
+                                        event.preventDefault();
+                                        refocus.current = preset.name;
+                                        reorder(index, index + step);
+                                    }
+                                }}
                             >
                                 <span className="menu-item-text">
                                     <strong>{preset.name}</strong>

@@ -40,7 +40,8 @@ history shows the last minute against a target (−14, −16, −23 or −24 LUF
 
 The chain can be reordered by dragging slots, each effect can be bypassed (with a short
 crossfade), and the whole rack can be bypassed for comparison. Factory presets are included;
-your own presets can be saved, exported and imported as JSON.
+your own presets can be saved, exported and imported as JSON, and put in any order by dragging
+them in the preset menu (or with Alt+↑/↓). Saving over a preset keeps its place.
 
 The header has two rows. The first holds the **Process tab** button with the tab's title, the
 **This tab / All tabs** switch and the window buttons (dock in the side panel, open in a larger

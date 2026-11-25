@@ -103,7 +103,17 @@ export function ChevronIcon({ right = false }: { right?: boolean }) {
     );
 }
 
-/** A box with an arrow leaving it, for opening something in a window of its own. */
+/** Two columns of dots, marking something that can be dragged to reorder it. */
+export function GripIcon() {
+    return (
+        <svg viewBox="0 0 10 16" width="8" height="14" aria-hidden="true">
+            {[3, 7].flatMap((x) =>
+                [3, 8, 13].map((y) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.2" />),
+            )}
+        </svg>
+    );
+}
+
 /** A floppy disk, for saving a preset. */
 export function SaveIcon() {
     return (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_PRESET_NAME, nextPresetName } from '../src/shared/presets';
+import { MAX_PRESET_NAME, moveListItem, nextPresetName, upsertPreset } from '../src/shared/presets';
 
 describe('preset naming', () => {
     it('counts "Preset" names when the rack did not come from a preset', () => {
@@ -17,5 +17,38 @@ describe('preset naming', () => {
         const name = nextPresetName('x'.repeat(MAX_PRESET_NAME), []);
         expect(name).toHaveLength(MAX_PRESET_NAME);
         expect(name.endsWith(' 2')).toBe(true);
+    });
+});
+
+describe('preset order', () => {
+    const list = ['a', 'b', 'c', 'd'];
+
+    it('moves an item to an insertion point', () => {
+        expect(moveListItem(list, 0, 4)).toEqual(['b', 'c', 'd', 'a']);
+        expect(moveListItem(list, 3, 0)).toEqual(['d', 'a', 'b', 'c']);
+        expect(moveListItem(list, 1, 3)).toEqual(['a', 'c', 'b', 'd']);
+        expect(moveListItem(list, 2, 1)).toEqual(['a', 'c', 'b', 'd']);
+    });
+
+    it('leaves the list alone when the item stays put or the index is bad', () => {
+        expect(moveListItem(list, 1, 1)).toBe(list);
+        expect(moveListItem(list, 1, 2)).toBe(list);
+        expect(moveListItem(list, 7, 0)).toBe(list);
+    });
+
+    it('overwrites a preset in place and adds new ones last', () => {
+        const presets = [{ name: 'One' }, { name: 'Two' }, { name: 'Three' }];
+        const replaced = { name: 'Two', version: 2 };
+        expect(upsertPreset<{ name: string; version?: number }>(presets, replaced)).toEqual([
+            { name: 'One' },
+            replaced,
+            { name: 'Three' },
+        ]);
+        expect(upsertPreset(presets, { name: 'Four' }).map((preset) => preset.name)).toEqual([
+            'One',
+            'Two',
+            'Three',
+            'Four',
+        ]);
     });
 });

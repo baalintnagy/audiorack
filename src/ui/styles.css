@@ -741,6 +741,44 @@ button:disabled {
     gap: 4px;
 }
 
+/* Your presets: a grip to drag them by, and a line where a dragged one would land. */
+.menu-item-row.reorderable {
+    position: relative;
+    gap: 2px;
+}
+
+.drag-grip {
+    display: flex;
+    flex: none;
+    padding: 0 2px 0 4px;
+    color: var(--text-faint);
+    fill: currentColor;
+    cursor: grab;
+}
+
+.menu-item-row.reorderable:hover .drag-grip {
+    color: var(--text-dim);
+}
+
+.menu-item-row.drop-before::before,
+.menu-item-row.drop-after::after {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--accent);
+    content: '';
+}
+
+.menu-item-row.drop-before::before {
+    top: -1px;
+}
+
+.menu-item-row.drop-after::after {
+    bottom: -1px;
+}
+
 .menu-item-text {
     display: flex;
     flex-direction: column;
@@ -759,12 +797,16 @@ button:disabled {
     box-shadow: 0 0 8px currentColor;
 }
 
+/* Pinned to the bottom of the menu, so the name field is in view however long the list is. */
 .menu-save {
+    position: sticky;
+    bottom: -6px;
     display: flex;
     gap: 6px;
-    padding: 8px 4px 2px;
+    padding: 8px 4px 6px;
     border-top: 1px solid var(--border);
-    margin-top: 6px;
+    margin: 6px 0 -6px;
+    background: #1a1e26;
 }
 
 .menu-save input {

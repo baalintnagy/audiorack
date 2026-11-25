@@ -186,3 +186,30 @@ export function nextPresetName(base: string | undefined, taken: string[]): strin
     }
     return named(counter);
 }
+
+/**
+ * Moves the item at `from` so it lands at `to`, an insertion point in the original list
+ * (0 before the first item, `list.length` after the last). Returns the list itself when nothing
+ * moves.
+ */
+export function moveListItem<T>(list: T[], from: number, to: number): T[] {
+    if (from < 0 || from >= list.length) {
+        return list;
+    }
+    const target = Math.min(Math.max(to, 0), list.length);
+    // Dropping an item right before or after itself leaves it where it is.
+    if (target === from || target === from + 1) {
+        return list;
+    }
+    const rest = list.filter((_, index) => index !== from);
+    const at = target > from ? target - 1 : target;
+    return [...rest.slice(0, at), list[from], ...rest.slice(at)];
+}
+
+/** Saves `preset` under its name: in place of a preset of the same name, else last. */
+export function upsertPreset<T extends { name: string }>(presets: T[], preset: T): T[] {
+    const index = presets.findIndex((item) => item.name === preset.name);
+    return index < 0
+        ? [...presets, preset]
+        : presets.map((item, position) => (position === index ? preset : item));
+}

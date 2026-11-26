@@ -73,8 +73,12 @@ export function drawGrid(
     ctx.restore();
 }
 
-const SPECTRUM_FLOOR = -96;
-const SPECTRUM_CEILING = -6;
+/**
+ * The spectrum levels at the bottom and the top of a display, in dBFS, where a full-scale sine
+ * reads 0 dB as on the Spectrum analyzer.
+ */
+const SPECTRUM_FLOOR = -82;
+const SPECTRUM_CEILING = 8;
 
 /** Draws a log-spaced spectrum (from telemetry) as a filled area. */
 export function drawSpectrum(

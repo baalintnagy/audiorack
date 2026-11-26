@@ -4,6 +4,7 @@ import { ControlGroup } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { DynamicsHistory, ReductionMeter } from '../components/Meters';
 import type { EditorProps } from './types';
+import { outputPeak } from '../telemetry';
 
 export function LimiterEditor({ effect, setParams, color }: EditorProps<'limiter'>) {
     const p = effect.params;
@@ -13,6 +14,7 @@ export function LimiterEditor({ effect, setParams, color }: EditorProps<'limiter
             <div className="display split">
                 <DynamicsHistory
                     reduction={reduction}
+                    level={(telemetry) => outputPeak(telemetry, effect.id)}
                     color={color}
                     thresholdDb={p.ceilingDb}
                     range={30}

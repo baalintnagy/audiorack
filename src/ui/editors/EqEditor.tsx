@@ -28,7 +28,7 @@ import {
     yToDb,
 } from '../graph';
 import { formatFrequency, fromNormalized, toNormalized } from '../format';
-import { useTelemetryStore } from '../telemetry';
+import { signalOf, useTelemetryStore } from '../telemetry';
 import { useCanvas } from '../useCanvas';
 import { BAND_COLORS, type EditorProps } from './types';
 
@@ -129,16 +129,18 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
     const ref = useCanvas(
         ({ ctx, width, height, telemetry }) => {
             size.current = { width, height };
+            // The spectra going into and coming out of this equalizer, not the rack.
+            const own = signalOf(telemetry, effect.id);
             const sampleRate = telemetry?.sampleRate ?? store.sampleRate;
             const frequencies = frequenciesFor(width);
             const toY = (db: number) => dbToY(db, height, range);
             drawGrid(ctx, width, height, { dbRange: range, dbStep: range <= 6 ? 2 : range / 3 });
             if (showPre) {
-                drawSpectrum(ctx, telemetry?.pre, width, height, css('--spectrum-pre'));
+                drawSpectrum(ctx, own?.pre, width, height, css('--spectrum-pre'));
             }
             drawSpectrum(
                 ctx,
-                telemetry?.post,
+                own?.post,
                 width,
                 height,
                 css('--spectrum-post'),

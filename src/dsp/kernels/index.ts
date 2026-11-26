@@ -8,6 +8,7 @@ import { EqKernel } from './eq';
 import { FilterKernel } from './filter';
 import { GateKernel } from './gate';
 import type { Kernel } from './kernel';
+import { LevelerKernel } from './leveler';
 import { LimiterKernel } from './limiter';
 import { LoudnessKernel } from './loudness';
 import { MultibandKernel } from './multiband';
@@ -22,6 +23,7 @@ export const KERNELS: KernelFactories = {
     eq: EqKernel,
     compressor: CompressorKernel,
     limiter: LimiterKernel,
+    leveler: LevelerKernel,
     multiband: MultibandKernel,
     saturator: SaturatorKernel,
     gate: GateKernel,

@@ -12,9 +12,8 @@ function frame(sampleRate: number): Telemetry {
             outputPeak: [0, 0],
             outputRms: [0, 0],
             effects: {},
+            signals: {},
         },
-        pre: [],
-        post: [],
     };
 }
 

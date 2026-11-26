@@ -5,6 +5,7 @@ import { ControlGroup, Segmented } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { formatLoudness } from '../components/Meters';
 import { drawHandleLine } from '../display/draw';
+import { drawLevelGrid, strokeHistory } from '../display/history';
 import { LINE_GRAB, settingHandle } from '../display/handles';
 import { useCanvasDrag } from '../display/pointer';
 import { css, withAlpha } from '../graph';
@@ -76,18 +77,8 @@ function LoudnessHistory({
                 ((HISTORY_MAX - Math.max(HISTORY_MIN, Math.min(HISTORY_MAX, lufs))) /
                     (HISTORY_MAX - HISTORY_MIN)) *
                 height;
+            drawLevelGrid(ctx, width, toY, { min: HISTORY_MIN, max: HISTORY_MAX, step: 6 });
             ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
-            ctx.lineWidth = 1;
-            for (let lufs = HISTORY_MAX - 6; lufs > HISTORY_MIN; lufs -= 6) {
-                const y = Math.round(toY(lufs)) + 0.5;
-                ctx.strokeStyle = css('--grid');
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(width, y);
-                ctx.stroke();
-                ctx.fillStyle = css('--grid-label');
-                ctx.fillText(`${lufs}`, 4, y - 2);
-            }
             // Target with its tolerance band.
             ctx.fillStyle = withAlpha(color, 0.1);
             const bandTop = toY(target + TOLERANCE_LU);
@@ -105,27 +96,8 @@ function LoudnessHistory({
             ctx.textAlign = 'right';
             ctx.fillText(`target ${target.toFixed(1)}`, width - 6, toY(target) - 4);
             ctx.textAlign = 'start';
-            const step = width / (HISTORY_LENGTH - 1);
-            const at = (index: number) => (history.position + index) % HISTORY_LENGTH;
-            const trace = (values: Float32Array) => {
-                ctx.beginPath();
-                let drawing = false;
-                for (let index = 0; index < HISTORY_LENGTH; index++) {
-                    const value = values[at(index)];
-                    if (value <= HISTORY_MIN) {
-                        drawing = false;
-                        continue;
-                    }
-                    const x = index * step;
-                    if (drawing) {
-                        ctx.lineTo(x, toY(value));
-                    } else {
-                        ctx.moveTo(x, toY(value));
-                        drawing = true;
-                    }
-                }
-                ctx.stroke();
-            };
+            const trace = (values: Float32Array) =>
+                strokeHistory(ctx, values, history.position, width, toY, HISTORY_MIN);
             ctx.strokeStyle = css('--history-level-top');
             ctx.lineWidth = 1;
             trace(history.momentary);

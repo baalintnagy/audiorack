@@ -12,6 +12,7 @@ export function BassBoostEditor({ effect, setParams, color }: EditorProps<'bassb
         <div className="editor bass-editor">
             <div className="display">
                 <ResponseGraph
+                    effectId={effect.id}
                     color={color}
                     range={24}
                     deps={[p]}

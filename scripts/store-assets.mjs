@@ -56,11 +56,13 @@ const SITE_SHOTS = [
     { file: 'denoiser.jpg', slot: 'DN', enable: true, noisy: true, settle: 8000 },
 ].map(({ file, ...shot }) => ({ path: join(SITE_IMAGE_DIR, file), ...shot, ...SITE }));
 
-// The site rack is full, so the saturator is pictured from a small rack of its own.
-const SATURATOR_RACK = readFileSync(join(ROOT, 'site', 'saturator-rack.json'), 'utf8');
-const SATURATOR_SHOTS = [
-    { path: join(SITE_IMAGE_DIR, 'saturator.jpg'), slot: 'SAT', settle: 6000, ...SITE },
-];
+// The site rack is full, so newer modules are pictured from a small rack of their own. The
+// leveler needs a while of the demo to show how it rides the level.
+const EXTRA_RACK = readFileSync(join(ROOT, 'site', 'extra-rack.json'), 'utf8');
+const EXTRA_SHOTS = [
+    { file: 'saturator.jpg', slot: 'SAT', settle: 6000 },
+    { file: 'leveler.jpg', slot: 'LVL', settle: 25000 },
+].map(({ file, ...shot }) => ({ path: join(SITE_IMAGE_DIR, file), ...shot, ...SITE }));
 
 // Renders the demo track with white hiss and a 50 Hz hum into a WAV file and loads it with
 // "Load audio…". Runs in the page, where Vite serves the module that renders the track.
@@ -436,7 +438,7 @@ async function captureScreenshots(page, origin) {
     }
     for (const [rack, shots] of [
         [SITE_RACK, wanted(SITE_SHOTS)],
-        [SATURATOR_RACK, wanted(SATURATOR_SHOTS)],
+        [EXTRA_RACK, wanted(EXTRA_SHOTS)],
     ]) {
         if (shots.length) {
             await captureRack(page, origin, rack, shots);

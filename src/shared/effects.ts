@@ -2,6 +2,7 @@ export type EffectType =
     | 'eq'
     | 'compressor'
     | 'limiter'
+    | 'leveler'
     | 'multiband'
     | 'saturator'
     | 'gate'
@@ -196,6 +197,24 @@ export interface DenoiserParams {
     profile: number[];
 }
 
+/** Rides the gain towards a loudness target; see the leveler kernel. */
+export interface LevelerParams {
+    targetLufs: number;
+    /**
+     * Fast: reacts within milliseconds, like a compressor that also lifts; otherwise it rides
+     * the level slowly, over seconds.
+     */
+    fast: boolean;
+    /** Seconds the slow leveler takes to close most of the gap to the target; down is faster. */
+    responseS: number;
+    /** The same for the fast leveler, in milliseconds. */
+    fastResponseMs: number;
+    maxBoostDb: number;
+    maxCutDb: number;
+    /** Below this momentary loudness the gain holds still. */
+    gateLufs: number;
+}
+
 export interface UtilityParams {
     gainDb: number;
     pan: number;
@@ -254,6 +273,7 @@ export interface EffectParamsMap {
     filter: FilterParams;
     deesser: DeesserParams;
     denoiser: DenoiserParams;
+    leveler: LevelerParams;
     utility: UtilityParams;
     bassboost: BassBoostParams;
     spectrum: SpectrumParams;
@@ -416,6 +436,34 @@ export const SPECS = {
         unit: 'ms',
         scale: 'log',
     },
+    levelerTargetLufs: {
+        label: 'Target',
+        min: -36,
+        max: -10,
+        default: -18,
+        unit: 'LUFS',
+        decimals: 1,
+    },
+    levelerResponse: {
+        label: 'Response',
+        min: 0.5,
+        max: 30,
+        default: 4,
+        unit: 's',
+        scale: 'log',
+        decimals: 1,
+    },
+    levelerFastResponse: {
+        label: 'Response',
+        min: 5,
+        max: 1000,
+        default: 100,
+        unit: 'ms',
+        scale: 'log',
+    },
+    maxBoostDb: { label: 'Boost', min: 0, max: 24, default: 12, unit: 'dB', decimals: 1 },
+    maxCutDb: { label: 'Cut', min: 0, max: 24, default: 12, unit: 'dB', decimals: 1 },
+    levelerGateLufs: { label: 'Gate', min: -70, max: -30, default: -50, unit: 'LUFS' },
     utilityGainDb: { label: 'Gain', min: -60, max: 24, default: 0, unit: 'dB', decimals: 1 },
     pan: { label: 'Pan', min: -100, max: 100, default: 0, unit: '' },
     width: { label: 'Width', min: 0, max: 200, default: 100, unit: '%' },
@@ -513,6 +561,13 @@ export const EFFECT_INFO: Record<EffectType, EffectInfo> = {
         short: 'LIM',
         description: 'Lookahead brickwall limiter',
         color: '#ff5e7a',
+        category: 'effect',
+    },
+    leveler: {
+        label: 'Leveler',
+        short: 'LVL',
+        description: 'Rides the gain towards a loudness target, like a hand on the fader',
+        color: '#c8f560',
         category: 'effect',
     },
     multiband: {
@@ -768,6 +823,15 @@ export function defaultParams<T extends EffectType>(type: T): EffectParamsMap[T]
             listen: false,
             learning: false,
             profile: [],
+        },
+        leveler: {
+            targetLufs: -18,
+            fast: false,
+            responseS: 4,
+            fastResponseMs: 100,
+            maxBoostDb: 12,
+            maxCutDb: 12,
+            gateLufs: -50,
         },
         utility: {
             gainDb: 0,

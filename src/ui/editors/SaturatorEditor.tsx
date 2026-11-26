@@ -25,6 +25,7 @@ import {
     type BandNode,
 } from './bandDisplay';
 import { BAND_COLORS, type EditorProps } from './types';
+import { signalOf } from '../telemetry';
 
 const STYLE_LABELS: Record<SaturationStyle, string> = {
     tube: 'Tube',
@@ -120,7 +121,7 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
             drawGrid(ctx, w, height);
             drawSpectrum(
                 ctx,
-                telemetry?.post,
+                signalOf(telemetry, effect.id)?.post,
                 w,
                 height,
                 css('--spectrum-post'),

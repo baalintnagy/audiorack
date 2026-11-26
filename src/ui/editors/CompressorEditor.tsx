@@ -14,6 +14,7 @@ import { fromNormalized, toNormalized } from '../format';
 import { css } from '../graph';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
+import { outputPeak } from '../telemetry';
 
 const CURVE_MIN = -60;
 /** Space kept between the node's ratio track and the sides of the display. */
@@ -254,6 +255,7 @@ export function CompressorEditor({ effect, setParams, color }: EditorProps<'comp
                 />
                 <DynamicsHistory
                     reduction={reduction}
+                    level={(telemetry) => outputPeak(telemetry, effect.id)}
                     color={color}
                     thresholdDb={p.thresholdDb}
                     threshold={{

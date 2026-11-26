@@ -40,6 +40,18 @@
             }
         },
         {
+            "type": "leveler",
+            "params": {
+                "targetLufs": -18,
+                "fast": false,
+                "responseS": 4,
+                "fastResponseMs": 100,
+                "maxBoostDb": 12,
+                "maxCutDb": 12,
+                "gateLufs": -50
+            }
+        },
+        {
             "type": "limiter",
             "params": { "inputDb": 0, "ceilingDb": -1, "releaseMs": 80, "lookaheadMs": 3 }
         }

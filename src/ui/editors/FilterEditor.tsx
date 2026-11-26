@@ -26,6 +26,7 @@ export function FilterEditor({ effect, setParams, color }: EditorProps<'filter'>
         <div className="editor filter-editor">
             <div className="display">
                 <ResponseGraph
+                    effectId={effect.id}
                     color={color}
                     range={30}
                     sections={(sampleRate) => filterCoefficients(p, live.current, sampleRate)}

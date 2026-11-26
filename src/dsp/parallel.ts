@@ -1,7 +1,7 @@
 import type { Effect, ParallelBranch, ParallelGroup } from '../shared/effects';
 import { StereoDelay } from './delay';
 import { LevelMeter } from './meter';
-import { SerialChain, type Stage } from './stage';
+import { SerialChain, type MeterSink, type Stage } from './stage';
 import { Smoother, dbToGain, ensureCapacity, panGains } from './util';
 
 const GAIN_SMOOTHING_MS = 20;
@@ -119,13 +119,14 @@ export class ParallelStage implements Stage {
         });
     }
 
-    collectMeters(into: Record<string, number[]>) {
+    collectMeters(into: MeterSink) {
         this.branches.forEach((branch) => branch.chain.collectMeters(into));
-        into[this.id] = [...this.branches.map((branch) => branch.meter), this.sumMeter].flatMap(
-            (meter) => {
-                const { peak, rms } = meter.take();
-                return [...peak, ...rms];
-            },
-        );
+        into.effects[this.id] = [
+            ...this.branches.map((branch) => branch.meter),
+            this.sumMeter,
+        ].flatMap((meter) => {
+            const { peak, rms } = meter.take();
+            return [...peak, ...rms];
+        });
     }
 }

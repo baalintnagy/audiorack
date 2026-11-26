@@ -1,9 +1,19 @@
 import type { EffectType } from '../shared/effects';
+import type { SignalReading } from '../shared/messages';
 import { StereoDelay } from './delay';
 import { createKernel, type Kernel } from './kernels';
+import { SignalProbe } from './probe';
 import { Smoother, ensureCapacity } from './util';
 
 const CROSSFADE_MS = 12;
+
+/** Where stages leave what they measured for the next meter frame, keyed by effect or group id. */
+export interface MeterSink {
+    /** Each effect's own readings, such as gain reduction, and the branch levels of groups. */
+    effects: Record<string, number[]>;
+    /** Each effect's own signal; see {@link SignalReading}. */
+    signals: Record<string, SignalReading>;
+}
 
 /** A node of the processing tree: an effect, a serial chain or a parallel group. */
 export interface Stage {
@@ -12,13 +22,14 @@ export interface Stage {
     /** Processes a stereo block in place. */
     process(left: Float32Array, right: Float32Array, frames: number): void;
     reset(): void;
-    /** Adds the readings gathered since the previous call, keyed by effect or group id. */
-    collectMeters(into: Record<string, number[]>): void;
+    /** Adds what it measured since the previous call. */
+    collectMeters(into: MeterSink): void;
 }
 
-/** Runs one effect kernel. */
+/** Runs one effect kernel, watching its own signal on the way in and out. */
 export class EffectStage implements Stage {
     private readonly kernel: Kernel<unknown>;
+    private readonly probe: SignalProbe;
 
     constructor(
         readonly id: string,
@@ -26,6 +37,7 @@ export class EffectStage implements Stage {
         sampleRate: number,
     ) {
         this.kernel = createKernel(type, sampleRate);
+        this.probe = new SignalProbe(type, sampleRate);
     }
 
     configure(params: unknown) {
@@ -37,15 +49,19 @@ export class EffectStage implements Stage {
     }
 
     process(left: Float32Array, right: Float32Array, frames: number) {
+        this.probe.observeInput(left, right, frames);
         this.kernel.process(left, right, frames);
+        this.probe.observeOutput(left, right, frames);
     }
 
     reset() {
         this.kernel.reset();
+        this.probe.reset();
     }
 
-    collectMeters(into: Record<string, number[]>) {
-        into[this.id] = this.kernel.takeMeters?.() ?? [];
+    collectMeters(into: MeterSink) {
+        into.effects[this.id] = this.kernel.takeMeters?.() ?? [];
+        into.signals[this.id] = this.probe.take();
     }
 }
 
@@ -126,7 +142,7 @@ export class BypassStage<S extends Stage> implements Stage {
      * Once fully bypassed, the stage measures nothing, so it reports no readings: its displays
      * then show silence rather than holding the last readings it had.
      */
-    collectMeters(into: Record<string, number[]>) {
+    collectMeters(into: MeterSink) {
         if (this.wet.settled && this.wet.value === 0) {
             return;
         }
@@ -154,7 +170,7 @@ export class SerialChain implements Stage {
         this.stages.forEach((stage) => stage.reset());
     }
 
-    collectMeters(into: Record<string, number[]>) {
+    collectMeters(into: MeterSink) {
         this.stages.forEach((stage) => stage.collectMeters(into));
     }
 }

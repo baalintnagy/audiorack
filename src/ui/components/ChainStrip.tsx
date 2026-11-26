@@ -16,8 +16,9 @@ import {
 } from '../../shared/effects';
 import { MAX_CHAIN_LENGTH } from '../../shared/normalize';
 import { BAND_COLORS } from '../editors/types';
-import { branchName } from '../format';
+import { branchName, gainToDbValue } from '../format';
 import { css } from '../graph';
+import { outputPeak } from '../telemetry';
 import { useCanvas } from '../useCanvas';
 import { useChainDrag, type ChainDrag } from '../useChainDrag';
 import { AddMenu, type AddKind } from './AddMenu';
@@ -41,28 +42,32 @@ function PinBadge() {
     );
 }
 
-/** Small activity indicator: gain reduction for dynamics, otherwise nothing. */
-function SlotActivity({ effect }: { effect: Effect }) {
-    const shown = useRef(0);
+/** The lowest level a slot's meter shows, in dBFS; it fills up to 0 dBFS. */
+const METER_FLOOR_DB = -60;
+/** How fast a slot's level falls back, in dB per telemetry frame, like a peak meter. */
+const METER_FALL_DB = 1.5;
+
+/**
+ * A slot's meter: the level of the effect's own output, in its color. A bypassed effect has no
+ * readings, so its meter empties.
+ */
+function SlotMeter({ effect }: { effect: Effect }) {
+    const shown = useRef(METER_FLOOR_DB);
     const ref = useCanvas(
-        ({ ctx, width, height, telemetry, live }) => {
-            const readings = telemetry?.meters.effects[effect.id] ?? [];
-            // Only dynamics report gain reduction; the filter and analyzers report other data.
-            const reportsReduction =
-                EFFECT_INFO[effect.type].category === 'effect' && effect.type !== 'filter';
-            const reduction = reportsReduction ? Math.max(0, ...readings) : 0;
-            if (live) {
-                shown.current = reduction > shown.current ? reduction : shown.current * 0.8;
+        ({ ctx, width, height, telemetry, live, ticks }) => {
+            if (live && telemetry) {
+                const levelDb = gainToDbValue(outputPeak(telemetry, effect.id));
+                shown.current = Math.max(levelDb, shown.current - METER_FALL_DB * ticks);
             }
             ctx.fillStyle = css('--meter-bg');
             ctx.fillRect(0, 0, width, height);
-            const fraction = Math.min(1, shown.current / 18);
+            const level = Math.min(1, Math.max(0, 1 - shown.current / METER_FLOOR_DB));
             ctx.fillStyle = itemColor(effect);
-            ctx.fillRect(0, 0, width * fraction, height);
+            ctx.fillRect(0, 0, width * level, height);
         },
-        [effect.id, effect.type, effect.color],
+        [effect.id, effect.color],
     );
-    return <canvas ref={ref} className="slot-activity" />;
+    return <canvas ref={ref} className="slot-activity" title="Output level" />;
 }
 
 function PowerButton({
@@ -182,7 +187,7 @@ function EffectSlot({
                     <span className="slot-label">{info.label}</span>
                 </>
             )}
-            <SlotActivity effect={effect} />
+            <SlotMeter effect={effect} />
         </div>
     );
 }

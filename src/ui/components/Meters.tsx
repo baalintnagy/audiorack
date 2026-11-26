@@ -156,14 +156,15 @@ export function DynamicsHistory({
     color,
     thresholdDb,
     range = 48,
-    level = (telemetry) => Math.max(...telemetry.meters.outputPeak),
+    level,
     threshold,
 }: {
     reduction: (telemetry: Telemetry) => number;
     color: string;
     thresholdDb?: number;
     range?: number;
-    level?: (telemetry: Telemetry) => number;
+    /** The effect's own level, linear, such as its output peak; never the rack's. */
+    level: (telemetry: Telemetry) => number;
     /** Makes the threshold line draggable. */
     threshold?: { spec: NumberSpec; onChange: (value: number) => void; label?: string };
 }) {

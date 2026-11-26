@@ -10,6 +10,7 @@ import { formatValue, fromNormalized, toNormalized } from '../format';
 import { css, withAlpha } from '../graph';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
+import { SILENT_LEVELS, signalOf } from '../telemetry';
 
 /** Where the sound stage sits in a canvas of the given size. */
 function stage(w: number, height: number) {
@@ -219,10 +220,7 @@ export function UtilityEditor({ effect, setParams, color }: EditorProps<'utility
                 </div>
                 <LevelMeter
                     label="OUT"
-                    source={(telemetry) => ({
-                        peak: telemetry.meters.outputPeak,
-                        rms: telemetry.meters.outputRms,
-                    })}
+                    source={(telemetry) => signalOf(telemetry, effect.id)?.output ?? SILENT_LEVELS}
                 />
             </div>
             <div className="control-row">

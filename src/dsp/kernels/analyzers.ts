@@ -53,7 +53,7 @@ function mixChannel(channel: AnalyzerChannel, l: number, r: number): number {
  * Computes a Hann-windowed FFT of the tapped signal and reduces it to log-spaced bins.
  * Levels are normalized so a full-scale sine reads 0 dBFS.
  */
-class SpectrumTap implements Kernel<{ channel: AnalyzerChannel; fftSize: number }> {
+export class SpectrumTap implements Kernel<{ channel: AnalyzerChannel; fftSize: number }> {
     private readonly tap = new Tap();
     private channel: AnalyzerChannel = 'mono';
     private fft = new FFT(4096);

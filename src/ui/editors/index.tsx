@@ -7,6 +7,7 @@ import { DenoiserEditor } from './DenoiserEditor';
 import { EqEditor } from './EqEditor';
 import { FilterEditor } from './FilterEditor';
 import { GateEditor } from './GateEditor';
+import { LevelerEditor } from './LevelerEditor';
 import { LimiterEditor } from './LimiterEditor';
 import { LoudnessEditor } from './LoudnessEditor';
 import { MultibandEditor } from './MultibandEditor';
@@ -31,6 +32,8 @@ export function EffectEditor({
             return <CompressorEditor effect={effect} setParams={setParams} color={color} />;
         case 'limiter':
             return <LimiterEditor effect={effect} setParams={setParams} color={color} />;
+        case 'leveler':
+            return <LevelerEditor effect={effect} setParams={setParams} color={color} />;
         case 'multiband':
             return <MultibandEditor effect={effect} setParams={setParams} color={color} />;
         case 'saturator':

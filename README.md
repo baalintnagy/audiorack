@@ -12,6 +12,7 @@ effects, with a dark, analyzer-driven interface inspired by modern plug-in suite
 | Equalizer    | Up to 12 bands (bell, shelves, 12–48 dB/oct cuts, notch, band pass) edited directly on the live pre/post spectrum.                     |
 | Compressor   | Feed-forward soft-knee compressor with peak/RMS detection, sidechain high-pass, auto makeup and parallel mix.                          |
 | Limiter      | Lookahead brickwall limiter; the output never exceeds the ceiling.                                                                     |
+| Leveler      | Rides the gain to a BS.1770 loudness target, slowly or fast like an AGC, within boost and cut limits; holds below a gate.              |
 | Multiband    | 2–4 band compressor on phase-compensated Linkwitz-Riley crossovers, with solo/mute/bypass per band.                                    |
 | Saturator    | 1–4 band saturation (tube, tape, soft, hard, fold, rectify) with drive, dynamics, tone, mix and level per band; 1×/2×/4× oversampling. |
 | Gate         | Noise gate with range, attack, hold, release, hysteresis and a sidechain high-pass; a transfer curve shows the hysteresis loop.        |
@@ -39,7 +40,10 @@ range and the maxima cover everything played through the rack since the last **R
 history shows the last minute against a target (−14, −16, −23 or −24 LUFS, or any value).
 
 The chain can be reordered by dragging slots, each effect can be bypassed (with a short
-crossfade), and the whole rack can be bypassed for comparison. Factory presets are included;
+crossfade), and the whole rack can be bypassed for comparison. Each slot has a small meter of
+its own output level (−60 to 0 dBFS) in the effect's color; a bypassed effect's meter stays
+empty. Every display shows its effect's own signal, so
+the rack's input and output gain do not change them. Factory presets are included;
 your own presets can be saved, exported and imported as JSON, and put in any order by dragging
 them in the preset menu (or with Alt+↑/↓). Saving over a preset keeps its place.
 
@@ -142,6 +146,7 @@ loaded from the popup; factory presets and presets without pins clear them.
       curve plot drags the drive.
     - Denoiser: the dashed line for the largest reduction and the pass curve above the noise
       floor for the threshold.
+    - Leveler: the target and gate lines of the loudness history.
     - Loudness: the target line.
 
 ## How it works

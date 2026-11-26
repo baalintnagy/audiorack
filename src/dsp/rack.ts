@@ -2,7 +2,7 @@ import type { RackState } from '../shared/effects';
 import type { MeterFrame } from '../shared/messages';
 import { LevelMeter } from './meter';
 import { StagePool } from './pool';
-import { SerialChain } from './stage';
+import { SerialChain, type MeterSink } from './stage';
 import { Smoother, dbToGain, ensureCapacity } from './util';
 
 const CROSSFADE_MS = 12;
@@ -79,17 +79,17 @@ export class RackProcessor {
     takeMeters(): MeterFrame {
         const input = this.inputMeter.take();
         const output = this.outputMeter.take();
-        const effects: Record<string, number[]> = {};
+        const sink: MeterSink = { effects: {}, signals: {} };
         // While the whole rack is bypassed the chain does not run, so it has no readings either.
         if (!this.engaged.settled || this.engaged.value !== 0) {
-            this.chain.collectMeters(effects);
+            this.chain.collectMeters(sink);
         }
         return {
             inputPeak: input.peak,
             inputRms: input.rms,
             outputPeak: output.peak,
             outputRms: output.rms,
-            effects,
+            ...sink,
         };
     }
 }

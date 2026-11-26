@@ -218,6 +218,15 @@ const normalizers: { [T in EffectType]: (raw: Loose) => EffectParamsMap[T] } = {
         learning: bool(raw.learning, false),
         profile: noiseProfile(raw.profile),
     }),
+    leveler: (raw) => ({
+        targetLufs: num(raw.targetLufs, 'levelerTargetLufs'),
+        fast: bool(raw.fast, false),
+        responseS: num(raw.responseS, 'levelerResponse'),
+        fastResponseMs: num(raw.fastResponseMs, 'levelerFastResponse'),
+        maxBoostDb: num(raw.maxBoostDb, 'maxBoostDb'),
+        maxCutDb: num(raw.maxCutDb, 'maxCutDb'),
+        gateLufs: num(raw.gateLufs, 'levelerGateLufs'),
+    }),
     utility: (raw) => ({
         gainDb: num(raw.gainDb, 'utilityGainDb'),
         pan: num(raw.pan, 'pan'),

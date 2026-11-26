@@ -54,9 +54,9 @@ change.
 **Single purpose description**
 
 > AudioRack processes the audio of a browser tab that the user chooses through a configurable
-> chain of audio effects (equalizer, compressors, saturator, limiter, gate, filter, de-esser,
-> denoiser, bass booster and a gain, pan and width utility) and shows audio analyzers and a
-> loudness meter for that sound.
+> chain of audio effects (equalizer, compressors, saturator, limiter, leveler, gate, filter,
+> de-esser, denoiser, bass booster and a gain, pan and width utility) and shows audio analyzers
+> and a loudness meter for that sound.
 
 **Permission justifications**
 
@@ -117,8 +117,9 @@ through [`site/screenshot-rack.json`](../site/screenshot-rack.json), which holds
 analyzer and a parallel group, and saves one 800×600 picture of each module to `site/images/`,
 undressed, as the demo looks on the site. The gate, filter, de-esser and denoiser are bypassed in
 that rack and switched on for their own pictures; for the denoiser the page plays the demo track
-with added hiss and hum. That rack is full, so the saturator's picture comes from a small
-rack of its own, [`site/saturator-rack.json`](../site/saturator-rack.json), played last. The side panel screenshot is staged by
+with added hiss and hum. That rack is full, so the saturator's and the leveler's pictures come
+from a small rack of their own, [`site/extra-rack.json`](../site/extra-rack.json), played last.
+The side panel screenshot is staged by
 [`promo/side-panel.html`](promo/side-panel.html): a sample video page with the rack docked in a
 panel next to it, the equalizer and the spectrogram pinned and the equalizer picked. The panel is
 820 px wide, so the equalizer's controls fit on one row, and the scene is laid out larger than it

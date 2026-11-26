@@ -52,7 +52,7 @@
                 "@context": "https://schema.org",
                 "@type": "SoftwareApplication",
                 "name": "AudioRack",
-                "description": "A Chrome extension that routes any tab's audio through a configurable chain of EQ, compressors, saturator, limiter, gate, denoiser, filter, de-esser, bass booster and analyzers, in series or in parallel.",
+                "description": "A Chrome extension that routes any tab's audio through a configurable chain of EQ, compressors, saturator, limiter, leveler, gate, denoiser, filter, de-esser, bass booster and analyzers, in series or in parallel.",
                 "url": "https://baalintnagy.github.io/audiorack/",
                 "applicationCategory": "MultimediaApplication",
                 "applicationSubCategory": "Browser extension",
@@ -71,6 +71,7 @@
                 "featureList": [
                     "Parametric equalizer with up to 12 bands",
                     "Compressor, multiband compressor and lookahead limiter",
+                    "Leveler that rides the volume towards a loudness target",
                     "Noise gate, spectral denoiser and de-esser",
                     "Multiband saturator, resonant filter and bass booster",
                     "Spectrum, spectrogram, stereo image and EBU R128 loudness meters",
@@ -104,9 +105,9 @@
                     <h1>An effect rack for <span class="gradient">every tab</span>.</h1>
                     <p class="lead">
                         Route the sound of any browser tab through a chain of EQ, compressors, a
-                        saturator, limiter, gate, denoiser, filter, de-esser and bass booster, and
-                        see it on live analyzers and a loudness meter. Tame loud videos, clarify
-                        podcasts or make laptop speakers sound bigger.
+                        saturator, limiter, leveler, gate, denoiser, filter, de-esser and bass
+                        booster, and see it on live analyzers and a loudness meter. Even out loud
+                        and quiet videos, clarify podcasts or make laptop speakers sound bigger.
                     </p>
                     <div class="actions">
                         <a class="button primary" href="demo/rack.html">Try the live demo</a>
@@ -128,7 +129,7 @@
             </section>
 
             <section id="effects" class="section">
-                <h2>Eleven effects, any order</h2>
+                <h2>Twelve effects, any order</h2>
                 <p class="section-lead">
                     Add effects, drag them into the order you want, or side by side in parallel
                     branches, and bypass any of them with a click. Bypassing crossfades, so there
@@ -185,6 +186,23 @@
                             ceiling. It looks a few milliseconds ahead, so peaks are caught smoothly
                             instead of clipped, and the drive pushes the level into it for a louder
                             sound. Drag the ceiling line to set it.
+                        </p>
+                    </article>
+                    <article class="module" style="--tint: #c8f560">
+                        <img
+                            src="images/leveler.jpg"
+                            width="800"
+                            height="600"
+                            loading="lazy"
+                            alt="Leveler with the input and output loudness over the last minute against the target, and the gain it applies"
+                        />
+                        <h3>Leveler</h3>
+                        <p>
+                            A hand on the fader: it measures the loudness of what plays and slowly
+                            turns quiet passages up and loud ones down towards a target, so a quiet
+                            video and a loud one end up alike. Fast mode reacts within milliseconds,
+                            like a compressor that also lifts. Pauses don't make it pump, and it
+                            turns down faster than up. Drag the target and gate lines to set them.
                         </p>
                     </article>
                     <article class="module" style="--tint: #b78bff">

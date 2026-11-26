@@ -225,6 +225,11 @@ export class LoudnessMeter {
         return energy / available;
     }
 
+    /** Loudness of the newest 100 ms block alone, which follows a sudden pause at once. */
+    get latestBlock(): number {
+        return energyToLufs(this.windowEnergy(1));
+    }
+
     get momentary(): number {
         return energyToLufs(this.windowEnergy(MOMENTARY_SUB_BLOCKS));
     }

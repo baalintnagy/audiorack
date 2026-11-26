@@ -34,6 +34,10 @@ Follows the conventions of the sibling PermaFormula projects, applied to TypeScr
   `chrome.storage.session` under `tabRack:<tabId>`, removed when the tab closes. A tab switched
   to the shared rack (`chrome.storage.local`) is marked with `tabScope:<tabId>`. Rack
   messages to the offscreen document carry the tab and its scope.
+- A module's displays show its own signal, never the rack's input or output, so the rack's
+  input and output gain cannot change them: levels and spectra come from the effect's
+  `SignalProbe` (`telemetry.meters.signals[id]`, read through `signalOf`). Only the master
+  meters read the rack's own levels.
 - The offscreen document only has `chrome.runtime`; it receives rack updates by message and
   never reads storage directly.
 - Releases go through `.github/workflows/release.yml` (Chrome Web Store API v2). Do not publish

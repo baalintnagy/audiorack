@@ -8,6 +8,7 @@ import { ResponseGraph } from '../components/ResponseGraph';
 import { specValue } from '../display/handles';
 import { css, frequencyToX } from '../graph';
 import type { EditorProps } from './types';
+import { outputPeak } from '../telemetry';
 
 export function DeesserEditor({ effect, setParams, color }: EditorProps<'deesser'>) {
     const p = effect.params;
@@ -16,6 +17,7 @@ export function DeesserEditor({ effect, setParams, color }: EditorProps<'deesser
         <div className="editor dynamics-editor">
             <div className="display split">
                 <ResponseGraph
+                    effectId={effect.id}
                     color={color}
                     range={24}
                     deps={[p]}
@@ -57,7 +59,12 @@ export function DeesserEditor({ effect, setParams, color }: EditorProps<'deesser
                             }),
                     }}
                 />
-                <DynamicsHistory reduction={reduction} color={color} range={24} />
+                <DynamicsHistory
+                    reduction={reduction}
+                    level={(telemetry) => outputPeak(telemetry, effect.id)}
+                    color={color}
+                    range={24}
+                />
                 <ReductionMeter value={reduction} color={color} range={24} />
             </div>
             <div className="control-row">

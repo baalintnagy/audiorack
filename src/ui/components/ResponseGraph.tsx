@@ -20,7 +20,7 @@ import {
     xToFrequency,
     yToDb,
 } from '../graph';
-import { useTelemetryStore } from '../telemetry';
+import { signalOf, useTelemetryStore } from '../telemetry';
 import { useCanvas, type CanvasFrame } from '../useCanvas';
 
 /**
@@ -65,8 +65,12 @@ function controlNode(
     };
 }
 
-/** Frequency-response display over the live output spectrum, with an optional handle. */
+/**
+ * Frequency-response display over the live spectrum of the effect's own output, with an optional
+ * handle.
+ */
 export function ResponseGraph({
+    effectId,
     sections,
     color,
     range = 24,
@@ -75,6 +79,8 @@ export function ResponseGraph({
     deps,
     title,
 }: {
+    /** The effect whose own output spectrum is drawn behind the curve. */
+    effectId: string;
     sections: (sampleRate: number) => BiquadCoefficients[];
     color: string;
     range?: number;
@@ -118,7 +124,7 @@ export function ResponseGraph({
             drawGrid(ctx, width, height, { dbRange: range, dbStep: range / 4 });
             drawSpectrum(
                 ctx,
-                telemetry?.post,
+                signalOf(telemetry, effectId)?.post,
                 width,
                 height,
                 css('--spectrum-post'),

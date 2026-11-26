@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import type { Telemetry } from '../shared/messages';
+import type { Levels, SignalReading, Telemetry } from '../shared/messages';
 
 type Listener = (telemetry: Telemetry) => void;
 
@@ -67,6 +67,25 @@ export class HoldableTelemetry extends TelemetryStore {
 }
 
 export const TelemetryContext = createContext(new TelemetryStore());
+
+/**
+ * What an effect measured on its own signal in a frame of telemetry, which its displays show
+ * rather than the rack's input and output; nothing while the effect is bypassed.
+ */
+export function signalOf(
+    telemetry: Telemetry | undefined,
+    effectId: string,
+): SignalReading | undefined {
+    return telemetry?.meters.signals[effectId];
+}
+
+/** Levels of silence, for an effect without a reading. */
+export const SILENT_LEVELS: Levels = { peak: [0, 0], rms: [0, 0] };
+
+/** An effect's own output peak, linear, of the louder channel; zero without a reading. */
+export function outputPeak(telemetry: Telemetry, effectId: string): number {
+    return Math.max(...(signalOf(telemetry, effectId)?.output.peak ?? SILENT_LEVELS.peak));
+}
 
 export function useTelemetryStore() {
     return useContext(TelemetryContext);

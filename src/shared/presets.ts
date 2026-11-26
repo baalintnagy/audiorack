@@ -23,7 +23,7 @@ function rack(chain: ChainItem[], partial: Partial<RackState> = {}): RackState {
 /** The longest name a saved preset can have. */
 export const MAX_PRESET_NAME = 60;
 
-export interface FactoryPreset {
+interface FactoryPreset {
     name: string;
     description: string;
     create: () => RackState;

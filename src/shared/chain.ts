@@ -52,11 +52,6 @@ export function findItem(chain: ChainItem[], id: string): ChainItem | undefined 
     return chain.find((item) => item.id === id) ?? allEffects(chain).find((item) => item.id === id);
 }
 
-export function findGroup(chain: ChainItem[], id: string): ParallelGroup | undefined {
-    const item = chain.find((candidate) => candidate.id === id);
-    return item && isParallelGroup(item) ? item : undefined;
-}
-
 export function locate(chain: ChainItem[], id: string): ChainPosition | undefined {
     const index = chain.findIndex((item) => item.id === id);
     if (index >= 0) {
@@ -109,7 +104,7 @@ export function stepSelection(
 }
 
 /** The insertion point right after `id`, or the end of the main chain. */
-export function positionAfter(chain: ChainItem[], id: string | undefined): ChainPosition {
+function positionAfter(chain: ChainItem[], id: string | undefined): ChainPosition {
     const position = id === undefined ? undefined : locate(chain, id);
     return position ? { ...position, index: position.index + 1 } : { index: chain.length };
 }

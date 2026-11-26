@@ -6,8 +6,10 @@ import { logFrequencies } from '../../shared/spectrum';
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { ReductionMeter } from '../components/Meters';
-import { LINE_GRAB, specValue, useCanvasDrag, wheelStep } from '../canvasDrag';
-import { css, drawGrid, drawGrip, frequencyToX, withAlpha, xToFrequency } from '../graph';
+import { drawHandleLine } from '../display/draw';
+import { LINE_GRAB, settingHandle } from '../display/handles';
+import { useCanvasDrag } from '../display/pointer';
+import { css, drawGrid, frequencyToX, withAlpha, xToFrequency } from '../graph';
 import { useTelemetry } from '../telemetry';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
@@ -89,6 +91,33 @@ function NoiseDisplay({
             c.gain[i] += (data[DENOISER_FIELDS.gain + i] - c.gain[i]) * 0.5;
         }
     });
+    const { handlers: pointer, hot } = useCanvasDrag(({ x, y, width, height }) => {
+        if (Math.abs(y - reductionY(-reductionDb, height)) <= LINE_GRAB) {
+            return settingHandle({
+                id: 'reduction',
+                cursor: 'ns-resize',
+                spec: SPECS.denoiseReductionDb,
+                value: reductionDb,
+                toValue: (to) => (to.y / (height * REDUCTION_HEIGHT)) * 40,
+                onChange: (value) => onChange({ reductionDb: value }),
+            });
+        }
+        const passY = toY(noiseAt(curves.current.noise, x, width) + thresholdDb, height);
+        if (Math.abs(y - passY) <= LINE_GRAB + 2) {
+            const dbPerPixel = (CEILING_DB - FLOOR_DB) / height;
+            return settingHandle({
+                id: 'pass',
+                cursor: 'ns-resize',
+                spec: SPECS.denoiseThresholdDb,
+                value: thresholdDb,
+                // The noise moves on its own, so the drag is relative to where it started.
+                toValue: (to) => thresholdDb + (y - to.y) * dbPerPixel,
+                onChange: (value) => onChange({ thresholdDb: value }),
+            });
+        }
+        return undefined;
+    });
+
     const ref = useCanvas(
         ({ ctx, width, height }) => {
             drawGrid(ctx, width, height);
@@ -119,20 +148,11 @@ function NoiseDisplay({
             ctx.stroke();
             ctx.setLineDash([]);
             // Pass curve: bins this far above the noise are left alone.
-            ctx.beginPath();
-            xs.forEach((x, i) => {
-                const py = y(c.noise[i] + thresholdDb);
-                if (i === 0) {
-                    ctx.moveTo(x, py);
-                } else {
-                    ctx.lineTo(x, py);
-                }
-            });
-            ctx.strokeStyle = withAlpha(color, 0.6);
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            const passX = width * 0.9;
-            drawGrip(ctx, passX, y(noiseAt(c.noise, passX, width) + thresholdDb), color);
+            drawHandleLine(
+                ctx,
+                xs.map((x, i): [number, number] => [x, y(c.noise[i] + thresholdDb)]),
+                { color, base: withAlpha(color, 0.6), hot: hot === 'pass', dash: [] },
+            );
             // Reduction, hanging from the top.
             const hang = (gainDb: number) => reductionY(gainDb, height);
             ctx.beginPath();
@@ -156,19 +176,18 @@ function NoiseDisplay({
             ctx.stroke();
             // The largest reduction allowed.
             const limitY = Math.round(hang(-reductionDb)) + 0.5;
-            ctx.setLineDash([5, 4]);
-            ctx.strokeStyle = css('--threshold');
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(0, limitY);
-            ctx.lineTo(width, limitY);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            drawGrip(ctx, width - 14, limitY, color);
-            ctx.fillStyle = css('--grid-label');
+            drawHandleLine(
+                ctx,
+                [
+                    [0, limitY],
+                    [width, limitY],
+                ],
+                { color, base: css('--threshold'), hot: hot === 'reduction', dash: [5, 4] },
+            );
+            ctx.fillStyle = hot === 'reduction' ? color : css('--grid-label');
             ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
             ctx.textAlign = 'right';
-            ctx.fillText(`max -${reductionDb.toFixed(1)} dB`, width - 26, limitY + 12);
+            ctx.fillText(`max -${reductionDb.toFixed(1)} dB`, width - 6, limitY + 12);
             ctx.textAlign = 'start';
             ctx.fillText('reduction', 6, 14);
             ctx.fillText(`${noiseLabel} (dashed)`, 6, height - 18);
@@ -180,36 +199,8 @@ function NoiseDisplay({
                 ctx.textAlign = 'start';
             }
         },
-        [color, noiseLabel, learning, reductionDb, thresholdDb],
+        [color, noiseLabel, learning, reductionDb, thresholdDb, hot],
     );
-    const pointer = useCanvasDrag(({ x, y, width, height }) => {
-        const setReduction = (value: number) =>
-            onChange({ reductionDb: specValue(SPECS.denoiseReductionDb, value) });
-        const setThreshold = (value: number) =>
-            onChange({ thresholdDb: specValue(SPECS.denoiseThresholdDb, value) });
-        if (Math.abs(y - reductionY(-reductionDb, height)) <= LINE_GRAB) {
-            return {
-                cursor: 'ns-resize',
-                drag: (to) => setReduction((to.y / (height * REDUCTION_HEIGHT)) * 40),
-                reset: () => setReduction(SPECS.denoiseReductionDb.default),
-                wheel: (direction, fine) =>
-                    setReduction(wheelStep(SPECS.denoiseReductionDb, reductionDb, direction, fine)),
-            };
-        }
-        const passY = toY(noiseAt(curves.current.noise, x, width) + thresholdDb, height);
-        if (Math.abs(y - passY) <= LINE_GRAB + 2) {
-            const dbPerPixel = (CEILING_DB - FLOOR_DB) / height;
-            return {
-                cursor: 'ns-resize',
-                // The noise moves on its own, so the drag is relative to where it started.
-                drag: (to) => setThreshold(thresholdDb + (y - to.y) * dbPerPixel),
-                reset: () => setThreshold(SPECS.denoiseThresholdDb.default),
-                wheel: (direction, fine) =>
-                    setThreshold(wheelStep(SPECS.denoiseThresholdDb, thresholdDb, direction, fine)),
-            };
-        }
-        return undefined;
-    });
     return (
         <canvas
             ref={ref}

@@ -57,11 +57,3 @@ export function eqResponseDb(
         return 20 * Math.log10(Math.max(magnitude, 1e-6));
     });
 }
-
-export function bandResponseDb(
-    band: EqBand,
-    frequencies: ArrayLike<number>,
-    sampleRate: number,
-): Float32Array {
-    return eqResponseDb([band], frequencies, sampleRate);
-}

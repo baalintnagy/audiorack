@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { SPECS, type NumberSpec } from '../src/shared/effects';
-import { nodePart, ringHandle, specValue, wheelStep, type CanvasPoint } from '../src/ui/canvasDrag';
+import { outsideCircle, ringTurn } from '../src/ui/display/draw';
+import { nodePart, ringHandle, specValue, wheelStep } from '../src/ui/display/handles';
+import { nodeHandle, type ControlNode } from '../src/ui/display/node';
+import { type CanvasPoint } from '../src/ui/display/pointer';
+import { frequencyToX } from '../src/ui/graph';
 import { bandHandle, type BandNode, type NodeValue } from '../src/ui/editors/bandDisplay';
 import { toNormalized } from '../src/ui/format';
-import { frequencyToX, ringTurn } from '../src/ui/graph';
 
 const WIDTH = 600;
 const HEIGHT = 200;
@@ -200,5 +203,132 @@ describe('node rings', () => {
         expect(calls.patches[0].index).toBe(0);
         expect(calls.patches[0].patch.ring).toBeGreaterThan(0);
         expect(calls.patches[0].patch.x).toBeUndefined();
+    });
+});
+
+describe('node guides', () => {
+    const node = { x: 50, y: 50, r: 10 };
+
+    it('leaves out the part of a guide inside the node', () => {
+        expect(outsideCircle([0, 50], [100, 50], node)).toEqual([
+            [
+                [0, 50],
+                [40, 50],
+            ],
+            [
+                [60, 50],
+                [100, 50],
+            ],
+        ]);
+    });
+
+    it('starts a guide at the edge of the node it leaves from', () => {
+        expect(outsideCircle([50, 50], [50, 100], node)).toEqual([
+            [
+                [50, 60],
+                [50, 100],
+            ],
+        ]);
+    });
+
+    it('drops a guide that ends inside the node, so it never overshoots', () => {
+        expect(outsideCircle([50, 50], [50, 44], node)).toEqual([]);
+        expect(outsideCircle([0, 0], [100, 0], node)).toEqual([
+            [
+                [0, 0],
+                [100, 0],
+            ],
+        ]);
+    });
+});
+
+describe('control nodes', () => {
+    /** A node at (100, 50) that records every move and reset, with both guides by default. */
+    function control(extra: Partial<ControlNode<{ x?: number; y?: number }>> = {}) {
+        const calls: string[] = [];
+        const moves: { x?: number; y?: number }[] = [];
+        const rings: number[] = [];
+        const node: ControlNode<{ x?: number; y?: number }> = {
+            x: 100,
+            y: 50,
+            atX: (x) => ({ x }),
+            atY: (y) => ({ y }),
+            apply: (patch) => moves.push(patch),
+            ring: { spec: SPECS.kneeDb, value: 6, onChange: (value) => rings.push(value) },
+            reset: {
+                node: () => calls.push('node'),
+                x: () => calls.push('x'),
+                y: () => calls.push('y'),
+            },
+            across: { left: 0, right: 200 },
+            down: { bottom: 150 },
+            ...extra,
+        };
+        return { node, calls, moves, rings };
+    }
+
+    it('moves the node with the pointer from where it was grabbed', () => {
+        const { node, moves } = control();
+        const grabbed = nodeHandle(at(103, 48), node);
+        expect(grabbed?.id).toBe('node');
+        expect(grabbed?.cursor).toBe('move');
+        grabbed?.drag?.(at(113, 28));
+        expect(moves).toEqual([{ x: 110, y: 30 }]);
+    });
+
+    it('drags each guide for its own setting and resets only that one', () => {
+        const { node, moves, calls } = control();
+        const across = nodeHandle(at(20, 52), node);
+        expect(across?.id).toBe('across');
+        across?.drag?.(at(30, 42));
+        across?.reset?.();
+        const down = nodeHandle(at(103, 120), node);
+        expect(down?.id).toBe('down');
+        down?.drag?.(at(93, 140));
+        down?.reset?.();
+        nodeHandle(at(100, 50), node)?.reset?.();
+        expect(moves).toEqual([{ y: 40 }, { x: 90 }]);
+        expect(calls).toEqual(['y', 'x', 'node']);
+    });
+
+    it('runs the guide down from the node, or from the top when given', () => {
+        expect(nodeHandle(at(100, 10), control().node)).toBeUndefined();
+        const full = control({ down: { top: 0, bottom: 150 } }).node;
+        expect(nodeHandle(at(100, 10), full)?.id).toBe('down');
+        expect(nodeHandle(at(20, 80), full)).toBeUndefined();
+    });
+
+    it('leaves out guides the node does not have', () => {
+        const { node } = control({ across: undefined });
+        expect(nodeHandle(at(20, 52), node)).toBeUndefined();
+    });
+
+    it('turns the ring with the wheel on every part, and keys the ids', () => {
+        const { node, rings } = control({ key: 3 });
+        const ring = nodeHandle(at(114, 50), node);
+        expect(ring?.id).toBe('ring:3');
+        nodeHandle(at(100, 50), node)?.wheel?.(1, false);
+        nodeHandle(at(20, 52), node)?.wheel?.(-1, false);
+        expect(rings[0]).toBeGreaterThan(6);
+        expect(rings[1]).toBeLessThan(6);
+    });
+
+    it("drags a band node's guides for one setting each", () => {
+        const values = [
+            { x: 0, y: 6, ring: 0 },
+            { x: 6, y: 18, ring: 50 },
+        ];
+        const { calls, handle } = recorder(SATURATOR, values);
+        const center = nodeAt(SATURATOR, values[1], SPLIT, WIDTH);
+        const across = handle(at(WIDTH - 10, center.y + 2));
+        expect(across.id).toBe('across:1');
+        across.drag?.(at(WIDTH - 10, center.y + 2 - 20));
+        expect(calls.patches[0].patch).toEqual({ y: expect.any(Number) });
+        expect(calls.patches[0].patch.y).toBeGreaterThan(18);
+        const down = handle(at(center.x + 2, HEIGHT - 40));
+        expect(down.id).toBe('down:1');
+        down.drag?.(at(center.x + 2 - 15, HEIGHT - 40));
+        expect(calls.patches[1].patch).toEqual({ x: expect.any(Number) });
+        expect(calls.patches[1].patch.x).toBeLessThan(6);
     });
 });

@@ -11,23 +11,23 @@ import {
 } from '../../shared/effects';
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
-import { nodePart, specValue, wheelEditsDisplays, wheelStep } from '../canvasDrag';
-import { formatFrequency, fromNormalized, toNormalized } from '../format';
+import { drawRing, ringTurn } from '../display/draw';
+import { nodePart, specValue, wheelStep } from '../display/handles';
+import { drawControlGuides, nodeHandle, type ControlNode } from '../display/node';
+import { wheelEditsDisplays, type DragHandle } from '../display/pointer';
 import {
     css,
     dbToY,
     drawGrid,
-    drawGuide,
-    drawRing,
     drawSpectrum,
     frequencyToX,
     pixelFrequencies,
-    ringTurn,
     strokeCurve,
     withAlpha,
     xToFrequency,
     yToDb,
 } from '../graph';
+import { formatFrequency, fromNormalized, toNormalized } from '../format';
 import { useTelemetryStore } from '../telemetry';
 import { useCanvas } from '../useCanvas';
 import { BAND_COLORS, type EditorProps } from './types';
@@ -71,16 +71,43 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
               pointerId: number;
               /** Set while the ring is turned: Q along the knob's scale, and the last pointer y. */
               ring?: { position: number; lastY: number };
+              /** Set while a guide is dragged: only its frequency, or only its gain. */
+              guide?: DragHandle;
           }
         | undefined
     >(undefined);
     // The band whose ring is under the pointer, to highlight it.
     const [hotRing, setHotRing] = useState<string>();
+    // The `id` of the selected band's guide under the pointer, to highlight it.
+    const [hotGuide, setHotGuide] = useState<string>();
     const size = useRef({ width: 1, height: 1 });
     const selected = bands.find((band) => band.id === selectedId);
 
     const updateBand = (id: string, patch: Partial<EqBand>) =>
         setParams({ bands: bands.map((band) => (band.id === id ? { ...band, ...patch } : band)) });
+
+    /**
+     * A band's point as a control node, for its guides: from top to bottom for the frequency and,
+     * on bands with a gain, across for the gain. Its center and ring are handled here, with the
+     * other bands' points.
+     */
+    const bandNode = (
+        band: EqBand,
+        width: number,
+        height: number,
+    ): ControlNode<Partial<EqBand>> => ({
+        x: frequencyToX(band.frequency, width),
+        y: dbToY(hasGain(band.type) ? band.gainDb : 0, height, range),
+        atX: (x) => ({
+            frequency: Math.round(Math.min(20000, Math.max(20, xToFrequency(x, width))) * 10) / 10,
+        }),
+        atY: (y) =>
+            hasGain(band.type) ? { gainDb: specValue(SPECS.gainDb, yToDb(y, height, range)) } : {},
+        apply: (patch) => updateBand(band.id, patch),
+        ring: { spec: SPECS.q, value: band.q, onChange: (q) => updateBand(band.id, { q }) },
+        across: hasGain(band.type) ? { left: 0, right: width } : undefined,
+        down: { top: 0, bottom: height },
+    });
 
     const removeBand = (id: string) => {
         setParams({ bands: bands.filter((band) => band.id !== id) });
@@ -142,13 +169,8 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
                 const y = toY(hasGain(band.type) ? band.gainDb : 0);
                 const tint = bandColor(bands, band);
                 if (band.id === selectedId) {
-                    const gap = NODE_RADIUS + 7;
-                    drawGuide(ctx, [x, 0], [x, y - gap], tint);
-                    drawGuide(ctx, [x, y + gap], [x, height], tint);
-                    if (hasGain(band.type)) {
-                        drawGuide(ctx, [0, y], [x - gap, y], tint);
-                        drawGuide(ctx, [x + gap, y], [width, y], tint);
-                    }
+                    // The selected band's guides drag its frequency and its gain.
+                    drawControlGuides(ctx, bandNode(band, width, height), tint, hotGuide);
                 }
                 // The ring shows Q, which the wheel sets.
                 drawRing(
@@ -176,7 +198,7 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
                 ctx.textAlign = 'start';
             });
         },
-        [bands, selectedId, range, showPre, hotRing],
+        [bands, selectedId, range, showPre, hotRing, hotGuide],
     );
 
     const hit = (event: PointerEvent<HTMLCanvasElement> | WheelEvent<HTMLCanvasElement>) => {
@@ -196,11 +218,22 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
         const band =
             reversed.find((candidate) => partOf(candidate) === 'center') ??
             reversed.find((candidate) => partOf(candidate) === 'ring');
-        return { x, y, band, part: band && partOf(band), width, height };
+        // Away from every point, the selected band's guides: frequency down, gain across.
+        const guide =
+            band || !selected
+                ? undefined
+                : nodeHandle({ x, y, width, height }, bandNode(selected, width, height));
+        return { x, y, band, part: band && partOf(band), guide, width, height };
     };
 
     const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
-        const { band, part, x, y, width, height } = hit(event);
+        const { band, part, guide, x, y, width, height } = hit(event);
+        if (guide && selected && event.button === 0) {
+            drag.current = { id: selected.id, pointerId: event.pointerId, guide };
+            guide.drag?.({ x, y, width, height });
+            event.currentTarget.setPointerCapture(event.pointerId);
+            return;
+        }
         if (band && part === 'ring' && event.button === 0 && !event.altKey) {
             setSelectedId(band.id);
             drag.current = {
@@ -235,12 +268,15 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
 
     const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
         if (!drag.current) {
-            const { band, part } = hit(event);
+            const { band, part, guide } = hit(event);
             event.currentTarget.style.cursor =
-                part === 'ring' ? 'ns-resize' : part === 'center' ? 'move' : '';
+                part === 'ring' ? 'ns-resize' : part === 'center' ? 'move' : (guide?.cursor ?? '');
             const hot = part === 'ring' ? band?.id : undefined;
             if (hot !== hotRing) {
                 setHotRing(hot);
+            }
+            if (guide?.id !== hotGuide) {
+                setHotGuide(guide?.id);
             }
             return;
         }
@@ -256,6 +292,11 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
             ring.position += ((ring.lastY - y) / RING_DRAG_PIXELS) * scale;
             ring.lastY = y;
             updateBand(band.id, { q: specValue(SPECS.q, fromNormalized(SPECS.q, ring.position)) });
+            return;
+        }
+        const guide = drag.current.guide;
+        if (guide) {
+            guide.drag?.({ x, y, width, height });
             return;
         }
         const frequency = Math.min(20000, Math.max(20, xToFrequency(x, width)));
@@ -290,7 +331,12 @@ export function EqEditor({ effect, setParams, color }: EditorProps<'eq'>) {
                     onPointerMove={onPointerMove}
                     onPointerUp={() => (drag.current = undefined)}
                     onPointerCancel={() => (drag.current = undefined)}
-                    onPointerLeave={() => !drag.current && hotRing && setHotRing(undefined)}
+                    onPointerLeave={() => {
+                        if (!drag.current) {
+                            setHotRing(undefined);
+                            setHotGuide(undefined);
+                        }
+                    }}
                     onWheel={onWheel}
                     onContextMenu={(event) => {
                         event.preventDefault();

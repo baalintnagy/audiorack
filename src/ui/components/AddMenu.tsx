@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { EFFECT_INFO, EFFECT_TYPES, PARALLEL_INFO, type EffectType } from '../../shared/effects';
+import { useDismiss } from '../useDismiss';
 
 /** What the add menu can create: an effect, or a parallel group in the main chain. */
 export type AddKind = EffectType | 'parallel';
@@ -59,18 +60,7 @@ export function AddMenu({
                 : undefined,
         );
     };
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-        const close = (event: MouseEvent) => {
-            if (!ref.current?.contains(event.target as Node)) {
-                setPosition(undefined);
-            }
-        };
-        window.addEventListener('mousedown', close);
-        return () => window.removeEventListener('mousedown', close);
-    }, [open]);
+    useDismiss(open, ref, () => setPosition(undefined));
     const choose = (kind: AddKind) => {
         onAdd(kind);
         setOpen(false);

@@ -3,26 +3,82 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>AudioRack — an effect rack for your browser tabs</title>
+        <title>AudioRack — audio equalizer, compressor and effects for Chrome tabs</title>
         <meta
             name="description"
-            content="AudioRack is a Chrome extension that routes any tab's audio through a configurable chain of EQ, compressors, saturator, limiter, gate, denoiser, filter, de-esser, bass booster and analyzers, in series or in parallel, with a separate rack per tab if you like."
+            content="Free, open-source Chrome extension that runs any tab's audio through an equalizer, compressor, limiter, gate, denoiser, saturator and more, with live analyzers and a loudness meter."
         />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://baalintnagy.github.io/audiorack/" />
         <meta name="theme-color" content="#0e1014" />
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="AudioRack" />
+        <meta property="og:site_name" content="AudioRack" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:title" content="AudioRack — an effect rack for your browser tabs" />
         <meta
             property="og:description"
-            content="An effect rack for your browser tabs: EQ, dynamics, filters and analyzers."
+            content="EQ, compressors, limiter, gate, denoiser, saturator and analyzers for the sound of any browser tab. Free, open source, and everything stays on your device."
         />
         <meta property="og:url" content="https://baalintnagy.github.io/audiorack/" />
         <meta
             property="og:image"
             content="https://baalintnagy.github.io/audiorack/images/equalizer.jpg"
         />
+        <meta property="og:image:width" content="800" />
+        <meta property="og:image:height" content="600" />
+        <meta
+            property="og:image:alt"
+            content="The AudioRack equalizer, with its bands drawn over the live spectrum"
+        />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="AudioRack — an effect rack for your browser tabs" />
+        <meta
+            name="twitter:description"
+            content="EQ, compressors, limiter, gate, denoiser, saturator and analyzers for the sound of any browser tab. Free and open source."
+        />
+        <meta
+            name="twitter:image"
+            content="https://baalintnagy.github.io/audiorack/images/equalizer.jpg"
+        />
+        <meta
+            name="twitter:image:alt"
+            content="The AudioRack equalizer, with its bands drawn over the live spectrum"
+        />
         <link rel="icon" href="images/icon.png" />
+        <link rel="apple-touch-icon" href="images/icon.png" />
         <link rel="stylesheet" href="style.css" />
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                "name": "AudioRack",
+                "description": "A Chrome extension that routes any tab's audio through a configurable chain of EQ, compressors, saturator, limiter, gate, denoiser, filter, de-esser, bass booster and analyzers, in series or in parallel.",
+                "url": "https://baalintnagy.github.io/audiorack/",
+                "applicationCategory": "MultimediaApplication",
+                "applicationSubCategory": "Browser extension",
+                "operatingSystem": "Chrome 116 or newer",
+                "isAccessibleForFree": true,
+                "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+                "license": "https://opensource.org/licenses/MIT",
+                "codeRepository": "https://github.com/baalintnagy/audiorack",
+                "image": "https://baalintnagy.github.io/audiorack/images/icon.png",
+                "screenshot": [
+                    "https://baalintnagy.github.io/audiorack/images/equalizer.jpg",
+                    "https://baalintnagy.github.io/audiorack/images/compressor.jpg",
+                    "https://baalintnagy.github.io/audiorack/images/side-panel.jpg",
+                    "https://baalintnagy.github.io/audiorack/images/spectrogram.jpg"
+                ],
+                "featureList": [
+                    "Parametric equalizer with up to 12 bands",
+                    "Compressor, multiband compressor and lookahead limiter",
+                    "Noise gate, spectral denoiser and de-esser",
+                    "Multiband saturator, resonant filter and bass booster",
+                    "Spectrum, spectrogram, stereo image and EBU R128 loudness meters",
+                    "Series and parallel routing, with a separate rack per tab",
+                    "Side panel and pop-out window"
+                ]
+            }
+        </script>
     </head>
     <body>
         <header class="nav">
@@ -77,8 +133,8 @@
                     Add effects, drag them into the order you want, or side by side in parallel
                     branches, and bypass any of them with a click. Bypassing crossfades, so there
                     are no clicks or pops. The displays are controls too: drag a node to set two
-                    settings at once and its ring for a third, or drag a threshold line, and give
-                    each effect an accent color of your own.
+                    settings at once, its ring for a third and its dotted guides for one each, or
+                    drag a threshold line, and give each effect an accent color of your own.
                 </p>
                 <div class="modules">
                     <article class="module" style="--tint: #4fb3ff">
@@ -111,8 +167,8 @@
                             by the ratio. The transfer curve shows the setting and the history shows
                             the level and the gain reduction as they happen. Peak or RMS detection,
                             a sidechain filter that ignores the bass, auto makeup gain and a mix
-                            knob for parallel compression. Drag the knee for the threshold and
-                            ratio, and its ring for a softer knee.
+                            knob for parallel compression. Drag the node up and down for the
+                            threshold, sideways for the ratio, and its ring for a softer knee.
                         </p>
                     </article>
                     <article class="module" style="--tint: #ff5e7a">
@@ -246,8 +302,9 @@
                         <p>
                             Gain, pan, stereo width from mono to extra wide and a polarity flip for
                             each channel, with a loudness bar that shows the momentary and
-                            short-term loudness of its output in LUFS. Drag the handle on the sound
-                            stage to pan and widen the image.
+                            short-term loudness of its output in LUFS. Drag the node on the sound
+                            stage sideways to pan and up to widen the image, and its ring for the
+                            gain.
                         </p>
                     </article>
                     <article class="module" style="--tint: #ff8a3d">

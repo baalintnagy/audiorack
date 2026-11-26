@@ -1,42 +1,68 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { cascadeMagnitude, type BiquadCoefficients } from '../../dsp/biquad';
-import type { NumberSpec } from '../../shared/effects';
+import {
+    drawControlNode,
+    nodeHandle,
+    ringWheel,
+    type ControlNode,
+    type NodeLayout,
+} from '../display/node';
+import { useCanvasDrag } from '../display/pointer';
 import {
     css,
-    RING_RADIUS,
     dbToY,
     drawGrid,
-    drawGuide,
-    drawNode,
     drawSpectrum,
     frequencyToX,
     pixelFrequencies,
-    ringTurn,
     strokeCurve,
     withAlpha,
     xToFrequency,
     yToDb,
 } from '../graph';
-import { nodePart, ringHandle, useCanvasDrag, wheelStep } from '../canvasDrag';
 import { useTelemetryStore } from '../telemetry';
 import { useCanvas, type CanvasFrame } from '../useCanvas';
 
 /**
- * A handle on the response graph. Dragging sets its frequency and level; with a `ring` it
- * controls a third setting too, turned with the mouse wheel and shown around the handle.
+ * A node on the response graph. Dragging sets its frequency and level; its `ring` controls a
+ * third setting, shown around it.
  */
 export interface GraphNode {
     frequency: number;
     db: number;
     onDrag: (frequency: number, db: number) => void;
-    ring?: { spec: NumberSpec; value: number; onChange: (value: number) => void };
+    ring: NodeLayout['ring'];
     /**
      * Dotted guides from the handle to the axes whose reading is the setting: the frequency
      * scale below, the level scale at the side.
      */
     guides?: { frequency?: boolean; level?: boolean };
-    /** Double-click on the display. */
-    onReset?: () => void;
+    /** Double-click on the display: restores all three settings. */
+    onReset: () => void;
+}
+
+/**
+ * The control node of a {@link GraphNode} on a graph of the given size and level range. Its
+ * guides, when shown, run from top to bottom and across the whole graph; each resets all three
+ * settings like the node.
+ */
+function controlNode(
+    node: GraphNode,
+    width: number,
+    height: number,
+    range: number,
+): ControlNode<{ frequency?: number; db?: number }> {
+    return {
+        x: frequencyToX(node.frequency, width),
+        y: dbToY(node.db, height, range),
+        atX: (x) => ({ frequency: Math.min(20000, Math.max(20, xToFrequency(x, width))) }),
+        atY: (y) => ({ db: Math.min(range, Math.max(-range, yToDb(y, height, range))) }),
+        apply: ({ frequency = node.frequency, db = node.db }) => node.onDrag(frequency, db),
+        ring: node.ring,
+        reset: { node: node.onReset, x: node.onReset, y: node.onReset },
+        across: node.guides?.level ? { left: 0, right: width } : undefined,
+        down: node.guides?.frequency ? { top: 0, bottom: height } : undefined,
+    };
 }
 
 /** Frequency-response display over the live output spectrum, with an optional handle. */
@@ -58,8 +84,6 @@ export function ResponseGraph({
     title?: string;
 }) {
     const store = useTelemetryStore();
-    // The node part under the pointer, to highlight the ring.
-    const [hot, setHot] = useState<string>();
     const frequenciesFor = useMemo(() => {
         let cache: { width: number; values: Float32Array } | undefined;
         return (width: number) => {
@@ -69,6 +93,22 @@ export function ResponseGraph({
             return cache.values;
         };
     }, []);
+
+    const { handlers: pointer, hot } = useCanvasDrag((point) => {
+        if (!node) {
+            return undefined;
+        }
+        const control = controlNode(node, point.width, point.height, range);
+        // Away from the node and its guides, a press moves the node to the pointer.
+        return (
+            nodeHandle(point, control) ?? {
+                cursor: '',
+                drag: (to) => control.apply({ ...control.atX(to.x), ...control.atY(to.y) }),
+                reset: node.onReset,
+                wheel: ringWheel(control),
+            }
+        );
+    });
 
     const ref = useCanvas(
         (frame) => {
@@ -104,57 +144,11 @@ export function ResponseGraph({
             });
             overlay?.(frame);
             if (node) {
-                const x = frequencyToX(node.frequency, width);
-                const y = toY(node.db);
-                const gap = RING_RADIUS + 2;
-                if (node.guides?.frequency) {
-                    drawGuide(ctx, [x, 0], [x, y - gap], color);
-                    drawGuide(ctx, [x, y + gap], [x, height], color);
-                }
-                if (node.guides?.level) {
-                    drawGuide(ctx, [0, y], [x - gap, y], color);
-                    drawGuide(ctx, [x + gap, y], [width, y], color);
-                }
-                const turn = node.ring ? ringTurn(node.ring.spec, node.ring.value) : 0;
-                drawNode(ctx, x, y, color, turn, true, hot === 'ring');
+                drawControlNode(ctx, controlNode(node, width, height, range), color, hot);
             }
         },
         [range, color, hot, ...deps],
     );
-
-    const pointer = useCanvasDrag(({ x, y, width, height }) => {
-        if (!node) {
-            return undefined;
-        }
-        const part = nodePart(
-            { x, y },
-            frequencyToX(node.frequency, width),
-            dbToY(node.db, height, range),
-        );
-        const { ring } = node;
-        if (part === 'ring' && ring) {
-            return ringHandle('ring', ring.spec, ring.value, y, ring.onChange, {
-                wheel: (direction, fine) =>
-                    ring.onChange(wheelStep(ring.spec, ring.value, direction, fine)),
-            });
-        }
-        return {
-            cursor: part ? 'move' : '',
-            // A press anywhere moves the handle there.
-            drag: (to) =>
-                node.onDrag(
-                    Math.min(20000, Math.max(20, xToFrequency(to.x, width))),
-                    Math.min(range, Math.max(-range, yToDb(to.y, height, range))),
-                ),
-            reset: node.onReset,
-            wheel:
-                node.ring &&
-                ((direction, fine) => {
-                    const ring = node.ring;
-                    ring?.onChange(wheelStep(ring.spec, ring.value, direction, fine));
-                }),
-        };
-    }, setHot);
 
     return (
         <canvas

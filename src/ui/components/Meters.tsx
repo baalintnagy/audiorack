@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
 import type { NumberSpec } from '../../shared/effects';
 import type { Telemetry } from '../../shared/messages';
-import { LINE_GRAB, specValue, useCanvasDrag, wheelStep } from '../canvasDrag';
-import { css, drawGrip } from '../graph';
+import { drawHandleLine } from '../display/draw';
+import { LINE_GRAB, settingHandle } from '../display/handles';
+import { useCanvasDrag } from '../display/pointer';
+import { css } from '../graph';
 import { gainToDbValue } from '../format';
 import { useTelemetry } from '../telemetry';
 import { useCanvas } from '../useCanvas';
@@ -180,6 +182,26 @@ export function DynamicsHistory({
     // The scale may follow the threshold; it holds still while the line is dragged.
     const [heldRange, setHeldRange] = useState<number>();
     const scale = heldRange ?? range;
+    const { handlers: pointer, hot } = useCanvasDrag((point) => {
+        if (!threshold || thresholdDb === undefined) {
+            return undefined;
+        }
+        const lineY = (-Math.max(-scale, Math.min(0, thresholdDb)) / scale) * point.height;
+        if (Math.abs(point.y - lineY) > LINE_GRAB) {
+            return undefined;
+        }
+        return settingHandle({
+            id: 'line',
+            cursor: 'ns-resize',
+            spec: threshold.spec,
+            value: thresholdDb,
+            toValue: ({ y }) => -(y / point.height) * scale,
+            onChange: threshold.onChange,
+            press: () => setHeldRange(scale),
+            release: () => setHeldRange(undefined),
+        });
+    });
+
     const ref = useCanvas(
         ({ ctx, width, height }) => {
             const h = history.current;
@@ -236,49 +258,28 @@ export function DynamicsHistory({
             ctx.shadowBlur = 0;
             if (thresholdDb !== undefined) {
                 const y = Math.round(toY(thresholdDb)) + 0.5;
-                ctx.setLineDash([4, 4]);
-                ctx.strokeStyle = css('--threshold');
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(width, y);
-                ctx.stroke();
-                ctx.setLineDash([]);
+                drawHandleLine(
+                    ctx,
+                    [
+                        [0, y],
+                        [width, y],
+                    ],
+                    { color, base: css('--threshold'), hot: hot === 'line' },
+                );
                 if (threshold) {
-                    drawGrip(ctx, width - 14, y, color);
-                    ctx.fillStyle = css('--grid-label');
+                    ctx.fillStyle = hot === 'line' ? color : css('--grid-label');
                     ctx.textAlign = 'right';
                     ctx.fillText(
                         `${threshold.label ?? threshold.spec.label} ${thresholdDb.toFixed(1)}`,
-                        width - 26,
+                        width - 6,
                         y > 16 ? y - 4 : y + 12,
                     );
                     ctx.textAlign = 'start';
                 }
             }
         },
-        [color, thresholdDb, scale, threshold !== undefined],
+        [color, thresholdDb, scale, threshold !== undefined, hot],
     );
-    const pointer = useCanvasDrag((point) => {
-        if (!threshold || thresholdDb === undefined) {
-            return undefined;
-        }
-        const toDb = (y: number) => -(y / point.height) * scale;
-        const lineY = (-Math.max(-scale, Math.min(0, thresholdDb)) / scale) * point.height;
-        if (Math.abs(point.y - lineY) > LINE_GRAB) {
-            return undefined;
-        }
-        const set = (value: number) => threshold.onChange(specValue(threshold.spec, value));
-        return {
-            cursor: 'ns-resize',
-            press: () => setHeldRange(scale),
-            drag: ({ y }) => set(toDb(y)),
-            release: () => setHeldRange(undefined),
-            reset: () => set(threshold.spec.default),
-            wheel: (direction, fine) =>
-                set(wheelStep(threshold.spec, thresholdDb, direction, fine)),
-        };
-    });
     return (
         <canvas
             ref={ref}

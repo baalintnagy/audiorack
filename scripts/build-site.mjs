@@ -5,6 +5,8 @@ import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const out = resolve(root, 'site-dist');
+/** Where GitHub Pages serves the site. */
+const SITE_URL = 'https://baalintnagy.github.io/audiorack/';
 
 if (!existsSync(resolve(out, 'demo', 'rack.html'))) {
     console.error('site-dist/demo is missing; run `vite build --mode demo` first.');
@@ -81,6 +83,45 @@ if (!placeholder.test(template)) {
 }
 const policy = markdownToHtml(readFileSync(resolve(root, 'PRIVACY.md'), 'utf8'));
 writeFileSync(resolve(out, 'privacy.html'), template.replace(placeholder, policy));
+
+// The demo is the extension's rack page, which has a bare title: give it its own title,
+// description and canonical address for search engines.
+const demoPath = resolve(out, 'demo', 'rack.html');
+const demo = readFileSync(demoPath, 'utf8');
+if (!demo.includes('<title>AudioRack</title>')) {
+    console.error('site-dist/demo/rack.html has no <title>AudioRack</title> to replace.');
+    process.exit(1);
+}
+writeFileSync(
+    demoPath,
+    demo.replace(
+        '<title>AudioRack</title>',
+        [
+            '<title>AudioRack live demo — try the effect rack in your browser</title>',
+            '<meta name="description" content="Try AudioRack without installing it: EQ, compressors, saturator, limiter and analyzers running on a demo track, right in your browser." />',
+            `<link rel="canonical" href="${SITE_URL}demo/rack.html" />`,
+        ].join('\n        '),
+    ),
+);
+
+// Pages for search engines. A project site cannot point to it from robots.txt, which crawlers
+// read only at the root of the host, so it is submitted in Google Search Console instead.
+const lastModified = new Date().toISOString().slice(0, 10);
+const pages = ['', 'demo/rack.html', 'privacy.html'];
+writeFileSync(
+    resolve(out, 'sitemap.xml'),
+    [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        ...pages.map(
+            (page) =>
+                `  <url><loc>${SITE_URL}${page}</loc><lastmod>${lastModified}</lastmod></url>`,
+        ),
+        '</urlset>',
+        '',
+    ].join('\n'),
+);
+
 // Keep GitHub Pages from running Jekyll over the output.
 writeFileSync(resolve(out, '.nojekyll'), '');
 console.log(`Site written to ${out}`);

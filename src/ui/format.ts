@@ -60,13 +60,6 @@ export function parseValue(spec: NumberSpec, text: string): number | undefined {
     return Number.isFinite(value) ? Math.min(spec.max, Math.max(spec.min, value)) : undefined;
 }
 
-export function formatDb(value: number, decimals = 1): string {
-    if (!Number.isFinite(value) || value <= -99) {
-        return '-∞';
-    }
-    return value.toFixed(decimals);
-}
-
 export function gainToDbValue(gain: number): number {
     return gain > 1e-6 ? 20 * Math.log10(gain) : -120;
 }

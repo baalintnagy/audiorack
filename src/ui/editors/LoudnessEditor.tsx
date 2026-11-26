@@ -4,8 +4,10 @@ import { SPECS } from '../../shared/effects';
 import { ControlGroup, Segmented } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { formatLoudness } from '../components/Meters';
-import { LINE_GRAB, specValue, useCanvasDrag, wheelStep } from '../canvasDrag';
-import { css, drawGrip, withAlpha } from '../graph';
+import { drawHandleLine } from '../display/draw';
+import { LINE_GRAB, settingHandle } from '../display/handles';
+import { useCanvasDrag } from '../display/pointer';
+import { css, withAlpha } from '../graph';
 import { useTelemetry } from '../telemetry';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
@@ -53,6 +55,21 @@ function LoudnessHistory({
     /** Makes the target line draggable. */
     onTarget: (targetLufs: number) => void;
 }) {
+    const { handlers: pointer, hot } = useCanvasDrag(({ y, height }) => {
+        const targetY = ((HISTORY_MAX - target) / (HISTORY_MAX - HISTORY_MIN)) * height;
+        if (Math.abs(y - targetY) > LINE_GRAB) {
+            return undefined;
+        }
+        return settingHandle({
+            id: 'line',
+            cursor: 'ns-resize',
+            spec: SPECS.targetLufs,
+            value: target,
+            toValue: (to) => HISTORY_MAX - (to.y / height) * (HISTORY_MAX - HISTORY_MIN),
+            onChange: onTarget,
+        });
+    });
+
     const ref = useCanvas(
         ({ ctx, width, height }) => {
             const toY = (lufs: number) =>
@@ -75,16 +92,18 @@ function LoudnessHistory({
             ctx.fillStyle = withAlpha(color, 0.1);
             const bandTop = toY(target + TOLERANCE_LU);
             ctx.fillRect(0, bandTop, width, toY(target - TOLERANCE_LU) - bandTop);
-            ctx.setLineDash([4, 4]);
-            ctx.strokeStyle = withAlpha(color, 0.8);
-            ctx.beginPath();
-            ctx.moveTo(0, Math.round(toY(target)) + 0.5);
-            ctx.lineTo(width, Math.round(toY(target)) + 0.5);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            const targetY = Math.round(toY(target)) + 0.5;
+            drawHandleLine(
+                ctx,
+                [
+                    [0, targetY],
+                    [width, targetY],
+                ],
+                { color, base: withAlpha(color, 0.8), hot: hot === 'line' },
+            );
             ctx.fillStyle = color;
             ctx.textAlign = 'right';
-            ctx.fillText(`target ${target.toFixed(1)}`, width - 26, toY(target) - 4);
+            ctx.fillText(`target ${target.toFixed(1)}`, width - 6, toY(target) - 4);
             ctx.textAlign = 'start';
             const step = width / (HISTORY_LENGTH - 1);
             const at = (index: number) => (history.position + index) % HISTORY_LENGTH;
@@ -132,23 +151,9 @@ function LoudnessHistory({
             }
             ctx.fillStyle = css('--grid-label');
             ctx.fillText('short-term (bold), momentary · last minute', 30, height - 6);
-            drawGrip(ctx, width - 14, Math.round(toY(target)) + 0.5, color);
         },
-        [color, target],
+        [color, target, hot],
     );
-    const pointer = useCanvasDrag(({ y, height }) => {
-        const targetY = ((HISTORY_MAX - target) / (HISTORY_MAX - HISTORY_MIN)) * height;
-        if (Math.abs(y - targetY) > LINE_GRAB) {
-            return undefined;
-        }
-        const set = (value: number) => onTarget(specValue(SPECS.targetLufs, value));
-        return {
-            cursor: 'ns-resize',
-            drag: (to) => set(HISTORY_MAX - (to.y / height) * (HISTORY_MAX - HISTORY_MIN)),
-            reset: () => set(SPECS.targetLufs.default),
-            wheel: (direction, fine) => set(wheelStep(SPECS.targetLufs, target, direction, fine)),
-        };
-    });
     return (
         <canvas
             ref={ref}

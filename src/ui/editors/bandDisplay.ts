@@ -1,22 +1,9 @@
 import { SPECS, type NumberSpec } from '../../shared/effects';
-import {
-    nodePart,
-    ringHandle,
-    specValue,
-    wheelStep,
-    type CanvasPoint,
-    type DragHandle,
-} from '../canvasDrag';
-import { fromNormalized, toNormalized } from '../format';
-import {
-    RING_RADIUS,
-    css,
-    drawGuide,
-    drawNode,
-    frequencyToX,
-    ringTurn,
-    xToFrequency,
-} from '../graph';
+import { specValue } from '../display/handles';
+import { drawControlNode, nodeHandle, ringWheel, type ControlNode } from '../display/node';
+import type { CanvasPoint, DragHandle } from '../display/pointer';
+import { formatFrequency, fromNormalized, toNormalized } from '../format';
+import { css, frequencyToX, xToFrequency } from '../graph';
 
 /** Smallest ratio between neighbouring crossovers. */
 const MIN_GAP = 1.25;
@@ -49,6 +36,46 @@ export interface BandNode {
     format: (value: NodeValue) => string;
 }
 
+/** The name of a band: Low, Mid, High and so on, or Full for an unsplit signal. */
+export function bandLabel(index: number, count: number): string {
+    const names: Record<number, string[]> = {
+        1: ['Full'],
+        2: ['Low', 'High'],
+        3: ['Low', 'Mid', 'High'],
+        4: ['Low', 'Low Mid', 'High Mid', 'High'],
+    };
+    return names[count]?.[index] ?? '';
+}
+
+/** The crossovers between bands: a line with a handle in the middle and the frequency at the top. */
+export function drawCrossovers(
+    ctx: CanvasRenderingContext2D,
+    crossovers: number[],
+    width: number,
+    height: number,
+    color: string,
+) {
+    ctx.save();
+    ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+    crossovers.forEach((frequency, index) => {
+        const x = Math.round(frequencyToX(frequency, width)) + 0.5;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, height / 2, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = css('--text');
+        // Neighbouring labels alternate between two rows, so they do not overlap.
+        ctx.fillText(formatFrequency(frequency), x + 6, 14 + (index % 2) * 12);
+    });
+    ctx.restore();
+}
+
 export function bandEdges(crossovers: number[], width: number): number[] {
     return [20, ...crossovers, 20000].map((frequency) => frequencyToX(frequency, width));
 }
@@ -79,6 +106,47 @@ function nodeYValue(spec: NumberSpec, y: number, height: number): number {
     return fromNormalized(spec, (bottom - y) / (bottom - NODE_TOP));
 }
 
+/**
+ * The control node of one band, between its crossovers at `left` and `right`. Both axes follow
+ * the knobs' scales; its guides run across the band and down to its floor.
+ */
+function bandControl(
+    node: BandNode,
+    band: number,
+    left: number,
+    right: number,
+    height: number,
+): ControlNode<Partial<NodeValue>> {
+    const { specs, values, onChange } = node;
+    const value = values[band];
+    const set = (patch: Partial<NodeValue>) =>
+        onChange(
+            band,
+            Object.fromEntries(
+                Object.entries(patch).map(([key, next]) => [
+                    key,
+                    specValue(specs[key as keyof NodeValue], next),
+                ]),
+            ),
+        );
+    return {
+        x: nodeX(specs.x, value.x, left, right),
+        y: nodeY(specs.y, value.y, height),
+        atX: (x) => ({ x: nodeXValue(specs.x, x, left, right) }),
+        atY: (y) => ({ y: nodeYValue(specs.y, y, height) }),
+        apply: set,
+        ring: { spec: specs.ring, value: value.ring, onChange: (ring) => set({ ring }) },
+        reset: {
+            node: () => set({ x: specs.x.default, y: specs.y.default, ring: specs.ring.default }),
+            x: () => set({ x: specs.x.default }),
+            y: () => set({ y: specs.y.default }),
+        },
+        across: { left: left + 4, right: right - 4 },
+        down: { bottom: height - NODE_BOTTOM },
+        key: band,
+    };
+}
+
 /** Draws every band's node, with its values next to the selected one. */
 export function drawBandNodes(
     ctx: CanvasRenderingContext2D,
@@ -87,23 +155,17 @@ export function drawBandNodes(
     height: number,
     selected: number,
     tint: (index: number) => string,
-    /** The `id` of the handle under the pointer, to highlight its ring. */
+    /** The `id` of the handle under the pointer, to highlight it. */
     hot?: string,
 ) {
-    const { specs } = node;
     node.values.forEach((value, index) => {
         const left = edges[index];
         const right = edges[index + 1];
-        const x = nodeX(specs.x, value.x, left, right);
-        const y = nodeY(specs.y, value.y, height);
+        const control = bandControl(node, index, left, right, height);
+        const { y } = control;
         const color = tint(index);
         const on = index === selected;
-        // Guides: the vertical setting across the band, the horizontal one down to its floor.
-        const alpha = on ? 0.7 : 0.3;
-        drawGuide(ctx, [left + 4, y], [x - RING_RADIUS - 2, y], color, alpha);
-        drawGuide(ctx, [x + RING_RADIUS + 2, y], [right - 4, y], color, alpha);
-        drawGuide(ctx, [x, y + RING_RADIUS + 2], [x, height - NODE_BOTTOM], color, alpha);
-        drawNode(ctx, x, y, color, ringTurn(specs.ring, value.ring), on, hot === `ring:${index}`);
+        drawControlNode(ctx, control, color, hot, { selected: on, alpha: on ? 0.7 : 0.3 });
         if (on && right - left > 60) {
             ctx.fillStyle = css('--grid-label');
             ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
@@ -161,65 +223,22 @@ export function bandHandle({
     }
     const frequency = xToFrequency(x, width);
     const band = crossovers.filter((value) => value < frequency).length;
-    return nodeHandle(point, node, band, bandEdges(crossovers, width), () => select(band));
+    return bandNodeHandle(point, node, band, bandEdges(crossovers, width), () => select(band));
 }
 
-function nodeHandle(
+/**
+ * A band's node under the pointer (see {@link nodeHandle}); elsewhere in the band, a press
+ * selects it and the wheel turns its node's ring.
+ */
+function bandNodeHandle(
     point: CanvasPoint,
     node: BandNode,
     band: number,
     edges: number[],
     press: () => void,
 ): DragHandle {
-    const { specs, values, onChange } = node;
-    const value = values[band];
-    const left = edges[band];
-    const right = edges[band + 1];
-    const { height } = point;
-    const set = (patch: Partial<NodeValue>) =>
-        onChange(
-            band,
-            Object.fromEntries(
-                Object.entries(patch).map(([key, next]) => [
-                    key,
-                    specValue(specs[key as keyof NodeValue], next),
-                ]),
-            ),
-        );
-    const wheel: DragHandle['wheel'] = (direction, fine) =>
-        set({ ring: wheelStep(specs.ring, value.ring, direction, fine) });
-    const x = nodeX(specs.x, value.x, left, right);
-    const y = nodeY(specs.y, value.y, height);
-    const part = nodePart(point, x, y);
-    if (!part) {
-        return { cursor: '', press, wheel };
-    }
-    if (part === 'ring') {
-        return ringHandle(
-            `ring:${band}`,
-            specs.ring,
-            value.ring,
-            point.y,
-            (ring) => set({ ring }),
-            {
-                press,
-                wheel,
-            },
-        );
-    }
-    // The node moves with the pointer from where it was grabbed, without jumping to it.
-    const offsetX = x - point.x;
-    const offsetY = y - point.y;
-    return {
-        id: `node:${band}`,
-        cursor: 'move',
-        press,
-        drag: (to) =>
-            set({
-                x: nodeXValue(specs.x, to.x + offsetX, left, right),
-                y: nodeYValue(specs.y, to.y + offsetY, height),
-            }),
-        reset: () => set({ x: specs.x.default, y: specs.y.default, ring: specs.ring.default }),
-        wheel,
-    };
+    const control = bandControl(node, band, edges[band], edges[band + 1], point.height);
+    return (
+        nodeHandle(point, control, { press }) ?? { cursor: '', press, wheel: ringWheel(control) }
+    );
 }

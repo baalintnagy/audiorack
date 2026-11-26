@@ -5,26 +5,23 @@ import {
     type MultibandBand,
     type MultibandParams,
 } from '../../shared/effects';
-import { ControlGroup, Segmented, Toggle } from '../components/Controls';
+import { ControlGroup, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
-import { formatFrequency } from '../format';
-import { useCanvasDrag } from '../canvasDrag';
-import { css, drawGrid, drawSpectrum, frequencyToX, withAlpha } from '../graph';
+import { useCanvasDrag } from '../display/pointer';
+import { css, drawGrid, drawSpectrum, withAlpha } from '../graph';
 import { useCanvas } from '../useCanvas';
-import { bandEdges, bandHandle, drawBandNodes, type BandNode } from './bandDisplay';
+import { BandStrip } from './BandStrip';
+import {
+    bandEdges,
+    bandHandle,
+    bandLabel,
+    drawBandNodes,
+    drawCrossovers,
+    type BandNode,
+} from './bandDisplay';
 import { BAND_COLORS, type EditorProps } from './types';
 
 const GR_RANGE = 18;
-
-function bandLabel(index: number, count: number) {
-    if (count === 2) {
-        return ['Low', 'High'][index];
-    }
-    if (count === 3) {
-        return ['Low', 'Mid', 'High'][index];
-    }
-    return ['Low', 'Low Mid', 'High Mid', 'High'][index];
-}
 
 /** Changes the number of bands while keeping existing band settings where possible. */
 export function withBandCount(params: MultibandParams, count: number): MultibandParams {
@@ -46,8 +43,6 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
     const [selected, setSelected] = useState(1);
     const shown = useRef<number[]>([]);
     const count = p.crossovers.length + 1;
-    // The node part under the pointer, to highlight a ring.
-    const [hot, setHot] = useState<string>();
     const band = p.bands[Math.min(selected, count - 1)];
     const bandIndex = Math.min(selected, count - 1);
 
@@ -75,6 +70,16 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
             `${y.toFixed(1)} dB · ${x >= SPECS.ratio.max ? '∞' : x.toFixed(1)}:1 · makeup ${ring > 0 ? '+' : ''}${ring.toFixed(1)}`,
     };
     const tint = (index: number) => BAND_COLORS[(index + 4) % BAND_COLORS.length];
+
+    const { handlers: pointer, hot } = useCanvasDrag((point) =>
+        bandHandle({
+            point,
+            crossovers: p.crossovers,
+            onCrossovers: (crossovers) => setParams({ crossovers }),
+            select: setSelected,
+            node: nodes,
+        }),
+    );
 
     const ref = useCanvas(
         ({ ctx, width: w, height, telemetry, live }) => {
@@ -123,36 +128,9 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
                 ctx.textAlign = 'start';
             });
             drawBandNodes(ctx, nodes, edges, height, bandIndex, tint, hot);
-            p.crossovers.forEach((frequency, index) => {
-                const x = Math.round(frequencyToX(frequency, w)) + 0.5;
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, height);
-                ctx.stroke();
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.arc(x, height / 2, 6, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = css('--text');
-                ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
-                ctx.fillText(formatFrequency(frequency), x + 6, 14 + (index % 2) * 12);
-            });
+            drawCrossovers(ctx, p.crossovers, w, height, color);
         },
         [p, bandIndex, color, count, hot],
-    );
-
-    const pointer = useCanvasDrag(
-        (point) =>
-            bandHandle({
-                point,
-                crossovers: p.crossovers,
-                onCrossovers: (crossovers) => setParams({ crossovers }),
-                select: setSelected,
-                node: nodes,
-            }),
-        setHot,
     );
 
     const bandColor = BAND_COLORS[(bandIndex + 4) % BAND_COLORS.length];
@@ -166,37 +144,18 @@ export function MultibandEditor({ effect, setParams, color }: EditorProps<'multi
                     title="Drag crossover handles · drag a band's node up for the threshold, sideways for the ratio · wheel for makeup · click a band to edit it"
                 />
             </div>
-            <div className="band-strip">
-                {p.bands.map((item, index) => (
-                    <button
-                        type="button"
-                        key={index}
-                        className={`band-chip ${index === bandIndex ? 'on' : ''}`}
-                        style={{
-                            ['--chip-color' as string]:
-                                BAND_COLORS[(index + 4) % BAND_COLORS.length],
-                        }}
-                        onClick={() => setSelected(index)}
-                    >
-                        <span>{bandLabel(index, count)}</span>
-                        {item.solo && <span className="badge">S</span>}
-                        {item.mute && <span className="badge">M</span>}
-                        {item.bypass && <span className="badge">B</span>}
-                    </button>
-                ))}
-                <div className="band-strip-end">
-                    <Segmented
-                        label="Bands"
-                        value={count}
-                        options={[2, 3, 4].map((value) => ({ value, label: `${value}` }))}
-                        onChange={(value) => {
-                            setParams(withBandCount(p, value));
-                            setSelected((current) => Math.min(current, value - 1));
-                        }}
-                        color={color}
-                    />
-                </div>
-            </div>
+            <BandStrip
+                bands={p.bands}
+                selected={bandIndex}
+                onSelect={setSelected}
+                tint={tint}
+                counts={[2, 3, 4]}
+                onCount={(value) => {
+                    setParams(withBandCount(p, value));
+                    setSelected((current) => Math.min(current, value - 1));
+                }}
+                color={color}
+            />
             <div className="control-row">
                 <ControlGroup title={bandLabel(bandIndex, count)}>
                     <Knob

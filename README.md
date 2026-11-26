@@ -113,13 +113,17 @@ loaded from the popup; factory presets and presets without pins clear them.
   lights up under the pointer, fills a full circle at the maximum, and for settings that can go
   negative turns half a circle each way from the top: clockwise for positive, counterclockwise
   for negative values. Dotted guides run from the node to where its settings read off the
-  display. Shift drags in fine steps; double-click the center to reset all three, the ring to
-  reset its own setting. The mouse wheel turns the ring too, except in the side panel, where
+  display, and each can be dragged for its own setting: the one across up and down, the one
+  down sideways; they light up under the pointer like the dashed lines. Shift drags in fine
+  steps; double-click the center to reset all three, the ring or a guide to reset its own
+  setting. The mouse wheel turns the ring too, except in the side panel, where
   it only scrolls the panel.
-    - Compressor (on the knee): sideways for the threshold, up or down for the ratio (down
-      compresses harder), ring for the knee.
+    - Compressor (on the threshold line): up or down for the threshold, sideways for the
+      ratio (1:1 at the left, ∞ at the right), ring for the knee. Its guide across drags the
+      threshold, the one through it from top to bottom the ratio.
     - Gate (on its transfer curve, where it opens): sideways for the threshold, down for more
-      range, ring for the hysteresis.
+      range, ring for the hysteresis. Its guide through the node from top to bottom drags the
+      threshold, the one across the range, and the one where the gate closes the hysteresis.
     - Multiband (one per band): up for the threshold, sideways for the ratio, ring for the
       makeup gain.
     - Saturator (one per band): up for drive, sideways for tone (left darker, right brighter),
@@ -127,15 +131,17 @@ loaded from the popup; factory presets and presets without pins clear them.
     - Bass Booster: frequency and boost, ring for the harmonics.
     - De-esser: sideways for the frequency, down for more range, ring for the threshold.
     - Filter: cutoff and resonance, ring for drive.
-- **Other displays:** lines and handles with a round grip drag the same way:
+    - Volume (on the sound stage): sideways for the pan, up for a wider image (mono at the
+      floor, 200% at the top), ring for the gain (half circles, boost clockwise and cut
+      counterclockwise).
+- **Lines:** the dashed threshold, ceiling, target and limit lines can be dragged too. They
+  light up when the pointer is over them, and drag the same way:
     - Compressor, Gate and Limiter: the threshold or ceiling line of the level history; the
       compressor's curve above the threshold for the ratio.
     - Multiband and Saturator: the crossover handles; click a band to edit it. The saturator's
       curve plot drags the drive.
     - Denoiser: the dashed line for the largest reduction and the pass curve above the noise
       floor for the threshold.
-    - Volume: one handle for pan (around the sound stage) and width (towards or away from the
-      center, up to 200%); the wheel sets the width outside the side panel.
     - Loudness: the target line.
 
 ## How it works
@@ -159,7 +165,12 @@ popup / window (React UI) ──messages──▶ service worker ──▶ offsc
 - `src/engine` wires the worklet and analysers; the same graph powers the extension's
   offscreen document and the in-page demo mode.
 - `src/shared` holds the rack model, validation of stored/imported state, presets and
-  messaging types. `src/ui` is the React interface.
+  messaging types. `src/ui` is the React interface; `src/ui/display` holds what the editable
+  displays share: pointer handling (`pointer.ts`), hit tests and handles (`handles.ts`), the
+  drawing of nodes, guides and lines (`draw.ts`), the transfer-curve scale (`transfer.ts`) and
+  the control node (`node.ts`). Every three-setting node is a `ControlNode`: a display gives its
+  position, how a new position maps to its settings, its ring and how far its guides reach, and
+  `nodeHandle` and `drawControlNode` do the rest, the same way everywhere.
 
 ## Development
 

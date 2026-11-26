@@ -5,7 +5,7 @@ import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { DynamicsHistory, ReductionMeter } from '../components/Meters';
 import { ResponseGraph } from '../components/ResponseGraph';
-import { specValue } from '../canvasDrag';
+import { specValue } from '../display/handles';
 import { css, frequencyToX } from '../graph';
 import type { EditorProps } from './types';
 

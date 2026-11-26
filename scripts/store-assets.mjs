@@ -3,6 +3,7 @@
 // the rendered demo track.
 //
 //   npm run store:assets            (set CHROME_PATH if no Chrome, Brave or Edge is found)
+//   npm run store:assets -- --only=volume.jpg,stereo.jpg   (retakes just those screenshots)
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -414,16 +415,33 @@ async function captureRack(page, origin, rack, shots) {
     }
 }
 
+// `--only=a.jpg,b.jpg` limits the screenshots to those file names.
+const ONLY = process.argv
+    .find((arg) => arg.startsWith('--only='))
+    ?.slice('--only='.length)
+    .split(',');
+const wanted = (shots) =>
+    shots.filter(({ path }) => !ONLY || ONLY.some((name) => path.endsWith(name)));
+
 async function captureScreenshots(page, origin) {
     mkdirSync(SCREENSHOT_DIR, { recursive: true });
     mkdirSync(SITE_IMAGE_DIR, { recursive: true });
-    await captureRack(page, origin, RACK, STORE_SHOTS);
+    const store = wanted(STORE_SHOTS);
+    if (store.length) {
+        await captureRack(page, origin, RACK, store);
+    }
     // The side panel scene loads whichever rack the page stored last: the store rack here.
-    for (const shot of SIDE_PANEL_SHOTS) {
+    for (const shot of wanted(SIDE_PANEL_SHOTS)) {
         await captureSidePanel(page, origin, shot);
     }
-    await captureRack(page, origin, SITE_RACK, SITE_SHOTS);
-    await captureRack(page, origin, SATURATOR_RACK, SATURATOR_SHOTS);
+    for (const [rack, shots] of [
+        [SITE_RACK, wanted(SITE_SHOTS)],
+        [SATURATOR_RACK, wanted(SATURATOR_SHOTS)],
+    ]) {
+        if (shots.length) {
+            await captureRack(page, origin, rack, shots);
+        }
+    }
 }
 
 async function captureTiles(page, origin) {
@@ -460,7 +478,9 @@ try {
         if (!process.argv.includes('--tiles')) {
             await captureScreenshots(page, origin);
         }
-        await captureTiles(page, origin);
+        if (!ONLY) {
+            await captureTiles(page, origin);
+        }
     }
     page.close();
 } finally {

@@ -15,6 +15,8 @@ import {
     saveUserPresets,
     type UserPreset,
 } from '../../shared/storage';
+import { useDismiss } from '../useDismiss';
+import { useReorder } from '../useReorder';
 import { FileArrowIcon, GripIcon, SaveIcon } from './Controls';
 
 /** A rack as exported to a file, with the side panel pins when there are any. */
@@ -48,10 +50,6 @@ export function PresetMenu({
     const [naming, setNaming] = useState<string | undefined>(undefined);
     const ref = useRef<HTMLDivElement>(null);
     const menu = useRef<HTMLDivElement>(null);
-    // Reordering your presets: the one being dragged, and where it would land (an insertion
-    // point in the list).
-    const dragFrom = useRef<number | undefined>(undefined);
-    const [dropAt, setDropAt] = useState<number>();
     // The preset moved with the keyboard, to give it focus again in its new place.
     const refocus = useRef<string | undefined>(undefined);
     const fileInput = useRef<HTMLInputElement>(null);
@@ -98,19 +96,6 @@ export function PresetMenu({
         }
     }, [userPresets]);
 
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-        const outside = (event: MouseEvent) => {
-            if (!ref.current?.contains(event.target as Node)) {
-                close();
-            }
-        };
-        window.addEventListener('mousedown', outside);
-        return () => window.removeEventListener('mousedown', outside);
-    }, [open]);
-
     const persist = (presets: UserPreset[]) => {
         setUserPresets(presets);
         void saveUserPresets(presets);
@@ -144,18 +129,19 @@ export function PresetMenu({
         close();
     };
 
-    /** Moves your preset at `from` to the insertion point `to`, and saves the new order. */
-    const reorder = (from: number, to: number) => {
-        const next = moveListItem(userPresets, from, to);
-        if (next !== userPresets) {
-            persist(next);
-        }
-    };
+    useDismiss(open, ref, close);
 
-    const endDrag = () => {
-        dragFrom.current = undefined;
-        setDropAt(undefined);
-    };
+    // Your presets can be put in any order; the new order is saved straight away.
+    const reorder = useReorder(
+        userPresets.length,
+        (from, to) => {
+            const next = moveListItem(userPresets, from, to);
+            if (next !== userPresets) {
+                persist(next);
+            }
+        },
+        PRESET_DRAG_TYPE,
+    );
 
     const startSaving = () => {
         setNaming(
@@ -257,43 +243,10 @@ export function PresetMenu({
                     {userPresets.length > 0 && <div className="menu-heading">Yours</div>}
                     {userPresets.map((preset, index) => (
                         <div
-                            className={[
-                                'menu-item-row',
-                                'reorderable',
-                                dropAt === index ? 'drop-before' : '',
-                                dropAt === userPresets.length && index === userPresets.length - 1
-                                    ? 'drop-after'
-                                    : '',
-                            ].join(' ')}
+                            className={`menu-item-row reorderable ${reorder.marker(index)}`}
                             key={preset.name}
-                            draggable
                             title="Drag to reorder · Alt+↑/↓ to move"
-                            onDragStart={(event) => {
-                                dragFrom.current = index;
-                                event.dataTransfer.effectAllowed = 'move';
-                                event.dataTransfer.setData(PRESET_DRAG_TYPE, preset.name);
-                            }}
-                            onDragOver={(event) => {
-                                if (dragFrom.current === undefined) {
-                                    return;
-                                }
-                                event.preventDefault();
-                                event.dataTransfer.dropEffect = 'move';
-                                const box = event.currentTarget.getBoundingClientRect();
-                                const at =
-                                    event.clientY < box.top + box.height / 2 ? index : index + 1;
-                                if (at !== dropAt) {
-                                    setDropAt(at);
-                                }
-                            }}
-                            onDrop={(event) => {
-                                event.preventDefault();
-                                if (dragFrom.current !== undefined && dropAt !== undefined) {
-                                    reorder(dragFrom.current, dropAt);
-                                }
-                                endDrag();
-                            }}
-                            onDragEnd={endDrag}
+                            {...reorder.rowProps(index, preset.name)}
                         >
                             <span className="drag-grip">
                                 <GripIcon />
@@ -305,16 +258,8 @@ export function PresetMenu({
                                 data-preset={preset.name}
                                 onClick={() => load(preset.rack, preset.pins ?? [], preset.name)}
                                 onKeyDown={(event) => {
-                                    const step =
-                                        event.altKey && event.key === 'ArrowUp'
-                                            ? -1
-                                            : event.altKey && event.key === 'ArrowDown'
-                                              ? 2
-                                              : 0;
-                                    if (step !== 0) {
-                                        event.preventDefault();
+                                    if (reorder.keyMove(event, index)) {
                                         refocus.current = preset.name;
-                                        reorder(index, index + step);
                                     }
                                 }}
                             >

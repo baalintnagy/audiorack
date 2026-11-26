@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ACCENT_COLOR_PATTERN, ACCENT_SWATCHES } from '../../shared/effects';
+import { useDismiss } from '../useDismiss';
 
 const POPOVER_WIDTH = 188;
 
@@ -23,23 +24,7 @@ export function ColorPicker({
     const current = color ?? fallback;
     const open = position !== undefined;
 
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-        const close = (event: MouseEvent) => {
-            if (!ref.current?.contains(event.target as Node)) {
-                setPosition(undefined);
-            }
-        };
-        const escape = (event: KeyboardEvent) => event.key === 'Escape' && setPosition(undefined);
-        window.addEventListener('mousedown', close);
-        window.addEventListener('keydown', escape);
-        return () => {
-            window.removeEventListener('mousedown', close);
-            window.removeEventListener('keydown', escape);
-        };
-    }, [open]);
+    useDismiss(open, ref, () => setPosition(undefined));
 
     const toggle = () => {
         const rect = ref.current?.getBoundingClientRect();

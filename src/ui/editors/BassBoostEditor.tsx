@@ -50,7 +50,7 @@ export function BassBoostEditor({ effect, setParams, color }: EditorProps<'bassb
                                         Math.min(SPECS.boostDb.max, Math.max(0, db * 2)) * 10,
                                     ) / 10,
                             }),
-                        guides: { frequency: true },
+                        guides: { frequency: true, level: true },
                         ring: {
                             spec: SPECS.harmonics,
                             value: p.harmonics,

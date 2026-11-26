@@ -11,11 +11,19 @@ import {
 } from '../../shared/effects';
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
-import { formatFrequency } from '../format';
-import { specValue, useCanvasDrag, wheelStep } from '../canvasDrag';
-import { css, drawGrid, drawSpectrum, frequencyToX, withAlpha } from '../graph';
+import { specValue, wheelStep } from '../display/handles';
+import { useCanvasDrag } from '../display/pointer';
+import { css, drawGrid, drawSpectrum, withAlpha } from '../graph';
 import { useCanvas } from '../useCanvas';
-import { bandEdges, bandHandle, drawBandNodes, type BandNode } from './bandDisplay';
+import { BandStrip } from './BandStrip';
+import {
+    bandEdges,
+    bandHandle,
+    bandLabel,
+    drawBandNodes,
+    drawCrossovers,
+    type BandNode,
+} from './bandDisplay';
 import { BAND_COLORS, type EditorProps } from './types';
 
 const STYLE_LABELS: Record<SaturationStyle, string> = {
@@ -47,19 +55,6 @@ const CROSSOVER_PRESETS: Record<number, number[]> = {
     4: [150, 1500, 6000],
 };
 
-function bandLabel(index: number, count: number) {
-    if (count === 1) {
-        return 'Full';
-    }
-    if (count === 2) {
-        return ['Low', 'High'][index];
-    }
-    if (count === 3) {
-        return ['Low', 'Mid', 'High'][index];
-    }
-    return ['Low', 'Low Mid', 'High Mid', 'High'][index];
-}
-
 function signed(value: number, decimals: number) {
     return `${value > 0 ? '+' : ''}${value.toFixed(decimals)}`;
 }
@@ -82,8 +77,6 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
     const [selected, setSelected] = useState(0);
     const shown = useRef<number[]>([]);
     const count = p.crossovers.length + 1;
-    // The node part under the pointer, to highlight a ring.
-    const [hot, setHot] = useState<string>();
     const bandIndex = Math.min(selected, count - 1);
     const band = p.bands[bandIndex];
     const tint = bandColor(bandIndex);
@@ -106,6 +99,16 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
         format: ({ x, y, ring }) =>
             `drive +${y.toFixed(1)} · tone ${signed(x, 1)} · dyn ${signed(ring, 0)}%`,
     };
+
+    const { handlers: pointer, hot } = useCanvasDrag((point) =>
+        bandHandle({
+            point,
+            crossovers: p.crossovers,
+            onCrossovers: (crossovers) => setParams({ crossovers }),
+            select: setSelected,
+            node: nodes,
+        }),
+    );
 
     const ref = useCanvas(
         ({ ctx, width: w, height, telemetry, live }) => {
@@ -158,22 +161,7 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
                 ctx.textAlign = 'start';
             });
             drawBandNodes(ctx, nodes, edges, height, bandIndex, bandColor, hot);
-            p.crossovers.forEach((frequency, index) => {
-                const x = Math.round(frequencyToX(frequency, w)) + 0.5;
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, height);
-                ctx.stroke();
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.arc(x, height / 2, 6, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = css('--text');
-                ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
-                ctx.fillText(formatFrequency(frequency), x + 6, 14 + (index % 2) * 12);
-            });
+            drawCrossovers(ctx, p.crossovers, w, height, color);
         },
         [p, bandIndex, color, count, hot],
     );
@@ -210,19 +198,7 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
         [band.style, band.driveDb, band.bypass, tint],
     );
 
-    const pointer = useCanvasDrag(
-        (point) =>
-            bandHandle({
-                point,
-                crossovers: p.crossovers,
-                onCrossovers: (crossovers) => setParams({ crossovers }),
-                select: setSelected,
-                node: nodes,
-            }),
-        setHot,
-    );
-
-    const curvePointer = useCanvasDrag(({ y, height }) => {
+    const { handlers: curvePointer } = useCanvasDrag(({ y, height }) => {
         const set = (driveDb: number) =>
             updateBand(bandIndex, { driveDb: specValue(SPECS.satDriveDb, driveDb) });
         return {
@@ -245,34 +221,18 @@ export function SaturatorEditor({ effect, setParams, color }: EditorProps<'satur
                     title="Drag crossover handles · drag a band's node up for drive, sideways for tone · wheel for dynamics · click a band to edit it"
                 />
             </div>
-            <div className="band-strip">
-                {p.bands.map((item, index) => (
-                    <button
-                        type="button"
-                        key={index}
-                        className={`band-chip ${index === bandIndex ? 'on' : ''}`}
-                        style={{ ['--chip-color' as string]: bandColor(index) }}
-                        onClick={() => setSelected(index)}
-                    >
-                        <span>{bandLabel(index, count)}</span>
-                        {item.solo && <span className="badge">S</span>}
-                        {item.mute && <span className="badge">M</span>}
-                        {item.bypass && <span className="badge">B</span>}
-                    </button>
-                ))}
-                <div className="band-strip-end">
-                    <Segmented
-                        label="Bands"
-                        value={count}
-                        options={[1, 2, 3, 4].map((value) => ({ value, label: `${value}` }))}
-                        onChange={(value) => {
-                            setParams(withSaturatorBandCount(p, value));
-                            setSelected((current) => Math.min(current, value - 1));
-                        }}
-                        color={color}
-                    />
-                </div>
-            </div>
+            <BandStrip
+                bands={p.bands}
+                selected={bandIndex}
+                onSelect={setSelected}
+                tint={bandColor}
+                counts={[1, 2, 3, 4]}
+                onCount={(value) => {
+                    setParams(withSaturatorBandCount(p, value));
+                    setSelected((current) => Math.min(current, value - 1));
+                }}
+                color={color}
+            />
             <div className="control-row">
                 <ControlGroup title={bandLabel(bandIndex, count)}>
                     <div className="stack saturator-styles">

@@ -3,8 +3,11 @@ import { SPECS } from '../../shared/effects';
 import { ControlGroup, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { LevelMeter, LoudnessBar } from '../components/Meters';
-import { specValue, useCanvasDrag, wheelStep, type DragHandle } from '../canvasDrag';
-import { css, drawGrip, drawGuide, withAlpha } from '../graph';
+import { specValue } from '../display/handles';
+import { drawControlNode, nodeHandle, ringWheel, type ControlNode } from '../display/node';
+import { useCanvasDrag } from '../display/pointer';
+import { formatValue, fromNormalized, toNormalized } from '../format';
+import { css, withAlpha } from '../graph';
 import { useCanvas } from '../useCanvas';
 import type { EditorProps } from './types';
 
@@ -25,38 +28,91 @@ function arc(width: number, pan: number) {
     };
 }
 
-/** Distance of the handle from the stage center, as a share of the radius, for a width. */
-const HANDLE_INNER = 0.15;
-
-function handleDistance(width: number, radius: number) {
-    return radius * (HANDLE_INNER + (1 - HANDLE_INNER) * (width / SPECS.width.max));
+/** Half the width of the stage at a height: how far a guide across it reaches the outer arc. */
+function reachAt(y: number, cy: number, radius: number) {
+    return Math.sqrt(Math.max(0, radius * radius - (cy - y) ** 2));
 }
 
-/** The handle sits on the image's center line: its angle is the pan, its distance the width. */
-function handlePosition(width: number, pan: number, w: number, height: number) {
-    const { cx, cy, radius } = stage(w, height);
-    const { center } = arc(width, pan);
-    const distance = handleDistance(width, radius);
-    return { x: cx + Math.cos(center) * distance, y: cy + Math.sin(center) * distance };
+/** The settings the sound stage shows. */
+interface StageSettings {
+    pan: number;
+    gainDb: number;
+    width: number;
 }
 
 /**
- * Visualizes the stereo image after width and pan as a sound stage. One handle sets both: drag
- * it around the stage to pan, towards or away from the center for the width.
+ * The node on the sound stage: across it for the pan, from hard left to hard right, and up from
+ * its floor for the width, from mono at the floor to the widest setting at the top of the stage.
+ * Its ring sets the gain; its guides run across the stage (up to its outer arc) for the width and
+ * down to the floor for the pan.
+ */
+function stageNode(
+    settings: StageSettings,
+    w: number,
+    height: number,
+    onChange: (patch: Partial<StageSettings>) => void,
+): ControlNode<Partial<StageSettings>> {
+    const { pan, gainDb, width } = settings;
+    const { cx, cy, radius } = stage(w, height);
+    const y = cy - toNormalized(SPECS.width, width) * radius;
+    const reach = reachAt(y, cy, radius);
+    return {
+        x: cx + (pan / 100) * radius,
+        y,
+        atX: (x) => ({ pan: specValue(SPECS.pan, ((x - cx) / radius) * 100) }),
+        atY: (to) => ({
+            width: specValue(SPECS.width, fromNormalized(SPECS.width, (cy - to) / radius)),
+        }),
+        apply: onChange,
+        ring: {
+            spec: SPECS.volumeDb,
+            value: gainDb,
+            onChange: (value) => onChange({ gainDb: value }),
+        },
+        reset: {
+            node: () =>
+                onChange({
+                    pan: SPECS.pan.default,
+                    gainDb: SPECS.volumeDb.default,
+                    width: SPECS.width.default,
+                }),
+            x: () => onChange({ pan: SPECS.pan.default }),
+            y: () => onChange({ width: SPECS.width.default }),
+        },
+        across: { left: cx - reach, right: cx + reach },
+        down: { bottom: cy },
+    };
+}
+
+/**
+ * Visualizes the stereo image after width and pan as a sound stage. Its node sets three
+ * settings: drag it sideways for the pan and up or down for the width; its ring sets the gain.
  */
 function StereoField({
     width,
     pan,
+    gainDb,
     color,
     mute,
     onChange,
 }: {
     width: number;
     pan: number;
+    gainDb: number;
     color: string;
     mute: boolean;
-    onChange: (patch: { pan?: number; width?: number }) => void;
+    onChange: (patch: { pan?: number; width?: number; gainDb?: number }) => void;
 }) {
+    const settings = { pan, gainDb, width };
+    // The wheel sets the gain anywhere on the stage.
+    const { handlers: pointer, hot } = useCanvasDrag((point) => {
+        if (mute) {
+            return undefined;
+        }
+        const node = stageNode(settings, point.width, point.height, onChange);
+        return nodeHandle(point, node) ?? { cursor: '', wheel: ringWheel(node) };
+    });
+
     const ref = useCanvas(
         ({ ctx, width: w, height }) => {
             const { cx, cy, radius } = stage(w, height);
@@ -99,49 +155,22 @@ function StereoField({
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
             ctx.stroke();
-            const handle = handlePosition(width, pan, w, height);
-            drawGuide(ctx, [cx, cy], [handle.x, handle.y], color);
-            drawGrip(ctx, handle.x, handle.y, color);
+            drawControlNode(ctx, stageNode(settings, w, height, onChange), color, hot);
+            ctx.fillStyle = css('--grid-label');
+            ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+            ctx.fillText(
+                `${formatValue(SPECS.volumeDb, gainDb)} · width ${width.toFixed(0)}%`,
+                6,
+                14,
+            );
         },
-        [width, pan, color, mute],
+        [width, pan, gainDb, color, mute, hot],
     );
-    const pointer = useCanvasDrag(({ x, y, width: w, height }) => {
-        if (mute) {
-            return undefined;
-        }
-        const { cx, cy, radius } = stage(w, height);
-        const wheel: DragHandle['wheel'] = (direction, fine) =>
-            onChange({ width: wheelStep(SPECS.width, width, direction, fine) });
-        if (Math.hypot(x - cx, y - cy) > radius * 1.15) {
-            return { cursor: '', wheel };
-        }
-        // The drag moves the handle by the pointer's movement, wherever it was pressed.
-        const handle = handlePosition(width, pan, w, height);
-        const offsetX = handle.x - x;
-        const offsetY = handle.y - y;
-        return {
-            cursor: 'move',
-            drag: (point) => {
-                const hx = point.x + offsetX - cx;
-                const hy = Math.min(0, point.y + offsetY - cy);
-                // Below the stage the handle stays on its floor: hard left or right.
-                const angle =
-                    hy < 0 ? Math.atan2(hy, hx) : hx < 0 ? -Math.PI : hx > 0 ? 0 : -Math.PI / 2;
-                const share = (Math.hypot(hx, hy) / radius - HANDLE_INNER) / (1 - HANDLE_INNER);
-                onChange({
-                    pan: specValue(SPECS.pan, ((angle + Math.PI / 2) / (Math.PI / 2)) * 100),
-                    width: specValue(SPECS.width, share * SPECS.width.max),
-                });
-            },
-            reset: () => onChange({ pan: SPECS.pan.default, width: SPECS.width.default }),
-            wheel,
-        };
-    });
     return (
         <canvas
             ref={ref}
             className="stereo-canvas"
-            title="Drag the handle around the stage to pan, in or out for the width · wheel for the width"
+            title="Drag the node sideways to pan, up or down for the width, its ring for the gain"
             {...pointer}
         />
     );
@@ -158,6 +187,7 @@ export function VolumeEditor({ effect, setParams, color }: EditorProps<'volume'>
                 <StereoField
                     width={p.width}
                     pan={p.pan}
+                    gainDb={p.gainDb}
                     color={color}
                     mute={p.mute}
                     onChange={setParams}

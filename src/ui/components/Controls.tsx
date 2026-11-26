@@ -166,6 +166,7 @@ export function BypassIcon() {
     );
 }
 
+/** A box with an arrow leaving it, for opening something in a window of its own. */
 export function PopOutIcon() {
     return (
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
@@ -213,10 +214,6 @@ export function SidePanelIcon() {
             <path d="M10.5 3.5h3v9h-3z" fill="currentColor" opacity="0.45" />
         </svg>
     );
-}
-
-export function ControlRow({ children }: { children: ReactNode }) {
-    return <div className="control-row">{children}</div>;
 }
 
 export function ControlGroup({

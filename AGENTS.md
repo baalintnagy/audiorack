@@ -23,7 +23,9 @@ Follows the conventions of the sibling PermaFormula projects, applied to TypeScr
 - The whole chain runs in a single AudioWorklet (`src/engine/worklet.ts`); reordering or
   bypassing never rewires the Web Audio graph.
 - Rack state from storage, presets or imported files is untrusted: pass it through
-  `normalizeRack` before use.
+  `normalizeRack` before use. When an effect type is renamed, add its old name to
+  `LEGACY_EFFECT_TYPES` in `src/shared/normalize.ts` and keep it there: stored racks and
+  exported files may carry the old name indefinitely.
 - The chain is a tree: `ChainItem` is an effect or a parallel group whose branches hold effects
   only (no nesting). Edit it through the pure helpers in `src/shared/chain.ts`. The DSP mirrors it
   with `Stage` implementations built by `StagePool`, which reuses stages by id; bypass and

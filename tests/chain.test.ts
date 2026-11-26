@@ -87,12 +87,12 @@ describe('chain operations', () => {
 
     it('inserts new items after the selection', () => {
         const { chain, compressor, group, wet } = setup();
-        const volume = createEffect('volume') as Effect;
-        expect(insertionPoint(chain, volume, compressor.id)).toEqual({
+        const utility = createEffect('utility') as Effect;
+        expect(insertionPoint(chain, utility, compressor.id)).toEqual({
             branch: { groupId: group.id, branchId: wet.id },
             index: 1,
         });
-        expect(insertionPoint(chain, volume, undefined)).toEqual({ index: 3 });
+        expect(insertionPoint(chain, utility, undefined)).toEqual({ index: 3 });
     });
 
     it('updates and removes nested effects', () => {
@@ -126,7 +126,7 @@ describe('chain operations', () => {
     it('enforces the effect and group limits', () => {
         const full = Array.from(
             { length: MAX_CHAIN_LENGTH },
-            () => createEffect('volume') as Effect,
+            () => createEffect('utility') as Effect,
         );
         expect(canInsert(full, createEffect('eq') as Effect)).toBe(false);
         expect(canInsert(full, createParallelGroup())).toBe(true);

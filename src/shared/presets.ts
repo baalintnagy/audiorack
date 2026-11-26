@@ -157,7 +157,7 @@ export const FACTORY_PRESETS: FactoryPreset[] = [
                     lfoRate: 0.15,
                     lfoDepth: 0.4,
                 }),
-                effect('volume', { width: 40, gainDb: 4 }),
+                effect('utility', { width: 40, gainDb: 4 }),
                 effect('limiter', { ceilingDb: -1 }),
             ]),
     },

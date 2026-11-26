@@ -3,7 +3,7 @@
 // the rendered demo track.
 //
 //   npm run store:assets            (set CHROME_PATH if no Chrome, Brave or Edge is found)
-//   npm run store:assets -- --only=volume.jpg,stereo.jpg   (retakes just those screenshots)
+//   npm run store:assets -- --only=utility.jpg,stereo.jpg   (retakes just those screenshots)
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -46,7 +46,7 @@ const SITE_SHOTS = [
     { file: 'gate.jpg', slot: 'GATE', enable: true, settle: 8000 },
     { file: 'filter.jpg', slot: 'FLT', enable: true, settle: 6000 },
     { file: 'deesser.jpg', slot: 'DS', enable: true, settle: 6000 },
-    { file: 'volume.jpg', slot: 'VOL', settle: 5000 },
+    { file: 'utility.jpg', slot: 'UTIL', settle: 5000 },
     { file: 'bass-booster.jpg', slot: 'BASS', settle: 4000 },
     { file: 'parallel.jpg', slot: 'PAR', settle: 6000 },
     { file: 'spectrum.jpg', slot: 'SPEC', settle: 4000 },

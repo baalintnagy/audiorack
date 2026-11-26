@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gainComputerDb, gainReductionDb } from '../src/dsp/dynamics';
 import { createKernel } from '../src/dsp/kernels';
-import { volumeGains } from '../src/dsp/kernels/volume';
+import { utilityGains } from '../src/dsp/kernels/utility';
 import { RackProcessor } from '../src/dsp/rack';
 import {
     EFFECT_TYPES,
@@ -119,17 +119,17 @@ describe('effect kernels', () => {
     });
 
     it('uses a constant-power pan law that is transparent at the center', () => {
-        const base = defaultParams('volume');
-        expect(volumeGains(base).left).toBeCloseTo(1, 6);
-        expect(volumeGains(base).right).toBeCloseTo(1, 6);
-        const hardLeft = volumeGains({ ...base, pan: -100 });
+        const base = defaultParams('utility');
+        expect(utilityGains(base).left).toBeCloseTo(1, 6);
+        expect(utilityGains(base).right).toBeCloseTo(1, 6);
+        const hardLeft = utilityGains({ ...base, pan: -100 });
         expect(hardLeft.right).toBeCloseTo(0, 6);
         expect(hardLeft.left).toBeCloseTo(Math.SQRT2, 6);
-        expect(volumeGains({ ...base, invertLeft: true }).left).toBeCloseTo(-1, 6);
+        expect(utilityGains({ ...base, invertLeft: true }).left).toBeCloseTo(-1, 6);
     });
 
     it('collapses to mono at zero width', () => {
-        const { output } = run('volume', { width: 0 }, sine(500, 0.1, 0.5), sine(700, 0.1, 0.5));
+        const { output } = run('utility', { width: 0 }, sine(500, 0.1, 0.5), sine(700, 0.1, 0.5));
         const difference = output[0].map((value, i) => value - output[1][i]);
         expect(peak(difference.subarray(2400))).toBeLessThan(1e-6);
     });
@@ -154,24 +154,24 @@ describe('rack processor', () => {
 
     it('crossfades bypassed effects to a transparent signal', () => {
         const rack = new RackProcessor(SAMPLE_RATE);
-        const volume = createEffect('volume');
-        volume.params.gainDb = -20;
-        const state = { ...defaultRack(), chain: [volume] };
+        const utility = createEffect('utility');
+        utility.params.gainDb = -20;
+        const state = { ...defaultRack(), chain: [utility] };
         rack.setRack(state);
         const input = sine(300, 0.2, 0.5);
         processStereo(input, input, (l, r, frames) => rack.process(l, r, frames));
-        rack.setRack({ ...state, chain: [{ ...volume, bypass: true }] });
+        rack.setRack({ ...state, chain: [{ ...utility, bypass: true }] });
         const [left] = processStereo(input, input, (l, r, frames) => rack.process(l, r, frames));
         expect(rms(left, 4800)).toBeCloseTo(rms(input, 4800), 4);
         // Meters are still collected: momentary and short-term loudness.
-        expect(rack.takeMeters().effects[volume.id]).toHaveLength(2);
+        expect(rack.takeMeters().effects[utility.id]).toHaveLength(2);
     });
 
     it('stays fully dry once the whole rack is bypassed', () => {
         const rack = new RackProcessor(SAMPLE_RATE);
-        const volume = createEffect('volume');
-        volume.params.gainDb = -20;
-        const state = { ...defaultRack(), chain: [volume] };
+        const utility = createEffect('utility');
+        utility.params.gainDb = -20;
+        const state = { ...defaultRack(), chain: [utility] };
         rack.setRack(state);
         const input = sine(300, 1, 0.5);
         processStereo(input, input, (l, r, frames) => rack.process(l, r, frames));

@@ -14,7 +14,7 @@ import { SaturatorEditor } from './SaturatorEditor';
 import { SpectrogramEditor } from './SpectrogramEditor';
 import { SpectrumEditor } from './SpectrumEditor';
 import { StereoEditor } from './StereoEditor';
-import { VolumeEditor } from './VolumeEditor';
+import { UtilityEditor } from './UtilityEditor';
 
 export function EffectEditor({
     effect,
@@ -45,8 +45,8 @@ export function EffectEditor({
             return <FilterEditor effect={effect} setParams={setParams} color={color} />;
         case 'deesser':
             return <DeesserEditor effect={effect} setParams={setParams} color={color} />;
-        case 'volume':
-            return <VolumeEditor effect={effect} setParams={setParams} color={color} />;
+        case 'utility':
+            return <UtilityEditor effect={effect} setParams={setParams} color={color} />;
         case 'bassboost':
             return <BassBoostEditor effect={effect} setParams={setParams} color={color} />;
         case 'spectrum':

@@ -55,7 +55,8 @@ change.
 
 > AudioRack processes the audio of a browser tab that the user chooses through a configurable
 > chain of audio effects (equalizer, compressors, saturator, limiter, gate, filter, de-esser,
-> denoiser, volume and bass booster) and shows audio analyzers and a loudness meter for that sound.
+> denoiser, bass booster and a gain, pan and width utility) and shows audio analyzers and a
+> loudness meter for that sound.
 
 **Permission justifications**
 

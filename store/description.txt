@@ -22,7 +22,7 @@ Turn down videos that are too loud, bring up quiet dialogue, clean hiss and hum 
 • Filter: resonant low pass, high pass, band pass or notch, with drive and a sweeping LFO.
 • De-esser: softens harsh “s” sounds in speech and vocals, with a listen mode.
 • Denoiser: reduces steady noise such as hiss, hum and fans. Let it follow the noise floor by itself, or play a few seconds of noise alone, press “Learn noise” and it removes exactly that profile. Listen mode lets you hear what it takes out.
-• Volume: gain, pan, stereo width and per-channel polarity, with a loudness bar.
+• Utility: pan, stereo width, gain, mute and per-channel polarity, with a loudness bar.
 • Bass Booster: a low boost plus generated harmonics, so bass comes through even on small speakers.
 
 ★ FOUR ANALYZERS

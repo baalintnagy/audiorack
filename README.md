@@ -18,7 +18,7 @@ effects, with a dark, analyzer-driven interface inspired by modern plug-in suite
 | Filter       | Resonant LP/HP/BP/notch filter with drive and a sine/triangle LFO on the cutoff.                                                       |
 | De-esser     | Band-pass sidechain detector, split-band or wideband reduction, and a listen mode.                                                     |
 | Denoiser     | Spectral noise reduction (STFT) on an adaptive noise floor or a learned noise profile, with listen; ~32 ms latency.                    |
-| Volume       | Gain, constant-power pan, stereo width, per-channel polarity and a momentary/short-term loudness bar.                                  |
+| Utility      | Gain, constant-power pan, stereo width, mute, per-channel polarity and a momentary/short-term loudness bar.                            |
 | Bass Booster | Low shelf boost plus a harmonic enhancer that suggests bass on small speakers, optional rumble filter and mono bass.                   |
 
 ### Analyzers
@@ -131,7 +131,7 @@ loaded from the popup; factory presets and presets without pins clear them.
     - Bass Booster: frequency and boost, ring for the harmonics.
     - De-esser: sideways for the frequency, down for more range, ring for the threshold.
     - Filter: cutoff and resonance, ring for drive.
-    - Volume (on the sound stage): sideways for the pan, up for a wider image (mono at the
+    - Utility (on the sound stage): sideways for the pan, up for a wider image (mono at the
       floor, 200% at the top), ring for the gain (half circles, boost clockwise and cut
       counterclockwise).
 - **Lines:** the dashed threshold, ceiling, target and limit lines can be dragged too. They

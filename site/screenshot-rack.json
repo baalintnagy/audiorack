@@ -180,7 +180,7 @@
             "bypass": true
         },
         {
-            "type": "volume",
+            "type": "utility",
             "params": {
                 "gainDb": -2,
                 "pan": 0,

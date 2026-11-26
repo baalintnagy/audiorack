@@ -404,7 +404,7 @@ function RackWindow({ backend }: { backend: Backend }) {
                             spec={SPECS.masterDb}
                             label="Input"
                             value={rack.inputDb}
-                            size={40}
+                            size={60}
                             onChange={(inputDb) =>
                                 actions.update((previous) => ({ ...previous, inputDb }))
                             }
@@ -413,7 +413,7 @@ function RackWindow({ backend }: { backend: Backend }) {
                             spec={SPECS.masterDb}
                             label="Output"
                             value={rack.outputDb}
-                            size={40}
+                            size={60}
                             onChange={(outputDb) =>
                                 actions.update((previous) => ({ ...previous, outputDb }))
                             }

@@ -86,7 +86,7 @@ describe('parallel groups', () => {
         const input = noise(0.1, 0.25);
         const group = createParallelGroup([
             { ...createBranch(), solo: true },
-            createBranch([effect('volume', { gainDb: 12 })]),
+            createBranch([effect('utility', { gainDb: 12 })]),
         ]);
         expect(maxDifference(run(rackWith([group]), input), input, 0)).toBeLessThan(1e-5);
     });
@@ -114,7 +114,7 @@ describe('parallel groups', () => {
         const group = createParallelGroup([
             { ...createBranch(), gainDb: HALF_DB },
             { ...createBranch(), gainDb: HALF_DB },
-            { ...createBranch([effect('volume', { gainDb: 12 })]), mute: true },
+            { ...createBranch([effect('utility', { gainDb: 12 })]), mute: true },
         ]);
         expect(maxDifference(run(rackWith([group]), input), input, 0)).toBeLessThan(1e-5);
     });
@@ -144,7 +144,7 @@ describe('parallel groups', () => {
 
     it('passes the dry signal when the whole group is bypassed', () => {
         const input = sine(300, 0.2, 0.25);
-        const group = createParallelGroup([createBranch([effect('volume', { gainDb: -20 })])]);
+        const group = createParallelGroup([createBranch([effect('utility', { gainDb: -20 })])]);
         const rack = rackWith([group]);
         run(rack, input);
         rack.setRack({ ...defaultRack(), chain: [{ ...group, bypass: true }] });

@@ -8,7 +8,7 @@ export type EffectType =
     | 'filter'
     | 'deesser'
     | 'denoiser'
-    | 'volume'
+    | 'utility'
     | 'bassboost'
     | 'spectrum'
     | 'spectrogram'
@@ -196,7 +196,7 @@ export interface DenoiserParams {
     profile: number[];
 }
 
-export interface VolumeParams {
+export interface UtilityParams {
     gainDb: number;
     pan: number;
     width: number;
@@ -254,7 +254,7 @@ export interface EffectParamsMap {
     filter: FilterParams;
     deesser: DeesserParams;
     denoiser: DenoiserParams;
-    volume: VolumeParams;
+    utility: UtilityParams;
     bassboost: BassBoostParams;
     spectrum: SpectrumParams;
     spectrogram: SpectrogramParams;
@@ -416,7 +416,7 @@ export const SPECS = {
         unit: 'ms',
         scale: 'log',
     },
-    volumeDb: { label: 'Gain', min: -60, max: 24, default: 0, unit: 'dB', decimals: 1 },
+    utilityGainDb: { label: 'Gain', min: -60, max: 24, default: 0, unit: 'dB', decimals: 1 },
     pan: { label: 'Pan', min: -100, max: 100, default: 0, unit: '' },
     width: { label: 'Width', min: 0, max: 200, default: 100, unit: '%' },
     boostDb: { label: 'Boost', min: 0, max: 18, default: 6, unit: 'dB', decimals: 1 },
@@ -557,9 +557,9 @@ export const EFFECT_INFO: Record<EffectType, EffectInfo> = {
         color: '#7fd1b9',
         category: 'effect',
     },
-    volume: {
-        label: 'Volume',
-        short: 'VOL',
+    utility: {
+        label: 'Utility',
+        short: 'UTIL',
         description: 'Gain, pan, stereo width, polarity and a loudness meter',
         color: '#9fe870',
         category: 'effect',
@@ -769,7 +769,7 @@ export function defaultParams<T extends EffectType>(type: T): EffectParamsMap[T]
             learning: false,
             profile: [],
         },
-        volume: {
+        utility: {
             gainDb: 0,
             pan: 0,
             width: 100,

@@ -44,8 +44,31 @@ describe('rack normalization', () => {
         expect(multiband.type === 'multiband' && multiband.params.bands).toHaveLength(3);
     });
 
+    it('reads effects stored under an earlier name as their current type', () => {
+        const stored = {
+            type: 'volume',
+            id: 'u',
+            color: '#123456',
+            params: { pan: -50, width: 0 },
+        };
+        const rack = normalizeRack({
+            chain: [stored, { type: 'parallel', branches: [{ effects: [stored] }, {}] }],
+        });
+        const [top, nested] = allEffects(rack.chain);
+        expect(top).toMatchObject({ type: 'utility', color: '#123456' });
+        expect(top.type === 'utility' && top.params).toMatchObject({ pan: -50, width: 0 });
+        expect(nested.type).toBe('utility');
+        // Written back under the current name, the rack reads the same again.
+        expect(normalizeRack(JSON.parse(JSON.stringify(rack)))).toEqual(rack);
+    });
+
+    it('drops names that only look like a legacy one', () => {
+        const rack = normalizeRack({ chain: [{ type: 'toString' }, { type: 'Volume' }] });
+        expect(rack.chain).toEqual([]);
+    });
+
     it('limits the chain length', () => {
-        const chain = Array.from({ length: 40 }, () => createEffect('volume'));
+        const chain = Array.from({ length: 40 }, () => createEffect('utility'));
         expect(normalizeRack({ chain }).chain).toHaveLength(MAX_CHAIN_LENGTH);
     });
 
@@ -105,7 +128,7 @@ describe('parallel rack state', () => {
     });
 
     it('counts effects inside branches towards the rack limit', () => {
-        const effects = Array.from({ length: 12 }, () => createEffect('volume'));
+        const effects = Array.from({ length: 12 }, () => createEffect('utility'));
         const rack = normalizeRack({
             chain: [
                 ...effects.slice(0, 6),

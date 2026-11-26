@@ -12,7 +12,7 @@ import { LimiterKernel } from './limiter';
 import { LoudnessKernel } from './loudness';
 import { MultibandKernel } from './multiband';
 import { SaturatorKernel } from './saturator';
-import { VolumeKernel } from './volume';
+import { UtilityKernel } from './utility';
 
 type KernelFactories = {
     [T in EffectType]: new (sampleRate: number) => Kernel<EffectParamsMap[T]>;
@@ -28,7 +28,7 @@ export const KERNELS: KernelFactories = {
     filter: FilterKernel,
     deesser: DeesserKernel,
     denoiser: DenoiserKernel,
-    volume: VolumeKernel,
+    utility: UtilityKernel,
     bassboost: BassBoostKernel,
     spectrum: SpectrumKernel,
     spectrogram: SpectrogramKernel,

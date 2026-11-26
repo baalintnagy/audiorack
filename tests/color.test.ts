@@ -48,7 +48,7 @@ describe('accent colors', () => {
                 { type: 'eq', color: '#FF00AA' },
                 { type: 'limiter', color: 'red' },
                 { type: 'gate', color: '#12345' },
-                { type: 'volume', color: 42 },
+                { type: 'utility', color: 42 },
                 {
                     type: 'parallel',
                     color: '#00ff00',
@@ -56,11 +56,11 @@ describe('accent colors', () => {
                 },
             ],
         });
-        const [eq, limiter, gate, volume, group] = rack.chain;
+        const [eq, limiter, gate, utility, group] = rack.chain;
         expect(eq.color).toBe('#ff00aa');
         expect(limiter).not.toHaveProperty('color');
         expect(gate).not.toHaveProperty('color');
-        expect(volume).not.toHaveProperty('color');
+        expect(utility).not.toHaveProperty('color');
         expect(group.color).toBe('#00ff00');
         expect(isParallelGroup(group) && group.branches[0].effects[0].color).toBe('#0000ff');
     });

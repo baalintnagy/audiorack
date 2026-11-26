@@ -1768,7 +1768,7 @@ button:disabled {
     padding: 6px 0;
 }
 
-.volume-readout {
+.utility-readout {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1778,7 +1778,7 @@ button:disabled {
     padding: 12px;
 }
 
-.volume-readout > div {
+.utility-readout > div {
     display: flex;
     flex-direction: column;
 }

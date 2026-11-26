@@ -1,4 +1,4 @@
-import { VOLUME_FIELDS, volumeGains } from '../../dsp/kernels/volume';
+import { UTILITY_FIELDS, utilityGains } from '../../dsp/kernels/utility';
 import { SPECS } from '../../shared/effects';
 import { ControlGroup, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
@@ -65,7 +65,7 @@ function stageNode(
         }),
         apply: onChange,
         ring: {
-            spec: SPECS.volumeDb,
+            spec: SPECS.utilityGainDb,
             value: gainDb,
             onChange: (value) => onChange({ gainDb: value }),
         },
@@ -73,7 +73,7 @@ function stageNode(
             node: () =>
                 onChange({
                     pan: SPECS.pan.default,
-                    gainDb: SPECS.volumeDb.default,
+                    gainDb: SPECS.utilityGainDb.default,
                     width: SPECS.width.default,
                 }),
             x: () => onChange({ pan: SPECS.pan.default }),
@@ -159,7 +159,7 @@ function StereoField({
             ctx.fillStyle = css('--grid-label');
             ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
             ctx.fillText(
-                `${formatValue(SPECS.volumeDb, gainDb)} · width ${width.toFixed(0)}%`,
+                `${formatValue(SPECS.utilityGainDb, gainDb)} · width ${width.toFixed(0)}%`,
                 6,
                 14,
             );
@@ -176,13 +176,13 @@ function StereoField({
     );
 }
 
-export function VolumeEditor({ effect, setParams, color }: EditorProps<'volume'>) {
+export function UtilityEditor({ effect, setParams, color }: EditorProps<'utility'>) {
     const p = effect.params;
-    const gains = volumeGains(p);
+    const gains = utilityGains(p);
     const balance = (value: number) =>
         Math.abs(value) < 1e-6 ? '-∞' : (20 * Math.log10(Math.abs(value))).toFixed(1);
     return (
-        <div className="editor volume-editor">
+        <div className="editor utility-editor">
             <div className="display split">
                 <StereoField
                     width={p.width}
@@ -192,7 +192,7 @@ export function VolumeEditor({ effect, setParams, color }: EditorProps<'volume'>
                     mute={p.mute}
                     onChange={setParams}
                 />
-                <div className="volume-readout">
+                <div className="utility-readout">
                     <div>
                         <span className="readout-label">Left</span>
                         <span className="readout-value">{balance(gains.left)} dB</span>
@@ -207,10 +207,10 @@ export function VolumeEditor({ effect, setParams, color }: EditorProps<'volume'>
                             color={color}
                             source={(telemetry) => {
                                 const data = telemetry.meters.effects[effect.id];
-                                return data && data.length > VOLUME_FIELDS.shortTerm
+                                return data && data.length > UTILITY_FIELDS.shortTerm
                                     ? {
-                                          momentary: data[VOLUME_FIELDS.momentary],
-                                          shortTerm: data[VOLUME_FIELDS.shortTerm],
+                                          momentary: data[UTILITY_FIELDS.momentary],
+                                          shortTerm: data[UTILITY_FIELDS.shortTerm],
                                       }
                                     : undefined;
                             }}
@@ -226,16 +226,7 @@ export function VolumeEditor({ effect, setParams, color }: EditorProps<'volume'>
                 />
             </div>
             <div className="control-row">
-                <ControlGroup title="Level">
-                    <Knob
-                        spec={SPECS.volumeDb}
-                        value={p.gainDb}
-                        onChange={(gainDb) => setParams({ gainDb })}
-                        color={color}
-                        size={72}
-                    />
-                </ControlGroup>
-                <ControlGroup title="Stereo">
+                <ControlGroup title="Stereo & gain">
                     <Knob
                         spec={SPECS.pan}
                         value={p.pan}
@@ -248,8 +239,14 @@ export function VolumeEditor({ effect, setParams, color }: EditorProps<'volume'>
                         onChange={(width) => setParams({ width })}
                         color={color}
                     />
+                    <Knob
+                        spec={SPECS.utilityGainDb}
+                        value={p.gainDb}
+                        onChange={(gainDb) => setParams({ gainDb })}
+                        color={color}
+                    />
                 </ControlGroup>
-                <ControlGroup title="Utility">
+                <ControlGroup title="Mute & polarity">
                     <div className="stack">
                         <Toggle
                             active={p.mute}

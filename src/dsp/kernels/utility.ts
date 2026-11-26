@@ -1,9 +1,9 @@
-import type { VolumeParams } from '../../shared/effects';
+import type { UtilityParams } from '../../shared/effects';
 import { LoudnessMeter } from '../loudness';
 import { Smoother, dbToGain, panGains } from '../util';
 import type { Kernel } from './kernel';
 
-export function volumeGains(p: VolumeParams): { left: number; right: number; width: number } {
+export function utilityGains(p: UtilityParams): { left: number; right: number; width: number } {
     if (p.mute) {
         return { left: 0, right: 0, width: p.width / 100 };
     }
@@ -16,10 +16,10 @@ export function volumeGains(p: VolumeParams): { left: number; right: number; wid
     };
 }
 
-/** Layout of the readings produced by {@link VolumeKernel}: loudness of its output in LUFS. */
-export const VOLUME_FIELDS = { momentary: 0, shortTerm: 1 };
+/** Layout of the readings produced by {@link UtilityKernel}: loudness of its output in LUFS. */
+export const UTILITY_FIELDS = { momentary: 0, shortTerm: 1 };
 
-export class VolumeKernel implements Kernel<VolumeParams> {
+export class UtilityKernel implements Kernel<UtilityParams> {
     private readonly left: Smoother;
     private readonly right: Smoother;
     private readonly width: Smoother;
@@ -32,8 +32,8 @@ export class VolumeKernel implements Kernel<VolumeParams> {
         this.loudness = new LoudnessMeter(sampleRate);
     }
 
-    setParams(p: VolumeParams) {
-        const gains = volumeGains(p);
+    setParams(p: UtilityParams) {
+        const gains = utilityGains(p);
         this.left.set(gains.left);
         this.right.set(gains.right);
         this.width.set(gains.width);

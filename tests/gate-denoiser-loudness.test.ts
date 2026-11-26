@@ -4,7 +4,7 @@ import { STEREO_BANDS, STEREO_BAND_FIELDS, STEREO_FIELDS } from '../src/dsp/kern
 import { DENOISER_FIELDS } from '../src/dsp/kernels/denoiser';
 import { GATE_FIELDS } from '../src/dsp/kernels/gate';
 import { LOUDNESS_FIELDS } from '../src/dsp/kernels/loudness';
-import { VOLUME_FIELDS } from '../src/dsp/kernels/volume';
+import { UTILITY_FIELDS } from '../src/dsp/kernels/utility';
 import { logFrequencies } from '../src/shared/spectrum';
 import {
     NOISE_PROFILE_BANDS,
@@ -88,14 +88,14 @@ describe('loudness analyzer', () => {
     });
 });
 
-describe('volume loudness meter', () => {
+describe('utility loudness meter', () => {
     it('reports the loudness of the output after the gain', () => {
-        const kernel = kernelFor('volume', { gainDb: -6 });
+        const kernel = kernelFor('utility', { gainDb: -6 });
         const signal = sine(1000, 4, dbfs(-17));
         processStereo(signal, signal, (l, r, frames) => kernel.process(l, r, frames));
         const readings = kernel.takeMeters?.() ?? [];
-        expect(readings[VOLUME_FIELDS.momentary]).toBeCloseTo(-23, 0);
-        expect(readings[VOLUME_FIELDS.shortTerm]).toBeCloseTo(-23, 0);
+        expect(readings[UTILITY_FIELDS.momentary]).toBeCloseTo(-23, 0);
+        expect(readings[UTILITY_FIELDS.shortTerm]).toBeCloseTo(-23, 0);
     });
 });
 

@@ -218,8 +218,8 @@ const normalizers: { [T in EffectType]: (raw: Loose) => EffectParamsMap[T] } = {
         learning: bool(raw.learning, false),
         profile: noiseProfile(raw.profile),
     }),
-    volume: (raw) => ({
-        gainDb: num(raw.gainDb, 'volumeDb'),
+    utility: (raw) => ({
+        gainDb: num(raw.gainDb, 'utilityGainDb'),
         pan: num(raw.pan, 'pan'),
         width: num(raw.width, 'width'),
         invertLeft: bool(raw.invertLeft, false),
@@ -273,11 +273,30 @@ function accentColor(raw: unknown): { color?: string } {
     return ACCENT_COLOR_PATTERN.test(color) ? { color } : {};
 }
 
-export function normalizeEffect(raw: unknown): Effect | undefined {
-    if (!isObject(raw) || !EFFECT_TYPES.includes(raw.type as EffectType)) {
+/**
+ * Effect types under the names earlier versions stored, and the type each is now. Racks in
+ * storage, saved presets and exported files keep the old name until they are saved again, and a
+ * file may never be, so the old names stay readable for good; a rack is always written back
+ * under the current ones.
+ *
+ * - `volume`: the Utility effect, stored under this name up to 0.8.4.
+ */
+const LEGACY_EFFECT_TYPES: Readonly<Record<string, EffectType>> = { volume: 'utility' };
+
+/** The current type of an effect stored under `raw`, if it is one at all. */
+function effectType(raw: unknown): EffectType | undefined {
+    if (typeof raw !== 'string') {
         return undefined;
     }
-    const type = raw.type as EffectType;
+    const type = Object.hasOwn(LEGACY_EFFECT_TYPES, raw) ? LEGACY_EFFECT_TYPES[raw] : raw;
+    return EFFECT_TYPES.includes(type as EffectType) ? (type as EffectType) : undefined;
+}
+
+export function normalizeEffect(raw: unknown): Effect | undefined {
+    const type = isObject(raw) ? effectType(raw.type) : undefined;
+    if (!isObject(raw) || type === undefined) {
+        return undefined;
+    }
     const params = normalizers[type](isObject(raw.params) ? raw.params : {});
     return {
         id: id(raw.id),

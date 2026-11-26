@@ -80,15 +80,20 @@ function NoiseDisplay({
         gain: new Float32Array(DENOISER_POINTS),
     });
     useTelemetry((telemetry) => {
-        const data = telemetry.meters.effects[id];
-        if (!data || data.length < DENOISER_FIELDS.gain + DENOISER_POINTS) {
-            return;
-        }
+        const readings = telemetry.meters.effects[id];
+        // Without readings, as while bypassed, the curves settle as they do in silence: no
+        // input, no noise floor and no reduction.
+        const data =
+            readings !== undefined && readings.length >= DENOISER_FIELDS.gain + DENOISER_POINTS
+                ? readings
+                : undefined;
         const c = curves.current;
         for (let i = 0; i < DENOISER_POINTS; i++) {
-            c.input[i] += (data[DENOISER_FIELDS.input + i] - c.input[i]) * 0.5;
-            c.noise[i] = data[DENOISER_FIELDS.noise + i];
-            c.gain[i] += (data[DENOISER_FIELDS.gain + i] - c.gain[i]) * 0.5;
+            const input = data ? data[DENOISER_FIELDS.input + i] : FLOOR_DB;
+            const gain = data ? data[DENOISER_FIELDS.gain + i] : 0;
+            c.input[i] += (input - c.input[i]) * 0.5;
+            c.noise[i] = data ? data[DENOISER_FIELDS.noise + i] : FLOOR_DB;
+            c.gain[i] += (gain - c.gain[i]) * 0.5;
         }
     });
     const { handlers: pointer, hot } = useCanvasDrag(({ x, y, width, height }) => {

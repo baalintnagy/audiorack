@@ -186,7 +186,7 @@ function LoudnessReadouts({
             ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
             ctx.fillText('INTEGRATED', padding, 20);
             ctx.textAlign = 'right';
-            ctx.fillText(formatDuration(value(LOUDNESS_FIELDS.seconds)), width - padding, 20);
+            ctx.fillText(formatDuration(r?.[LOUDNESS_FIELDS.seconds] ?? 0), width - padding, 20);
             ctx.textAlign = 'start';
             ctx.fillStyle = !measured
                 ? css('--text-dim')
@@ -207,7 +207,8 @@ function LoudnessReadouts({
             const rows: [string, string, string, boolean][] = [
                 ['Short-term', formatLoudness(value(LOUDNESS_FIELDS.shortTerm)), 'LUFS', false],
                 ['Momentary', formatLoudness(value(LOUDNESS_FIELDS.momentary)), 'LUFS', false],
-                ['Range', value(LOUDNESS_FIELDS.range).toFixed(1), 'LU', false],
+                // A spread, not a level: without readings there is no range to show at all.
+                ['Range', r ? r[LOUDNESS_FIELDS.range].toFixed(1) : '—', 'LU', false],
                 [
                     'True peak max',
                     formatLoudness(value(LOUDNESS_FIELDS.maxTruePeak)),
@@ -258,10 +259,16 @@ export function LoudnessEditor({ effect, setParams, color }: EditorProps<'loudne
     });
     useTelemetry((telemetry) => {
         const data = telemetry.meters.effects[effect.id];
+        const h = history.current;
         if (!data || data.length <= LOUDNESS_FIELDS.seconds) {
+            // Without readings, as while bypassed, nothing is measured: the readouts clear and
+            // the history runs on in silence.
+            latest.current = undefined;
+            h.momentary[h.position] = -120;
+            h.shortTerm[h.position] = -120;
+            h.position = (h.position + 1) % HISTORY_LENGTH;
             return;
         }
-        const h = history.current;
         const previous = latest.current?.[LOUDNESS_FIELDS.seconds] ?? 0;
         if (data[LOUDNESS_FIELDS.seconds] < previous) {
             // The measurement was reset; start the history over too.

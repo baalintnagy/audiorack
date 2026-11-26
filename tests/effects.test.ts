@@ -163,8 +163,27 @@ describe('rack processor', () => {
         rack.setRack({ ...state, chain: [{ ...utility, bypass: true }] });
         const [left] = processStereo(input, input, (l, r, frames) => rack.process(l, r, frames));
         expect(rms(left, 4800)).toBeCloseTo(rms(input, 4800), 4);
-        // Meters are still collected: momentary and short-term loudness.
+        // Once bypassed it measures nothing, so it reports no readings to hold on to.
+        expect(rack.takeMeters().effects).not.toHaveProperty(utility.id);
+        rack.setRack(state);
+        rack.process(new Float32Array(128), new Float32Array(128), 128);
         expect(rack.takeMeters().effects[utility.id]).toHaveLength(2);
+    });
+
+    it('reports no effect readings while the whole rack is bypassed', () => {
+        const rack = new RackProcessor(SAMPLE_RATE);
+        const spectrum = createEffect('spectrum');
+        const state = { ...defaultRack(), chain: [spectrum] };
+        rack.setRack(state);
+        const input = sine(300, 0.2, 0.5);
+        processStereo(input, input, (l, r, frames) => rack.process(l, r, frames));
+        expect(rack.takeMeters().effects).toHaveProperty(spectrum.id);
+        rack.setRack({ ...state, bypass: true });
+        processStereo(input, input, (l, r, frames) => rack.process(l, r, frames));
+        const meters = rack.takeMeters();
+        expect(meters.effects).toEqual({});
+        // The rack's own input and output meters keep running.
+        expect(Math.max(...meters.inputPeak)).toBeGreaterThan(0);
     });
 
     it('stays fully dry once the whole rack is bypassed', () => {

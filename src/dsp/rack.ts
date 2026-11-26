@@ -80,7 +80,10 @@ export class RackProcessor {
         const input = this.inputMeter.take();
         const output = this.outputMeter.take();
         const effects: Record<string, number[]> = {};
-        this.chain.collectMeters(effects);
+        // While the whole rack is bypassed the chain does not run, so it has no readings either.
+        if (!this.engaged.settled || this.engaged.value !== 0) {
+            this.chain.collectMeters(effects);
+        }
         return {
             inputPeak: input.peak,
             inputRms: input.rms,

@@ -7,8 +7,8 @@ import {
     SPECTROGRAM_PALETTES,
     type SpectrogramParams,
 } from '../../shared/effects';
-import { MAX_FREQUENCY, MIN_FREQUENCY, logFrequencies } from '../../shared/spectrum';
-import { ControlGroup, Segmented, Toggle } from '../components/Controls';
+import { MAX_FREQUENCY, MIN_FREQUENCY, SILENCE_DB, logFrequencies } from '../../shared/spectrum';
+import { ControlGroup, Segmented } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { formatFrequency } from '../format';
 import { css, withAlpha } from '../graph';
@@ -18,6 +18,7 @@ import { CHANNEL_LABELS, noteName, tilted } from './SpectrumEditor';
 import type { EditorProps } from './types';
 
 const COLUMNS = 480;
+const SILENT_COLUMN = new Array<number>(SPECTROGRAM_BINS).fill(SILENCE_DB);
 const FREQUENCIES = logFrequencies(SPECTROGRAM_BINS);
 const LABELS = [50, 100, 200, 500, 1000, 2000, 5000, 10000];
 
@@ -72,11 +73,10 @@ function frequencyToRow(frequency: number, height: number) {
 
 export function SpectrogramEditor({ effect, setParams, color }: EditorProps<'spectrogram'>) {
     const p = effect.params;
-    const [frozen, setFrozen] = useState(false);
     const [hoverY, setHoverY] = useState<number>();
     const palette = useMemo(() => buildPalette(p.palette), [p.palette]);
     const history = useRef({
-        values: new Float32Array(COLUMNS * SPECTROGRAM_BINS).fill(-140),
+        values: new Float32Array(COLUMNS * SPECTROGRAM_BINS).fill(SILENCE_DB),
         column: 0,
     });
     const image = useMemo(() => {
@@ -114,10 +114,9 @@ export function SpectrogramEditor({ effect, setParams, color }: EditorProps<'spe
     useEffect(repaint, [palette, p.floorDb, p.ceilingDb, p.tilt]);
 
     useTelemetry((telemetry) => {
-        const data = telemetry.meters.effects[effect.id];
-        if (frozen || !data || data.length !== SPECTROGRAM_BINS) {
-            return;
-        }
+        // Without readings, as while bypassed, time keeps scrolling by in silence.
+        const readings = telemetry.meters.effects[effect.id];
+        const data = readings?.length === SPECTROGRAM_BINS ? readings : SILENT_COLUMN;
         const h = history.current;
         h.values.set(data, h.column * SPECTROGRAM_BINS);
         h.column = (h.column + 1) % COLUMNS;
@@ -186,7 +185,6 @@ export function SpectrogramEditor({ effect, setParams, color }: EditorProps<'spe
                     }
                     onPointerLeave={() => setHoverY(undefined)}
                 />
-                {frozen && <div className="display-badge">Frozen</div>}
             </div>
             <div className="control-row">
                 <ControlGroup title="Source">
@@ -249,9 +247,6 @@ export function SpectrogramEditor({ effect, setParams, color }: EditorProps<'spe
                             onChange={(palette) => setParams({ palette })}
                             color={color}
                         />
-                        <Toggle active={frozen} onChange={setFrozen} color={color}>
-                            Freeze
-                        </Toggle>
                     </div>
                 </ControlGroup>
             </div>

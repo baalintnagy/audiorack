@@ -122,7 +122,14 @@ export class BypassStage<S extends Stage> implements Stage {
         this.dryDelay.reset();
     }
 
+    /**
+     * Once fully bypassed, the stage measures nothing, so it reports no readings: its displays
+     * then show silence rather than holding the last readings it had.
+     */
     collectMeters(into: Record<string, number[]>) {
+        if (this.wet.settled && this.wet.value === 0) {
+            return;
+        }
         this.inner.collectMeters(into);
     }
 }

@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
     defaultParams,
+    EFFECT_INFO,
     isParallelGroup,
     itemColor,
     itemInfo,
@@ -9,6 +10,7 @@ import {
 } from '../../shared/effects';
 import { EffectEditor } from '../editors';
 import { ParallelEditor } from '../editors/ParallelEditor';
+import { TelemetryContext, useFreezableTelemetry } from '../telemetry';
 import type { RackActions } from '../useRack';
 import { ColorPicker } from './ColorPicker';
 import { PinIcon, PopOutIcon, Toggle } from './Controls';
@@ -103,18 +105,39 @@ function PanelHeader({
     );
 }
 
+/**
+ * An effect's header and editor. An analyzer can be frozen from its header: its editor then gets
+ * a telemetry store that holds still, so everything it shows stops on the last readings while
+ * the engine, and any measurement such as loudness, carries on.
+ */
 function EffectPanel({
     effect,
     placement,
     actions,
+    frozen,
+    onFreeze,
 }: {
     effect: Effect;
     placement: PanelPlacement;
     actions: RackActions;
+    frozen: boolean;
+    onFreeze: (frozen: boolean) => void;
 }) {
+    const telemetry = useFreezableTelemetry(frozen);
     return (
         <>
             <PanelHeader item={effect} placement={placement} actions={actions}>
+                {EFFECT_INFO[effect.type].category === 'analyzer' && (
+                    <Toggle
+                        active={frozen}
+                        onChange={onFreeze}
+                        color={itemColor(effect)}
+                        title="Hold what the analyzer shows; it keeps measuring"
+                        className="small"
+                    >
+                        Freeze
+                    </Toggle>
+                )}
                 <button
                     type="button"
                     className="ghost small"
@@ -129,11 +152,13 @@ function EffectPanel({
                     Reset
                 </button>
             </PanelHeader>
-            <EffectEditor
-                key={effect.id}
-                effect={effect}
-                setParams={(patch) => actions.setParams(effect.id, patch)}
-            />
+            <TelemetryContext.Provider value={telemetry}>
+                <EffectEditor
+                    key={effect.id}
+                    effect={effect}
+                    setParams={(patch) => actions.setParams(effect.id, patch)}
+                />
+            </TelemetryContext.Provider>
         </>
     );
 }
@@ -152,9 +177,12 @@ export function ItemPanel({
     hint?: string;
     selected?: boolean;
 }) {
+    // Which analyzer is frozen; kept by id, so a panel that shows another one starts live.
+    const [frozenId, setFrozenId] = useState<string>();
+    const frozen = item !== undefined && frozenId === item.id;
     return (
         <section
-            className={`panel ${item?.bypass ? 'effect-bypassed' : ''} ${selected ? 'selected' : ''}`}
+            className={`panel ${item?.bypass ? 'effect-bypassed' : ''} ${selected ? 'selected' : ''} ${frozen ? 'frozen' : ''}`}
             data-item-id={item?.id}
             style={item ? { ['--effect-color' as string]: itemColor(item) } : undefined}
         >
@@ -183,7 +211,13 @@ export function ItemPanel({
                 </>
             )}
             {item && !isParallelGroup(item) && (
-                <EffectPanel effect={item} placement={placement} actions={actions} />
+                <EffectPanel
+                    effect={item}
+                    placement={placement}
+                    actions={actions}
+                    frozen={frozen}
+                    onFreeze={(next) => setFrozenId(next ? item.id : undefined)}
+                />
             )}
             {hint && <div className="idle-hint">{hint}</div>}
         </section>

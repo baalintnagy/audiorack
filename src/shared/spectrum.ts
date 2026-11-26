@@ -1,6 +1,8 @@
 export const MIN_FREQUENCY = 20;
 export const MAX_FREQUENCY = 20000;
 export const SPECTRUM_BINS = 192;
+/** The level a spectrum reading gives for silence: the floor of every bin. */
+export const SILENCE_DB = -140;
 
 /** Log-spaced band centers between 20 Hz and 20 kHz. */
 export function logFrequencies(count: number): Float32Array {
@@ -42,6 +44,8 @@ export function toLogSpectrum(
                 value = Math.max(value, fft[bin]);
             }
         }
-        return Number.isFinite(value) ? Math.round(Math.max(value, -140) * 10) / 10 : -140;
+        return Number.isFinite(value)
+            ? Math.round(Math.max(value, SILENCE_DB) * 10) / 10
+            : SILENCE_DB;
     });
 }

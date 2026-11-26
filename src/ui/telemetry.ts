@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { Telemetry } from '../shared/messages';
 
 type Listener = (telemetry: Telemetry) => void;
@@ -8,16 +8,20 @@ type Listener = (telemetry: Telemetry) => void;
  * the canvases that subscribe to them.
  */
 export class TelemetryStore {
-    latest: Telemetry | undefined;
+    protected frame: Telemetry | undefined;
     private listeners = new Set<Listener>();
 
+    get latest(): Telemetry | undefined {
+        return this.frame;
+    }
+
     publish(telemetry: Telemetry) {
-        this.latest = telemetry;
+        this.frame = telemetry;
         this.listeners.forEach((listener) => listener(telemetry));
     }
 
     clear() {
-        this.latest = undefined;
+        this.frame = undefined;
     }
 
     subscribe(listener: Listener): () => void {
@@ -27,6 +31,38 @@ export class TelemetryStore {
 
     get sampleRate() {
         return this.latest?.sampleRate ?? 48000;
+    }
+}
+
+/**
+ * Passes on the frames of another store, except while held: then its subscribers get none and
+ * `latest` stays at the frame it was held on, so whatever draws from it holds still.
+ */
+export class HoldableTelemetry extends TelemetryStore {
+    private held = false;
+
+    constructor(private readonly source: TelemetryStore) {
+        super();
+    }
+
+    override get latest(): Telemetry | undefined {
+        return this.held ? this.frame : this.source.latest;
+    }
+
+    /** Starts passing frames on; returns the function that stops it. */
+    follow(): () => void {
+        return this.source.subscribe((telemetry) => {
+            if (!this.held) {
+                this.publish(telemetry);
+            }
+        });
+    }
+
+    hold(held: boolean) {
+        if (held && !this.held) {
+            this.frame = this.source.latest;
+        }
+        this.held = held;
     }
 }
 
@@ -42,4 +78,17 @@ export function useTelemetry(listener: Listener) {
     const ref = useRef(listener);
     ref.current = listener;
     useEffect(() => store.subscribe((telemetry) => ref.current(telemetry)), [store]);
+}
+
+/**
+ * A telemetry store for a part of the page that can be frozen, such as an analyzer: provide it
+ * to that part, and while `frozen` everything there holds still on the last readings it had,
+ * while the engine itself carries on.
+ */
+export function useFreezableTelemetry(frozen: boolean): TelemetryStore {
+    const source = useTelemetryStore();
+    const store = useMemo(() => new HoldableTelemetry(source), [source]);
+    useLayoutEffect(() => store.hold(frozen), [store, frozen]);
+    useEffect(() => store.follow(), [store]);
+    return store;
 }

@@ -457,6 +457,14 @@ button:disabled {
     width: 24px;
 }
 
+/* A toggle sized to sit among small buttons, as in a panel header, keeping room for its label. */
+.toggle.small {
+    flex: none;
+    height: 22px;
+    min-width: 0;
+    padding: 0 8px;
+}
+
 .ghost.danger:hover:not(:disabled) {
     color: #ff8090;
     border-color: #7a3440;
@@ -1803,8 +1811,11 @@ button:disabled {
     visibility: hidden;
 }
 
-.display-badge {
+/* Marks the display of an analyzer frozen from its panel header. */
+.panel.frozen .display::after {
+    content: 'Frozen';
     position: absolute;
+    z-index: 1;
     top: 8px;
     left: 8px;
     padding: 2px 8px;

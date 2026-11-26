@@ -233,6 +233,9 @@ class LocalBackend implements Backend {
             const source = await this.createSource(this.context);
             this.source = source;
             this.graph = await RackGraph.create(this.context, source, this.rack);
+            // The rack may have changed while the graph was being created, before `pushRack`
+            // could reach it.
+            this.graph.setRack(this.rack);
             this.listeners.forEach((attach) => attach());
             return this.status();
         } catch (error) {

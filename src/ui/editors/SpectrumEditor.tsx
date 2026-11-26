@@ -1,6 +1,6 @@
 import { useRef, useState, type PointerEvent } from 'react';
 import { ANALYZER_CHANNELS, FFT_SIZES, SPECS, type AnalyzerChannel } from '../../shared/effects';
-import { SPECTRUM_BINS, SPECTRUM_FREQUENCIES } from '../../shared/spectrum';
+import { SILENCE_DB, SPECTRUM_BINS, SPECTRUM_FREQUENCIES } from '../../shared/spectrum';
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { formatFrequency } from '../format';
@@ -19,6 +19,7 @@ export const CHANNEL_LABELS: Record<AnalyzerChannel, string> = {
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const PEAK_FALL_DB = 0.35;
+const SILENT_SPECTRUM = new Array<number>(SPECTRUM_BINS).fill(SILENCE_DB);
 
 export function noteName(frequency: number): string {
     const midi = 69 + 12 * Math.log2(frequency / 440);
@@ -46,16 +47,14 @@ function valueAt(spectrum: Float32Array, frequency: number): number {
 
 export function SpectrumEditor({ effect, setParams, color }: EditorProps<'spectrum'>) {
     const p = effect.params;
-    const [frozen, setFrozen] = useState(false);
     const [hover, setHover] = useState<{ x: number; y: number }>();
-    const display = useRef(new Float32Array(SPECTRUM_BINS).fill(-140));
-    const peaks = useRef(new Float32Array(SPECTRUM_BINS).fill(-140));
+    const display = useRef(new Float32Array(SPECTRUM_BINS).fill(SILENCE_DB));
+    const peaks = useRef(new Float32Array(SPECTRUM_BINS).fill(SILENCE_DB));
 
     useTelemetry((telemetry) => {
-        const data = telemetry.meters.effects[effect.id];
-        if (frozen || !data || data.length !== SPECTRUM_BINS) {
-            return;
-        }
+        // Without readings, as while bypassed, the spectrum falls away as it does in silence.
+        const readings = telemetry.meters.effects[effect.id];
+        const data = readings?.length === SPECTRUM_BINS ? readings : SILENT_SPECTRUM;
         // Rise instantly, fall according to the smoothing setting.
         const keep = Math.min(0.97, (p.smoothing / 100) * 0.97);
         data.forEach((value, index) => {
@@ -162,7 +161,6 @@ export function SpectrumEditor({ effect, setParams, color }: EditorProps<'spectr
                     onPointerMove={onPointerMove}
                     onPointerLeave={() => setHover(undefined)}
                 />
-                {frozen && <div className="display-badge">Frozen</div>}
             </div>
             <div className="control-row">
                 <ControlGroup title="Source">
@@ -215,14 +213,6 @@ export function SpectrumEditor({ effect, setParams, color }: EditorProps<'spectr
                             color={color}
                         >
                             Peaks
-                        </Toggle>
-                        <Toggle
-                            active={frozen}
-                            onChange={setFrozen}
-                            color={color}
-                            title="Hold the current spectrum"
-                        >
-                            Freeze
                         </Toggle>
                     </div>
                 </ControlGroup>

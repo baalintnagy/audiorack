@@ -26,12 +26,12 @@ effects, with a dark, analyzer-driven interface inspired by modern plug-in suite
 Analyzers are pass-through modules: insert them anywhere in the chain to see the signal at
 that point (for example one before and one after the EQ).
 
-| Analyzer     | What it shows                                                                                                   |
-| ------------ | --------------------------------------------------------------------------------------------------------------- |
-| Spectrum     | 2k–8k point FFT of mono, left, right, mid or side, with tilt, smoothing, peak hold, freeze and a hover readout. |
-| Spectrogram  | Scrolling time-frequency image with adjustable floor/ceiling, tilt and Magma, Ice or Mono palettes.             |
-| Stereo Image | Goniometer with persistence and auto zoom next to the image by frequency; correlation, balance and width.       |
-| Loudness     | EBU R128 meter: momentary, short-term, gated integrated loudness, loudness range and 4× oversampled true peak.  |
+| Analyzer     | What it shows                                                                                                          |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Spectrum     | 2k–8k point FFT of mono, left, right, mid or side, with tilt, smoothing, peak hold, freeze and a hover readout.        |
+| Spectrogram  | Scrolling time-frequency image with adjustable floor/ceiling, tilt, Magma, Ice or Mono palettes and freeze.            |
+| Stereo Image | Goniometer with persistence and auto zoom next to the image by frequency; correlation, balance and width; freeze.      |
+| Loudness     | EBU R128 meter: momentary, short-term, gated integrated loudness, loudness range, 4× oversampled true peak and freeze. |
 
 The Loudness analyzer follows ITU-R BS.1770-4 and EBU Tech 3341/3342 (K-weighting, 400 ms gating
 blocks with absolute and relative gates, short-term values for the range). Integrated loudness,

@@ -27,9 +27,9 @@ Turn down videos that are too loud, bring up quiet dialogue, clean hiss and hum 
 
 ★ FOUR ANALYZERS
 • Spectrum: mono, left, right, mid or side, with peak hold, freeze and a frequency, note and level readout.
-• Spectrogram: frequency over time, with adjustable levels and three color schemes.
-• Stereo Image: a stereo scope next to the image by frequency, with phase correlation, balance and width meters.
-• Loudness: an EBU R128 meter with momentary, short-term and integrated loudness, loudness range and true peak, against a target such as −14 LUFS for streaming or −23 LUFS for broadcast.
+• Spectrogram: frequency over time, with adjustable levels, three color schemes and freeze.
+• Stereo Image: a stereo scope next to the image by frequency, with phase correlation, balance and width meters, and freeze.
+• Loudness: an EBU R128 meter with momentary, short-term and integrated loudness, loudness range and true peak, against a target such as −14 LUFS for streaming or −23 LUFS for broadcast. Freeze holds the readings while it keeps measuring.
 Analyzers leave the audio untouched, so you can put one before and one after an effect to compare.
 
 ★ PRESETS

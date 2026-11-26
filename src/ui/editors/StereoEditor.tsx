@@ -6,7 +6,7 @@ import {
     STEREO_POINTS,
 } from '../../dsp/kernels/analyzers';
 import { SPECS } from '../../shared/effects';
-import { MAX_FREQUENCY, MIN_FREQUENCY, logFrequencies } from '../../shared/spectrum';
+import { MAX_FREQUENCY, MIN_FREQUENCY, SILENCE_DB, logFrequencies } from '../../shared/spectrum';
 import { ControlGroup, Segmented, Toggle } from '../components/Controls';
 import { Knob } from '../components/Knob';
 import { css, withAlpha } from '../graph';
@@ -24,6 +24,8 @@ const BAND_FREQUENCIES = logFrequencies(STEREO_BANDS);
 const BAND_LABELS = [50, 100, 200, 500, 1000, 2000, 5000, 10000];
 const BAND_FLOOR_DB = -90;
 const BAND_CEILING_DB = -20;
+/** A band's readings for silence, as the analyzer reports them: level, position, width, correlation. */
+const SILENT_BAND = [SILENCE_DB, 0, 0, 0];
 
 interface Band {
     level: number;
@@ -60,19 +62,21 @@ function FrequencyImage({ id }: { id: string }) {
         })),
     );
     useTelemetry((telemetry) => {
-        const data = telemetry.meters.effects[id];
-        if (!data || data.length < STEREO_FIELDS.bands + STEREO_BANDS * STEREO_BAND_FIELDS.size) {
-            return;
-        }
+        const readings = telemetry.meters.effects[id];
+        const complete =
+            readings !== undefined &&
+            readings.length >= STEREO_FIELDS.bands + STEREO_BANDS * STEREO_BAND_FIELDS.size;
         bands.current.forEach((band, index) => {
+            // Without readings, as while bypassed, every band settles as it does in silence.
             const start = STEREO_FIELDS.bands + index * STEREO_BAND_FIELDS.size;
-            const level = data[start + STEREO_BAND_FIELDS.level];
+            const field = (offset: number) =>
+                complete ? readings[start + offset] : SILENT_BAND[offset];
+            const level = field(STEREO_BAND_FIELDS.level);
             // Fast rise, slower fall, like a meter.
             band.level = level > band.level ? level : band.level + (level - band.level) * 0.25;
-            band.position += (data[start + STEREO_BAND_FIELDS.position] - band.position) * 0.3;
-            band.width += (data[start + STEREO_BAND_FIELDS.width] - band.width) * 0.3;
-            band.correlation +=
-                (data[start + STEREO_BAND_FIELDS.correlation] - band.correlation) * 0.3;
+            band.position += (field(STEREO_BAND_FIELDS.position) - band.position) * 0.3;
+            band.width += (field(STEREO_BAND_FIELDS.width) - band.width) * 0.3;
+            band.correlation += (field(STEREO_BAND_FIELDS.correlation) - band.correlation) * 0.3;
         });
     });
     const ref = useCanvas(({ ctx, width, height }) => {
@@ -178,17 +182,19 @@ export function StereoEditor({ effect, setParams, color }: EditorProps<'stereo'>
     const trail = useMemo(() => document.createElement('canvas'), []);
 
     useTelemetry((telemetry) => {
-        const data = telemetry.meters.effects[effect.id];
-        if (!data || data.length <= STEREO_FIELDS.points) {
-            return;
-        }
+        const latest = telemetry.meters.effects[effect.id];
+        // Without readings, as while bypassed, the meters settle at zero and the trace fades out.
+        const data =
+            latest !== undefined && latest.length > STEREO_FIELDS.points ? latest : undefined;
         const r = readings.current;
-        r.correlation += (data[STEREO_FIELDS.correlation] - r.correlation) * 0.3;
-        r.balance += (data[STEREO_FIELDS.balance] - r.balance) * 0.3;
-        r.width += (data[STEREO_FIELDS.width] - r.width) * 0.3;
-        const peak = data[STEREO_FIELDS.peak];
-        const target = p.autoGain ? Math.min(30, 0.85 / Math.max(peak, 0.03)) : 1;
-        gain.current += (target - gain.current) * (target < gain.current ? 0.5 : 0.05);
+        r.correlation += ((data?.[STEREO_FIELDS.correlation] ?? 0) - r.correlation) * 0.3;
+        r.balance += ((data?.[STEREO_FIELDS.balance] ?? 0) - r.balance) * 0.3;
+        r.width += ((data?.[STEREO_FIELDS.width] ?? 0) - r.width) * 0.3;
+        if (data) {
+            const peak = data[STEREO_FIELDS.peak];
+            const target = p.autoGain ? Math.min(30, 0.85 / Math.max(peak, 0.03)) : 1;
+            gain.current += (target - gain.current) * (target < gain.current ? 0.5 : 0.05);
+        }
 
         const { width, height } = size.current;
         if (width === 0 || height === 0) {
@@ -203,6 +209,10 @@ export function StereoEditor({ effect, setParams, color }: EditorProps<'stereo'>
         ctx.globalCompositeOperation = 'destination-out';
         ctx.fillStyle = `rgb(0 0 0 / ${Math.round((1 - (p.persistence / 100) * 0.92) * 100)}%)`;
         ctx.fillRect(0, 0, width, height);
+        if (!data) {
+            ctx.globalCompositeOperation = 'source-over';
+            return;
+        }
         ctx.globalCompositeOperation = 'lighter';
         const cx = width / 2;
         const cy = height / 2;

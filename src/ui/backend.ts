@@ -24,7 +24,10 @@ export interface Backend {
     status(): Promise<BackendStatus>;
     start(): Promise<BackendStatus>;
     stop(): Promise<BackendStatus>;
-    /** Reports status changes made elsewhere, such as processing started in another window. */
+    /**
+     * Reports status changes made elsewhere, such as processing started in another window, or
+     * the tab moving on to another page with a title of its own.
+     */
     watchStatus(listener: (status: BackendStatus) => void): () => void;
     pushRack(rack: RackState, scope: RackScope): void;
     /** Streams telemetry into the store while the engine runs. */
@@ -47,7 +50,8 @@ class ExtensionBackend implements Backend {
 
     private constructor(
         readonly tabId: number,
-        private readonly tabTitle: string,
+        /** The tab's title, which the label shows; follows the tab in `watchStatus`. */
+        private tabTitle: string,
     ) {}
 
     static async create(): Promise<ExtensionBackend> {
@@ -87,13 +91,31 @@ class ExtensionBackend implements Backend {
     }
 
     watchStatus(listener: (status: BackendStatus) => void) {
-        const handler = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+        const onSessions = (
+            changes: Record<string, chrome.storage.StorageChange>,
+            area: string,
+        ) => {
             if (area === 'session' && SESSIONS_KEY in changes) {
                 void this.status().then(listener);
             }
         };
-        chrome.storage.onChanged.addListener(handler);
-        return () => chrome.storage.onChanged.removeListener(handler);
+        // A tab keeps being processed while it moves on to another page, whether it loads one
+        // or the site swaps its content in place, as video and music sites do. Its new title
+        // is reported only while the extension may read the tab (granted by opening AudioRack
+        // on it, for as long as the browser keeps that grant); otherwise the label keeps the
+        // last title it had.
+        const onTab = (tabId: number, change: chrome.tabs.OnUpdatedInfo) => {
+            if (tabId === this.tabId && change.title !== undefined) {
+                this.tabTitle = change.title;
+                void this.status().then(listener);
+            }
+        };
+        chrome.storage.onChanged.addListener(onSessions);
+        chrome.tabs.onUpdated.addListener(onTab);
+        return () => {
+            chrome.storage.onChanged.removeListener(onSessions);
+            chrome.tabs.onUpdated.removeListener(onTab);
+        };
     }
 
     pushRack(rack: RackState, scope: RackScope) {

@@ -34,7 +34,7 @@ Turn down videos that are too loud, bring up quiet dialogue, clean hiss and hum 
 Analyzers leave the audio untouched, so you can put one before and one after an effect to compare.
 
 ★ PRESETS
-Start from built-in presets such as Night Mode, Voice Clarity, Bass Head, Parallel Punch, Loudness and Lo-Fi Radio. Save your own, side panel pins and learned noise profiles included, drag them into the order you like, and export or import them as files.
+Start from built-in presets such as Night Mode, Voice Clarity, Bass Head, Parallel Punch, Loudness and Lo-Fi Radio. Save your own, side panel pins and learned noise profiles included, drag them into the order you like, find any of them by typing a few letters, and export or import them as files.
 
 ★ HOW TO USE
 1. Open a tab that plays audio.

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_PRESET_NAME, moveListItem, nextPresetName, upsertPreset } from '../src/shared/presets';
+import {
+    MAX_PRESET_NAME,
+    moveListItem,
+    nextPresetName,
+    presetMatches,
+    upsertPreset,
+} from '../src/shared/presets';
 
 describe('preset naming', () => {
     it('counts "Preset" names when the rack did not come from a preset', () => {
@@ -50,5 +56,23 @@ describe('preset order', () => {
             'Three',
             'Four',
         ]);
+    });
+});
+
+describe('preset search', () => {
+    it('matches every word typed, in any order, in the name or the description', () => {
+        expect(presetMatches('voice', 'Voice Clarity', 'Presence for speech')).toBe(true);
+        expect(presetMatches('speech clar', 'Voice Clarity', 'Presence for speech')).toBe(true);
+        expect(presetMatches('voice bass', 'Voice Clarity', 'Presence for speech')).toBe(false);
+    });
+
+    it('ignores case and accents', () => {
+        expect(presetMatches('CAFE', 'Café night')).toBe(true);
+        expect(presetMatches('élan', 'Elan')).toBe(true);
+    });
+
+    it('matches everything when nothing is typed', () => {
+        expect(presetMatches('', 'Anything')).toBe(true);
+        expect(presetMatches('   ', 'Anything')).toBe(true);
     });
 });

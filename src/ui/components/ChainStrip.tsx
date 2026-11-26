@@ -184,7 +184,6 @@ function EffectSlot({
                         />
                     </div>
                     <span className="slot-name">{info.short}</span>
-                    <span className="slot-label">{info.label}</span>
                 </>
             )}
             <SlotMeter effect={effect} />

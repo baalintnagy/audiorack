@@ -168,6 +168,24 @@ export const FACTORY_PRESETS: FactoryPreset[] = [
     },
 ];
 
+/** Text compared without regard to case or accents. */
+function searchable(text: string): string {
+    return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+/**
+ * Whether a preset matches what was typed to search for it: every word typed appears somewhere
+ * in its texts, such as its name and description, in any order and without regard to case or
+ * accents. An empty search matches every preset.
+ */
+export function presetMatches(query: string, ...texts: string[]): boolean {
+    const haystack = searchable(texts.join(' '));
+    return searchable(query)
+        .split(/\s+/)
+        .filter(Boolean)
+        .every((word) => haystack.includes(word));
+}
+
 /**
  * A free name for saving the rack as a preset: `base` with the next unused counter when the
  * rack came from a preset (a counter it already ends with is replaced), otherwise "Preset" and

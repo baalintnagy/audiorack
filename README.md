@@ -39,13 +39,14 @@ blocks with absolute and relative gates, short-term values for the range). Integ
 range and the maxima cover everything played through the rack since the last **Reset**; the
 history shows the last minute against a target (−14, −16, −23 or −24 LUFS, or any value).
 
-The chain can be reordered by dragging slots, each effect can be bypassed (with a short
-crossfade), and the whole rack can be bypassed for comparison. Each slot has a small meter of
-its own output level (−60 to 0 dBFS) in the effect's color; a bypassed effect's meter stays
-empty. Every display shows its effect's own signal, so
-the rack's input and output gain do not change them. Factory presets are included;
-your own presets can be saved, exported and imported as JSON, and put in any order by dragging
-them in the preset menu (or with Alt+↑/↓). Saving over a preset keeps its place.
+The chain can be reordered by dragging slots, each effect can be bypassed (with a short crossfade),
+and the whole rack can be bypassed for comparison. Each slot has a small meter of its own output
+level (−60 to 0 dBFS) in the effect's color; a bypassed effect's meter stays empty. Every display
+shows its effect's own signal, so the rack's input and output gain do not change them. Factory
+presets are included; your own presets can be saved, exported and imported as JSON, and put in any
+order by dragging them in the preset menu (or with Alt+↑/↓). Saving over a preset keeps its place.
+The menu opens with a search field that narrows the presets by name and description as you type;
+Enter loads the first match.
 
 The header has two rows. The first holds the **Process tab** button with the tab's title, the
 **This tab / All tabs** switch and the window buttons (dock in the side panel, open in a larger

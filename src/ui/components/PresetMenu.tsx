@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { countEffects } from '../../shared/chain';
 import type { RackState } from '../../shared/effects';
 import { normalizeRack } from '../../shared/normalize';
@@ -7,6 +7,7 @@ import {
     MAX_PRESET_NAME,
     moveListItem,
     nextPresetName,
+    presetMatches,
     upsertPreset,
 } from '../../shared/presets';
 import {
@@ -22,10 +23,6 @@ import { FileArrowIcon, GripIcon, SaveIcon } from './Controls';
 /** A rack as exported to a file, with the side panel pins when there are any. */
 type RackFile = RackState & { pins?: string[] };
 
-/**
- * Factory presets, user presets and files. User presets and files also keep the items pinned in
- * the side panel; loading one replaces the pins, and a preset without pins clears them.
- */
 /** Drag data type of a preset being reordered in the menu. */
 const PRESET_DRAG_TYPE = 'application/x-audiorack-preset';
 
@@ -34,6 +31,11 @@ const MENU_MAX_HEIGHT = 430;
 const MENU_MIN_HEIGHT = 160;
 const MENU_MARGIN = 8;
 
+/**
+ * Factory presets, user presets and files. User presets and files also keep the items pinned in
+ * the side panel; loading one replaces the pins, and a preset without pins clears them. The
+ * menu opens with a search field on top, which narrows both lists as you type.
+ */
 export function PresetMenu({
     rack,
     pins,
@@ -48,12 +50,14 @@ export function PresetMenu({
     const [userPresets, setUserPresets] = useState<UserPreset[]>([]);
     const [error, setError] = useState<string>();
     const [naming, setNaming] = useState<string | undefined>(undefined);
+    const [query, setQuery] = useState('');
     const ref = useRef<HTMLDivElement>(null);
     const menu = useRef<HTMLDivElement>(null);
     // The preset moved with the keyboard, to give it focus again in its new place.
     const refocus = useRef<string | undefined>(undefined);
     const fileInput = useRef<HTMLInputElement>(null);
     const nameInput = useRef<HTMLInputElement>(null);
+    const searchInput = useRef<HTMLInputElement>(null);
     const nameShown = naming !== undefined;
 
     // Keep the menu within the window: in a short popup or side panel it scrolls instead of
@@ -74,11 +78,14 @@ export function PresetMenu({
 
     // Select the suggested name so typing replaces it. The field stays at the bottom of the menu;
     // focusing it must not scroll the page, which would slide the header out of view.
+    // Otherwise the menu opens ready to search.
     useEffect(() => {
         if (nameShown && open) {
             nameInput.current?.focus({ preventScroll: true });
             nameInput.current?.select();
             nameInput.current?.scrollIntoView({ block: 'nearest' });
+        } else if (open) {
+            searchInput.current?.focus({ preventScroll: true });
         }
     }, [nameShown, open]);
 
@@ -104,10 +111,14 @@ export function PresetMenu({
     // Pins of items that are no longer in the rack are left out.
     const currentPins = presetPins(rack, pins);
 
-    /** Closes the menu and drops an unfinished preset name, so saving starts afresh next time. */
+    /**
+     * Closes the menu and drops an unfinished preset name and the search, so the menu starts
+     * afresh next time.
+     */
     const close = () => {
         setOpen(false);
         setNaming(undefined);
+        setQuery('');
     };
 
     const load = (next: RackState, nextPins: string[], name: string) => {
@@ -142,6 +153,37 @@ export function PresetMenu({
         },
         PRESET_DRAG_TYPE,
     );
+
+    // The presets that match the search; yours keep their place in the full list, for reordering,
+    // which is off while searching.
+    const searching = query.trim() !== '';
+    const factory = FACTORY_PRESETS.filter((preset) =>
+        presetMatches(query, preset.name, preset.description),
+    );
+    const yours = userPresets
+        .map((preset, index) => ({ preset, index }))
+        .filter(({ preset }) => presetMatches(query, preset.name));
+
+    /** Enter loads the first match; the down arrow moves into the list. */
+    const onSearchKey = (event: KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const [first] = factory;
+            if (first) {
+                load(first.create(), [], first.name);
+            } else if (yours[0]) {
+                const { preset } = yours[0];
+                load(preset.rack, preset.pins ?? [], preset.name);
+            }
+        } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            menu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+        } else if (event.key === 'Escape' && query) {
+            // The first Escape clears the search; the next one closes the menu.
+            event.stopPropagation();
+            setQuery('');
+        }
+    };
 
     const startSaving = () => {
         setNaming(
@@ -225,8 +267,19 @@ export function PresetMenu({
             {error && <span className="preset-error">{error}</span>}
             {open && (
                 <div className="menu preset-list" role="menu" ref={menu}>
-                    <div className="menu-heading">Factory</div>
-                    {FACTORY_PRESETS.map((preset) => (
+                    <div className="menu-search">
+                        <input
+                            ref={searchInput}
+                            type="search"
+                            placeholder="Search presets"
+                            aria-label="Search presets"
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            onKeyDown={onSearchKey}
+                        />
+                    </div>
+                    {factory.length > 0 && <div className="menu-heading">Factory</div>}
+                    {factory.map((preset) => (
                         <button
                             type="button"
                             role="menuitem"
@@ -240,17 +293,27 @@ export function PresetMenu({
                             </span>
                         </button>
                     ))}
-                    {userPresets.length > 0 && <div className="menu-heading">Yours</div>}
-                    {userPresets.map((preset, index) => (
+                    {yours.length > 0 && <div className="menu-heading">Yours</div>}
+                    {yours.map(({ preset, index }) => (
                         <div
-                            className={`menu-item-row reorderable ${reorder.marker(index)}`}
+                            className={
+                                searching
+                                    ? 'menu-item-row'
+                                    : `menu-item-row reorderable ${reorder.marker(index)}`
+                            }
                             key={preset.name}
-                            title="Drag to reorder · Alt+↑/↓ to move"
-                            {...reorder.rowProps(index, preset.name)}
+                            {...(searching
+                                ? {}
+                                : {
+                                      title: 'Drag to reorder · Alt+↑/↓ to move',
+                                      ...reorder.rowProps(index, preset.name),
+                                  })}
                         >
-                            <span className="drag-grip">
-                                <GripIcon />
-                            </span>
+                            {!searching && (
+                                <span className="drag-grip">
+                                    <GripIcon />
+                                </span>
+                            )}
                             <button
                                 type="button"
                                 role="menuitem"
@@ -258,7 +321,7 @@ export function PresetMenu({
                                 data-preset={preset.name}
                                 onClick={() => load(preset.rack, preset.pins ?? [], preset.name)}
                                 onKeyDown={(event) => {
-                                    if (reorder.keyMove(event, index)) {
+                                    if (!searching && reorder.keyMove(event, index)) {
                                         refocus.current = preset.name;
                                     }
                                 }}
@@ -280,6 +343,9 @@ export function PresetMenu({
                             </button>
                         </div>
                     ))}
+                    {factory.length === 0 && yours.length === 0 && (
+                        <div className="menu-empty">No presets match “{query.trim()}”.</div>
+                    )}
                     {naming !== undefined && (
                         <form
                             className="menu-save"

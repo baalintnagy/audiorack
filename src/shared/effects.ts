@@ -477,7 +477,8 @@ export const SPECS = {
         scale: 'log',
     },
     harmonics: { label: 'Harmonics', min: 0, max: 100, default: 25, unit: '%' },
-    masterDb: { label: 'Gain', min: -24, max: 24, default: 0, unit: 'dB', decimals: 1 },
+    /** The rack's input and output gain; as low as the Utility's, to turn a loud tab right down. */
+    masterDb: { label: 'Gain', min: -60, max: 24, default: 0, unit: 'dB', decimals: 1 },
     branchGainDb: { label: 'Level', min: -48, max: 12, default: 0, unit: 'dB', decimals: 1 },
     tilt: { label: 'Tilt', min: 0, max: 6, default: 4.5, unit: 'dB/oct', decimals: 1 },
     smoothing: { label: 'Smoothing', min: 0, max: 100, default: 60, unit: '%' },

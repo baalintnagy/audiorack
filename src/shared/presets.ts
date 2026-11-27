@@ -168,15 +168,18 @@ export const FACTORY_PRESETS: FactoryPreset[] = [
     },
 ];
 
-/** Text compared without regard to case or accents. */
+/** Text compared without regard to case, accents or punctuation, so "lofi" finds "Lo-Fi". */
 function searchable(text: string): string {
-    return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+    return text
+        .normalize('NFD')
+        .replace(/[^\p{L}\p{N}\s]/gu, '')
+        .toLowerCase();
 }
 
 /**
  * Whether a preset matches what was typed to search for it: every word typed appears somewhere
- * in its texts, such as its name and description, in any order and without regard to case or
- * accents. An empty search matches every preset.
+ * in its texts, such as its name and description, in any order and without regard to case,
+ * accents or punctuation. An empty search matches every preset.
  */
 export function presetMatches(query: string, ...texts: string[]): boolean {
     const haystack = searchable(texts.join(' '));

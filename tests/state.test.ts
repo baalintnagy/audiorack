@@ -25,6 +25,7 @@ describe('rack normalization', () => {
         const rack = normalizeRack({
             bypass: 'yes',
             inputDb: 1e9,
+            outputDb: -1e9,
             chain: [
                 { type: 'unknown' },
                 { type: 'compressor', id: 'a', params: { ratio: -5, attackMs: 'fast' } },
@@ -34,6 +35,7 @@ describe('rack normalization', () => {
         });
         expect(rack.bypass).toBe(false);
         expect(rack.inputDb).toBe(24);
+        expect(rack.outputDb).toBe(-60);
         expect(rack.chain.map((effect) => effect.type)).toEqual(['compressor', 'eq', 'multiband']);
         expect(new Set(rack.chain.map((effect) => effect.id)).size).toBe(3);
         const [compressor, eq, multiband] = allEffects(rack.chain);

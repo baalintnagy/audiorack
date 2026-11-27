@@ -66,9 +66,11 @@ describe('preset search', () => {
         expect(presetMatches('voice bass', 'Voice Clarity', 'Presence for speech')).toBe(false);
     });
 
-    it('ignores case and accents', () => {
+    it('ignores case, accents and punctuation', () => {
         expect(presetMatches('CAFE', 'Café night')).toBe(true);
         expect(presetMatches('élan', 'Elan')).toBe(true);
+        expect(presetMatches('lofi radio', 'Lo-Fi Radio')).toBe(true);
+        expect(presetMatches('lo-fi', 'Lo-Fi Radio')).toBe(true);
     });
 
     it('matches everything when nothing is typed', () => {

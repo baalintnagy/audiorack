@@ -34,7 +34,7 @@ describe('rack normalization', () => {
             ],
         });
         expect(rack.bypass).toBe(false);
-        expect(rack.inputDb).toBe(24);
+        expect(rack.inputDb).toBe(36);
         expect(rack.outputDb).toBe(-60);
         expect(rack.chain.map((effect) => effect.type)).toEqual(['compressor', 'eq', 'multiband']);
         expect(new Set(rack.chain.map((effect) => effect.id)).size).toBe(3);

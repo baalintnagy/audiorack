@@ -55,9 +55,10 @@ type CurvePatch = { thresholdDb?: number; ratio?: number; kneeDb?: number };
 
 /**
  * The node of an editable transfer curve: across the display for the ratio along its knob scale,
- * from 1:1 at the left to ∞ at the right, and up and down at the threshold's output level. Its
- * ring sets the knee; its guides run across for the threshold and from top to bottom for the
- * ratio.
+ * from 1:1 at the left to ∞ at the right, and up and down for the threshold on the level scale.
+ * Its ring sets the knee; its guides run across for the threshold and from top to bottom for the
+ * ratio. Makeup gain moves the curve but not the node, so each axis reads one setting only, even
+ * with auto makeup, which follows the threshold and the ratio.
  */
 function curveNode(
     curve: CurveSettings,
@@ -65,16 +66,16 @@ function curveNode(
     height: number,
     onChange: (patch: CurvePatch) => void,
 ): ControlNode<CurvePatch> {
-    const { thresholdDb, ratio, kneeDb, makeupDb } = curve;
+    const { thresholdDb, ratio, kneeDb } = curve;
     const scale = transferScale(CURVE_MIN, width, height);
     const track = width - 2 * RATIO_INSET;
     return {
         x: RATIO_INSET + toNormalized(SPECS.ratio, ratio) * track,
-        y: scale.toY(thresholdDb + makeupDb),
+        y: scale.toY(thresholdDb),
         atX: (x) => ({
             ratio: specValue(SPECS.ratio, fromNormalized(SPECS.ratio, (x - RATIO_INSET) / track)),
         }),
-        atY: (y) => ({ thresholdDb: specValue(SPECS.thresholdDb, scale.yToDb(y) - makeupDb) }),
+        atY: (y) => ({ thresholdDb: specValue(SPECS.thresholdDb, scale.yToDb(y)) }),
         apply: onChange,
         ring: {
             spec: SPECS.kneeDb,
